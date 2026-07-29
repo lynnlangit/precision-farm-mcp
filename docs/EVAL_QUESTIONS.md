@@ -39,8 +39,8 @@ control: most fields in the record are neither pattern.
 ### 4. Ranking over a relative window
 **Q:** Which fields made money in the last five years?
 **Tool:** `report-export.which_fields_made_money(seasons=[2021..2025])`
-**Verifiable answer:** Top result is **Section Corner**, total profit
-`$169,720.44`; Marginal Eighty is last, total profit `-$87,773.68`. The
+**Verifiable answer:** Top result is **East 80**, total profit
+`$162,146.32`; Marginal Eighty is last, total profit `-$87,773.68`. The
 five-year window must resolve to `[2021, 2022, 2023, 2024, 2025]` — the
 five most recent known seasons, not any other five.
 

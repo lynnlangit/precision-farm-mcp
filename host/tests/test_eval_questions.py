@@ -36,8 +36,8 @@ async def test_q4_ranking_over_relative_five_year_window():
         r = await fleet.call(
             "report-export", "which_fields_made_money", seasons=[2021, 2022, 2023, 2024, 2025]
         )
-    assert r["results"][0]["display_name"] == "Section Corner"
-    assert r["results"][0]["total_profit"] == 169720.44
+    assert r["results"][0]["display_name"] == "East 80"
+    assert r["results"][0]["total_profit"] == 162146.32
     assert r["results"][-1]["display_name"] == "Marginal Eighty"
     assert r["results"][-1]["total_profit"] == -87773.68
 

@@ -84,7 +84,7 @@ def _mapping_key(header_row: tuple) -> str:
 
 
 def _confirmed_mapping_for_season(
-    rows: list[tuple], season: int, confirm_fn: confirm_mod.ConfirmFn
+    rows: list[tuple], season: int, source_file: str, confirm_fn: confirm_mod.ConfirmFn
 ) -> tuple[dict[str, Any], int]:
     header_idx = xlsx_rows.find_header_row(rows)
     header_row = rows[header_idx]
@@ -101,12 +101,12 @@ def _confirmed_mapping_for_season(
         subject=f"Cost ledger column mapping for season {season} (header: {header_row})",
         proposal=proposal,
         confidence=confidence,
-        context={"header_row": list(header_row), "season": season},
+        context={"header_row": list(header_row), "season": season, "source_file": source_file},
     )
     response = confirm_fn(request)
     if not response.approved:
         raise confirm_mod.ConfirmationRejected(
-            f"Cost ledger column mapping for season {season} was not confirmed"
+            f"Cost ledger column mapping for season {season} was not confirmed", request=request
         )
     return response.answer, header_idx
 
@@ -154,12 +154,12 @@ def ingest_cost_ledger(
         season = int(sheet_name)
         ws = wb[sheet_name]
         rows = list(ws.iter_rows(values_only=True))
+        source_file = f"cost_ledger.xlsx::{sheet_name}"
 
-        mapping, header_idx = _confirmed_mapping_for_season(rows, season, confirm_fn)
+        mapping, header_idx = _confirmed_mapping_for_season(rows, season, source_file, confirm_fn)
         mapping_version = _mapping_key(rows[header_idx])
         extracted = _extract_rows(rows, header_idx, mapping)
 
-        source_file = f"cost_ledger.xlsx::{sheet_name}"
         db_rows = [
             {
                 **row,

@@ -12,7 +12,7 @@ import dataclasses
 
 from . import rng as rng_mod
 from .config import SimConfig
-from .field_identity import CORN, SOYBEAN, FarmIdentity
+from .field_identity import ALIAS_TIE_FIELD_IDS, CORN, SOYBEAN, FarmIdentity
 
 MARGINAL_YIELD_PENALTY = 0.72  # marginal field yields at 72% of the normal draw
 MARGINAL_COST_PREMIUM = 1.22  # and costs 22% more (poor drainage, more inputs)
@@ -81,6 +81,17 @@ def assign_acres(identity: FarmIdentity, config: SimConfig) -> dict[str, float]:
             parent_a_id, parent_b_id = event.parent_field_ids
             (child_id,) = event.child_field_ids
             acres[child_id] = round(acres[parent_a_id] + acres[parent_b_id], 1)
+
+    # Deliberate defect (DEF-ALIASTIE): force two unrelated "normal" fields to
+    # the same acreage. Acreage is otherwise a reliable near-unique fingerprint
+    # for alias resolution (see alias_resolution.py); tying two fields' acreage
+    # is what turns one ledger misspelling into a genuine 2-candidate ambiguity
+    # that must go through confirmation rather than an acreage-match auto-pick.
+    # A plain copy, not a fresh RNG draw, so no other field's draw sequence
+    # shifts. Both fields are optional filler roster entries, so this only
+    # applies when the roster is large enough to include them.
+    if ALIAS_TIE_FIELD_IDS[0] in acres and ALIAS_TIE_FIELD_IDS[1] in acres:
+        acres[ALIAS_TIE_FIELD_IDS[1]] = acres[ALIAS_TIE_FIELD_IDS[0]]
 
     return acres
 

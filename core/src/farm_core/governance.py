@@ -10,10 +10,12 @@ explicit override, never a default.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
+from . import confirm as confirm_mod
 from .audit import AuditLog
 
 _COORDINATE_KEYS = {
@@ -77,3 +79,58 @@ def export_json(
         path=str(path),
         redacted=not allow_identifying,
     )
+
+
+def _header_shape_hash(request: confirm_mod.ConfirmationRequest) -> str | None:
+    header_row = request.context.get("header_row")
+    if header_row is None:
+        return None
+    return hashlib.sha256(json.dumps(header_row, sort_keys=True).encode()).hexdigest()[:16]
+
+
+class ConfirmationGate:
+    """The named, governance-owned confirmation gate: every naming-drift
+    alias, identity event, and column-mapping proposal passes through here on
+    its way to a confirm_fn. Wraps PersistedConfirm (the mechanism, unchanged)
+    and adds one audit event per key the first time it's decided -- cache
+    hits on an already-decided key aren't re-logged, so a server restart
+    doesn't re-emit the same event on every boot.
+    """
+
+    def __init__(
+        self,
+        store_path: Path,
+        terminal: confirm_mod.ConfirmFn,
+        audit_log: AuditLog,
+        recheck: bool = False,
+    ):
+        self._persisted = confirm_mod.PersistedConfirm(store_path, inner=terminal, recheck=recheck)
+        self._audit_log = audit_log
+
+    def __call__(
+        self, request: confirm_mod.ConfirmationRequest
+    ) -> confirm_mod.ConfirmationResponse:
+        already_decided = self._persisted.has_key(request.key)
+        previous_answer = self._persisted.current_answer(request.key) if already_decided else None
+        response = self._persisted(request)
+
+        if already_decided and not self._persisted.recheck:
+            return response  # cache hit, no fresh decision made -- not logged
+
+        if not response.approved:
+            event = "confirmation_refused"
+        elif already_decided and response.answer != previous_answer:
+            event = "confirmation_corrected"
+        else:
+            event = "confirmation_accepted"
+
+        self._audit_log.log(
+            event,
+            proposal_id=request.key,
+            kind=request.kind,
+            source_file=request.context.get("source_file"),
+            header_shape_hash=_header_shape_hash(request),
+            proposed=request.proposal,
+            decision=response.answer if response.approved else None,
+        )
+        return response

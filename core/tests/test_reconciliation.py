@@ -85,28 +85,53 @@ def test_false_positive_rate_is_low(yield_reconciliation, ground_truth):
     assert len(flagged) == expected_count
 
 
+def _alias_tie_naive_wrong_field_seasons(ground_truth):
+    """(display_name, season) of the field an ambiguous_alias_tie defect's raw
+    name gets misattributed to when confirmation is bypassed (auto_approve),
+    per its naive_wrong_field_id -- this test suite's full_ingest fixture
+    always uses auto_approve, so this contamination is expected here (the
+    fix -- confirmation actually gating it -- is proven in
+    test_confirmation_gate.py instead).
+    """
+    out = set()
+    gt_fields = ground_truth["canonical_fields"]
+    for d in ground_truth["defects"]:
+        if d["type"] == "ambiguous_alias_tie":
+            name = gt_fields[d["naive_wrong_field_id"]]["display_name_by_season"][str(d["season"])]
+            out.add((name, d["season"]))
+    return out
+
+
 def test_transposed_digit_is_the_dominant_cost_outlier(cost_reconciliation, ground_truth):
     digit_defect = next(d for d in ground_truth["defects"] if d["type"] == "transposed_digit")
     gt_fields = ground_truth["canonical_fields"]
     field_name = gt_fields[digit_defect["field_id"]]["display_name_by_season"][
         str(digit_defect["season"])
     ]
+    excluded = _alias_tie_naive_wrong_field_seasons(ground_truth)
 
-    outliers = [r for r in cost_reconciliation if r.outlier_flagged]
+    outliers = [
+        r for r in cost_reconciliation if r.outlier_flagged and (r.field_name, r.season) not in excluded
+    ]
     assert len(outliers) >= 1
     match = next(
         r for r in outliers if r.field_name == field_name and r.season == digit_defect["season"]
     )
     assert match.line_item == "seed"
-    # It should be the single worst outlier by magnitude, not just any flag.
+    # Among reconciliation-detectable outliers (excluding the alias-tie
+    # misattribution above, which confirmation -- not reconciliation -- is
+    # responsible for catching), the transposed digit should be the worst.
     assert abs(match.pct_diff) == max(abs(r.pct_diff) for r in outliers)
 
 
-def test_cost_reconciliation_outlier_rate_is_low(cost_reconciliation):
+def test_cost_reconciliation_outlier_rate_is_low(cost_reconciliation, ground_truth):
     """With rates/prices shared between the ledger and as-applied logs, only
-    the one deliberate defect should stand out -- not systemic noise.
+    the deliberate defects should stand out -- not systemic noise.
     """
-    outliers = [r for r in cost_reconciliation if r.outlier_flagged]
+    excluded = _alias_tie_naive_wrong_field_seasons(ground_truth)
+    outliers = [
+        r for r in cost_reconciliation if r.outlier_flagged and (r.field_name, r.season) not in excluded
+    ]
     assert len(outliers) <= 2  # generous margin above the exactly-one-defect baseline
 
 

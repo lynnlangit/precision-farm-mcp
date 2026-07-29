@@ -141,7 +141,7 @@ def _match_transition(
 
 def _confirm_group(
     confirm_fn: confirm_mod.ConfirmFn, season: int, next_season: int, kind: str, d: dict, a: dict
-) -> confirm_mod.ConfirmationResponse:
+) -> tuple[confirm_mod.ConfirmationRequest, confirm_mod.ConfirmationResponse]:
     proposal = {"type": kind}
     if kind == "rename":
         proposal.update(old_name=next(iter(d)), new_name=next(iter(a)))
@@ -162,7 +162,7 @@ def _confirm_group(
         confidence="high",
         context={"disappeared_acres": d, "appeared_acres": a},
     )
-    return confirm_fn(request)
+    return request, confirm_fn(request)
 
 
 def resolve_field_identity(
@@ -200,11 +200,12 @@ def resolve_field_identity(
             lineages[cid].active_seasons.append(next_season)
 
         for kind, d, a in _match_transition(disappeared, appeared):
-            response = _confirm_group(confirm_fn, season, next_season, kind, d, a)
+            request, response = _confirm_group(confirm_fn, season, next_season, kind, d, a)
             if not response.approved:
                 raise confirm_mod.ConfirmationRejected(
                     f"Identity event {kind} at {season}->{next_season} ({d} -> {a}) "
-                    "was not confirmed"
+                    "was not confirmed",
+                    request=request,
                 )
             answer = response.answer
 

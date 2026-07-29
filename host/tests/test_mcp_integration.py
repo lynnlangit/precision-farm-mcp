@@ -14,13 +14,22 @@ that robustness.
 
 from pathlib import Path
 
-from farm_core.pipeline import build_farm_snapshot
+from farm_core import pipeline
+from farm_core.audit import AuditLog
 from farm_core.profitability import bad_field_or_bad_year, which_fields_made_money
 from farm_core.reconciliation import reconcile_yield_vs_scale
 from farm_host.mcp_client import MCPFleet
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "synthetic"
-DIRECT_SNAPSHOT = build_farm_snapshot(DATA_DIR)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = REPO_ROOT / "data" / "synthetic"
+CONFIRM_STORE_PATH = REPO_ROOT / "data" / "confirmed_mappings.json"
+# Loaded the same way every MCP server loads its snapshot -- from whatever
+# farm-ingest already persisted -- so "matches direct call" is a genuine
+# apples-to-apples comparison, not one side quietly using a less-confirmed
+# resolution than the other.
+DIRECT_SNAPSHOT = pipeline.load_query_time_snapshot(
+    DATA_DIR, CONFIRM_STORE_PATH, AuditLog(REPO_ROOT / "data" / "audit.jsonl")
+)
 
 
 async def test_which_fields_made_money_matches_direct_call():
@@ -124,3 +133,25 @@ async def test_as_applied_returns_empty_not_error_for_older_season():
             "as-applied", "get_as_applied_events", field_name="West 120", season=2016
         )
     assert result["events"] == []
+
+
+async def test_as_applied_structured_refusal_for_unknown_season():
+    async with MCPFleet(["as-applied"]) as fleet:
+        result = await fleet.call(
+            "as-applied", "get_as_applied_events", field_name="West 120", season=1999
+        )
+    assert result["code"] == "invalid_input"
+
+
+async def test_yield_history_structured_refusals():
+    async with MCPFleet(["yield-history"]) as fleet:
+        not_found = await fleet.call(
+            "yield-history",
+            "get_yield_reconciliation",
+            field_name="Not A Real Field",
+            season=2021,
+        )
+        assert not_found["code"] == "not_found"
+
+        invalid_season = await fleet.call("yield-history", "list_yield_reconciliation", season=1999)
+        assert invalid_season["code"] == "invalid_input"

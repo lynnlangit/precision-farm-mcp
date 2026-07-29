@@ -58,6 +58,18 @@ _FILLER_ROSTER: list[tuple[str, str, str]] = [
 
 _NAMING_DRIFT_VARIANTS = ["N 80", "north eighty", "North 80", "N80"]
 
+# Deliberate defect (DEF-ALIASTIE): two "normal" filler fields forced to the
+# same acreage (see economics.assign_acres) plus one season's ledger
+# misspelling of the first (see the alias-tie override below). Naive string
+# similarity favors the second (wrong) field over the first (correct) one --
+# empirically verified against difflib.get_close_matches, not assumed --
+# which is exactly the case alias_resolution.py's ambiguous_match confirmation
+# path exists to catch instead of silently auto-approving.
+ALIAS_TIE_FIELD_IDS = ("root_03", "root_12")
+ALIAS_TIE_MISSPELLING = "Hom Corner"
+ALIAS_TIE_NAIVE_WRONG_MATCH = "Section Corner"
+ALIAS_TIE_SEASON_INDEX = 7
+
 _EXTRA_FIELD_BASE_NAMES = [
     "Grain Bin Quarter",
     "Windbreak Forty",
@@ -393,6 +405,13 @@ def build_field_identity(config: SimConfig) -> FarmIdentity:
             spreadsheet_alias_by_season={s: root_name for s in seasons},
             rotation_phase=phase,
         )
+
+    tie_a_id, tie_b_id = ALIAS_TIE_FIELD_IDS
+    if tie_a_id in canonical_fields and tie_b_id in canonical_fields:
+        tie_field = canonical_fields[tie_a_id]
+        tie_season = seasons[min(ALIAS_TIE_SEASON_INDEX, len(seasons) - 1)]
+        if tie_season in tie_field.active_seasons:
+            tie_field.spreadsheet_alias_by_season[tie_season] = ALIAS_TIE_MISSPELLING
 
     identity = FarmIdentity(config=config, canonical_fields=canonical_fields, events=events)
     _validate_acreage_conservation(identity)

@@ -17,6 +17,7 @@ from . import (
     confirm as confirm_mod,
     db,
     field_identity,
+    governance,
     ingest_as_applied,
     ingest_boundaries,
     ingest_cost_ledger,
@@ -26,6 +27,7 @@ from . import (
     ingest_yield_monitor,
     profitability,
 )
+from .audit import AuditLog
 
 SEASONS = list(range(2016, 2026))
 
@@ -68,9 +70,7 @@ class FarmSnapshot:
         return None
 
 
-def build_farm_snapshot(
-    data_dir: Path, confirm_fn: confirm_mod.ConfirmFn = confirm_mod.auto_approve
-) -> FarmSnapshot:
+def build_farm_snapshot(data_dir: Path, confirm_fn: confirm_mod.ConfirmFn) -> FarmSnapshot:
     con = db.connect()
 
     ingest_boundaries.ingest_boundaries(con, data_dir)
@@ -111,3 +111,36 @@ def build_farm_snapshot(
         built_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         source_files=source_files,
     )
+
+
+class SnapshotUnconfirmed(Exception):
+    """Raised by load_query_time_snapshot when building the snapshot hits a
+    naming-drift alias, identity event, or column mapping with no persisted
+    decision. Carries the ConfirmationRequest that blocked it so a caller
+    (an MCP server tool function) can report exactly what's unconfirmed and
+    that `farm-ingest` is how to confirm it -- an MCP server is a
+    non-interactive stdio subprocess, so it can never resolve this itself.
+    """
+
+    def __init__(self, request: confirm_mod.ConfirmationRequest):
+        self.request = request
+        super().__init__(
+            f"unconfirmed: {request.kind} {request.key!r} -- run `farm-ingest` to confirm it"
+        )
+
+
+def load_query_time_snapshot(
+    data_dir: Path, confirm_store_path: Path, audit_log: AuditLog
+) -> FarmSnapshot:
+    """The only way an MCP server should build a FarmSnapshot: reuses
+    whatever farm-ingest already confirmed and persisted, and refuses
+    (SnapshotUnconfirmed) rather than guessing at anything it didn't.
+    """
+    gate = governance.ConfirmationGate(confirm_store_path, confirm_mod.refuse_unconfirmed, audit_log)
+    try:
+        return build_farm_snapshot(data_dir, confirm_fn=gate)
+    except confirm_mod.ConfirmationRejected as e:
+        if e.request is None:
+            raise  # not a pending-confirmation case (e.g. a structurally ambiguous
+            # source file) -- a real error, not something farm-ingest can resolve
+        raise SnapshotUnconfirmed(e.request) from e

@@ -52,6 +52,11 @@ instruction.
 # Generate ten seasons of synthetic (deliberately messy) farm data
 uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
 
+# Confirm every naming-drift alias, identity event, and column mapping once,
+# interactively -- MCP servers are non-interactive stdio processes and can
+# never do this themselves, so every query refuses until this has run.
+uv run --project host farm-ingest
+
 # Ask a question (requires a local Ollama with gemma3:4b pulled)
 ollama pull gemma3:4b
 uv run --project host farm-cli "was the north eighty a bad field or a bad year"
@@ -86,7 +91,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 ## Verification
 
-77 tests across the four packages, plus the 10 evaluation questions,
+83 tests across the four packages, plus the 10 evaluation questions,
 all currently green:
 
 ```bash

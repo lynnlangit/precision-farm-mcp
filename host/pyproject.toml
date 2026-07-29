@@ -11,6 +11,7 @@ dependencies = [
 
 [project.scripts]
 farm-cli = "farm_host.cli:main"
+farm-ingest = "farm_host.ingest_cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -98,7 +98,7 @@ def resolve_season_aliases(
         response = confirm_fn(request)
         if not response.approved:
             raise confirm_mod.ConfirmationRejected(
-                f"Alias for {raw_name!r} in season {season} was not confirmed"
+                f"Alias for {raw_name!r} in season {season} was not confirmed", request=request
             )
         resolved.append(
             ResolvedAlias(season, raw_name, response.answer["canonical_boundary_name"], method)

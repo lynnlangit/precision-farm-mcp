@@ -1,0 +1,241 @@
+{
+  "confirmed": {
+    "alias:2017:north eighty": {
+      "current_version": 1,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'north eighty' in season 2017",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "N 80"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "alias:2018:North 80": {
+      "current_version": 1,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'North 80' in season 2018",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "N 80"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "alias:2019:N80": {
+      "current_version": 1,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'N80' in season 2019",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "N 80"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "alias:2021:north eighty": {
+      "current_version": 1,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'north eighty' in season 2021",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "N 80"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "alias:2022:North 80": {
+      "current_version": 1,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'North 80' in season 2022",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "N 80"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "alias:2023:Hom Corner": {
+      "current_version": 2,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'Hom Corner' in season 2023 has 2 acreage candidates, not exactly 1",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "Section Corner"
+          },
+          "decision": "accepted",
+          "version": 1
+        },
+        {
+          "answer": {
+            "canonical_boundary_name": "Home Quarter"
+          },
+          "decision": "corrected",
+          "supersedes": 1,
+          "version": 2
+        }
+      ]
+    },
+    "alias:2023:N80": {
+      "current_version": 1,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'N80' in season 2023",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "N 80"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "alias:2025:north eighty": {
+      "current_version": 1,
+      "kind": "naming_drift_alias",
+      "subject": "Cost ledger name 'north eighty' in season 2025",
+      "versions": [
+        {
+          "answer": {
+            "canonical_boundary_name": "N 80"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "column_mapping:Field|Crop|Acres|Seed ($/ac)|Fertilizer ($/ac)|Chemical ($/ac)|Fuel ($/ac)|Cash Rent ($/ac)|Notes": {
+      "current_version": 1,
+      "kind": "column_mapping",
+      "subject": "Cost ledger column mapping for season 2016 (header: ('Field', 'Crop', 'Acres', 'Seed ($/ac)', 'Fertilizer ($/ac)', 'Chemical ($/ac)', 'Fuel ($/ac)', 'Cash Rent ($/ac)', 'Notes'))",
+      "versions": [
+        {
+          "answer": {
+            "acres_col": 2,
+            "cash_rent_col": 7,
+            "chemical_col": 5,
+            "cost_basis": "per_acre",
+            "crop_col": 1,
+            "fertilizer_col": 4,
+            "field_name_col": 0,
+            "fuel_col": 6,
+            "notes_col": 8,
+            "seed_col": 3
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "column_mapping:Field|Crop|Acres|Seed (Total $)|Fertilizer (Total $)|Chemical (Total $)|Fuel (Total $)|Cash Rent (Total $)|Notes": {
+      "current_version": 1,
+      "kind": "column_mapping",
+      "subject": "Cost ledger column mapping for season 2018 (header: ('Field', 'Crop', 'Acres', 'Seed (Total $)', 'Fertilizer (Total $)', 'Chemical (Total $)', 'Fuel (Total $)', 'Cash Rent (Total $)', 'Notes'))",
+      "versions": [
+        {
+          "answer": {
+            "acres_col": 2,
+            "cash_rent_col": 7,
+            "chemical_col": 5,
+            "cost_basis": "total_dollars",
+            "crop_col": 1,
+            "fertilizer_col": 4,
+            "field_name_col": 0,
+            "fuel_col": 6,
+            "notes_col": 8,
+            "seed_col": 3
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "identity:2019->2020:rental_lost:['Township Rd 12']:[]": {
+      "current_version": 1,
+      "kind": "identity_event",
+      "subject": "rental_lost between season 2019 and 2020: ['Township Rd 12'] -> []",
+      "versions": [
+        {
+          "answer": {
+            "field_name": "Township Rd 12",
+            "last_season_present": 2019,
+            "type": "rental_lost"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "identity:2019->2020:split:['South 160']:['South 160 North', 'South 160 South']": {
+      "current_version": 1,
+      "kind": "identity_event",
+      "subject": "split between season 2019 and 2020: ['South 160'] -> ['South 160 North', 'South 160 South']",
+      "versions": [
+        {
+          "answer": {
+            "child_names": [
+              "South 160 North",
+              "South 160 South"
+            ],
+            "parent_name": "South 160",
+            "type": "split"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "identity:2020->2021:rename:['River Bottom']:['Riverside']": {
+      "current_version": 1,
+      "kind": "identity_event",
+      "subject": "rename between season 2020 and 2021: ['River Bottom'] -> ['Riverside']",
+      "versions": [
+        {
+          "answer": {
+            "new_name": "Riverside",
+            "old_name": "River Bottom",
+            "type": "rename"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    },
+    "identity:2021->2022:merge:['Depot Forty', 'Elevator Forty']:['Elevator Forty-Depot Forty']": {
+      "current_version": 1,
+      "kind": "identity_event",
+      "subject": "merge between season 2021 and 2022: ['Depot Forty', 'Elevator Forty'] -> ['Elevator Forty-Depot Forty']",
+      "versions": [
+        {
+          "answer": {
+            "child_name": "Elevator Forty-Depot Forty",
+            "parent_names": [
+              "Depot Forty",
+              "Elevator Forty"
+            ],
+            "type": "merge"
+          },
+          "decision": "accepted",
+          "version": 1
+        }
+      ]
+    }
+  },
+  "version": 1
+}

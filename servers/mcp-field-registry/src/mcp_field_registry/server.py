@@ -13,24 +13,47 @@ from typing import Any
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
+from farm_core import pipeline
 from farm_core.audit import AuditLog
-from farm_core.pipeline import build_farm_snapshot
 
 mcp = FastMCP("field-registry")
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
 AUDIT_LOG_PATH = Path(os.getenv("FARM_AUDIT_LOG", str(_REPO_ROOT / "data" / "audit.jsonl")))
+CONFIRM_STORE_PATH = Path(
+    os.getenv("FARM_CONFIRM_STORE", str(_REPO_ROOT / "data" / "confirmed_mappings.json"))
+)
 
 
 @functools.lru_cache(maxsize=1)
 def _snapshot():
-    return build_farm_snapshot(DATA_DIR)
+    return pipeline.load_query_time_snapshot(DATA_DIR, CONFIRM_STORE_PATH, _audit_log())
 
 
 @functools.lru_cache(maxsize=1)
 def _audit_log() -> AuditLog:
     return AuditLog(AUDIT_LOG_PATH)
+
+
+def _confirmation_required(exc: pipeline.SnapshotUnconfirmed) -> dict[str, Any]:
+    return {
+        "error": str(exc),
+        "code": "confirmation_required",
+        "pending_key": exc.request.key,
+        "run": "farm-ingest",
+    }
+
+
+def _confirmation_guarded(fn):
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> dict:
+        try:
+            return fn(*args, **kwargs)
+        except pipeline.SnapshotUnconfirmed as e:
+            return _confirmation_required(e)
+
+    return wrapper
 
 
 def _provenance() -> dict[str, Any]:
@@ -43,6 +66,7 @@ def _provenance() -> dict[str, Any]:
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+@_confirmation_guarded
 def resolve_field_identity() -> dict:
     """Return the full resolved canonical field timeline: every canonical
     field's display name by season, and every split/merge/rename/rental-loss
@@ -58,6 +82,7 @@ def resolve_field_identity() -> dict:
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+@_confirmation_guarded
 def resolve_field_name(raw_name: str, season: int) -> dict:
     """Resolve a farmer-visible field name (as it appears in the cost ledger,
     drift and all) for a given season to the stable canonical boundary name.

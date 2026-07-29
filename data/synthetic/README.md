@@ -28,6 +28,10 @@ uv run python -m farm_data_gen.cli --seed 42 --fields 12 --seasons 10 --out data
 
 Every defect below is deliberate and recorded in `ground_truth.json` under `defects[]` with a stable `defect_id`, so a downstream test suite can assert each one was actually detected and handled -- a generator that only produced clean data would let a broken profitability engine pass its tests for free.
 
+### ambiguous_alias_tie
+
+- `DEF-ALIASTIE-2023-root_03` (season 2023): Cost ledger name 'Hom Corner' in season 2023 doesn't exactly match any boundary name, and 'Home Quarter' and 'Section Corner' have identical acreage that season -- acreage alone can't disambiguate, and string similarity favors the wrong field ('Section Corner', verified via difflib.get_close_matches).
+
 ### Spreadsheet mess: total-dollars cost basis
 
 - `DEF-BASIS-2018` (season 2018): The 2018 cost tab reports Seed/Fertilizer/Chemical/Fuel/Cash Rent as total dollars for the field, not $/ac as in every other season -- the column headers say so, but a parser assuming a constant basis across seasons would misread it by ~acres-fold.
@@ -92,7 +96,7 @@ Every defect below is deliberate and recorded in `ground_truth.json` under `defe
 
 - `DEF-CAL-2019-root_03` (season 2019): Yield monitor total (6,871 bu) is +6.9% off the scale ticket total (6,426 bu) on Home Quarter.
 - `DEF-CAL-2021-root_11` (season 2021): Yield monitor total (13,748 bu) is -3.4% off the scale ticket total (14,228 bu) on Coulee Field.
-- `DEF-CAL-2023-root_12` (season 2023): Yield monitor total (37,128 bu) is +3.8% off the scale ticket total (35,760 bu) on Section Corner.
+- `DEF-CAL-2023-root_12` (season 2023): Yield monitor total (25,642 bu) is +3.8% off the scale ticket total (24,697 bu) on Section Corner.
 - `DEF-CAL-2024-root_11` (season 2024): Yield monitor total (15,107 bu) is -5.9% off the scale ticket total (16,047 bu) on Coulee Field.
 
 ## Field identity

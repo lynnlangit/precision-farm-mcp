@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from farm_core import confirm
 from farm_core.pipeline import build_farm_snapshot
 from farm_core.profitability import bad_field_or_bad_year, which_fields_made_money
 from farm_model.narrator import narrate, narrate_verified
@@ -24,7 +25,10 @@ MODEL_SRC_DIR = Path(__file__).resolve().parents[1] / "src" / "farm_model"
 
 @pytest.fixture(scope="session")
 def snapshot():
-    return build_farm_snapshot(DATA_DIR)
+    # auto_approve here is deliberate and test-only: this suite verifies the
+    # model layer's bounds (structural isolation, grounding, narration), not
+    # confirmation gating -- that's core/tests/test_confirmation_gate.py.
+    return build_farm_snapshot(DATA_DIR, confirm_fn=confirm.auto_approve)
 
 
 @pytest.fixture(scope="session")

@@ -14,7 +14,13 @@ import dataclasses
 
 from . import rng as rng_mod
 from .farm import FarmModel
-from .field_identity import scaled_indices
+from .field_identity import (
+    ALIAS_TIE_FIELD_IDS,
+    ALIAS_TIE_MISSPELLING,
+    ALIAS_TIE_NAIVE_WRONG_MATCH,
+    ALIAS_TIE_SEASON_INDEX,
+    scaled_indices,
+)
 
 
 @dataclasses.dataclass
@@ -135,6 +141,44 @@ def build_structural_defect_records(farm: FarmModel, plan: DefectPlan) -> list[d
             ),
         }
     )
+
+    tie_a_id, tie_b_id = ALIAS_TIE_FIELD_IDS
+    if tie_a_id in farm.identity.canonical_fields and tie_b_id in farm.identity.canonical_fields:
+        tie_field = farm.identity.canonical_fields[tie_a_id]
+        wrong_field = farm.identity.canonical_fields[tie_b_id]
+        seasons = farm.config.seasons
+        tie_season = seasons[min(ALIAS_TIE_SEASON_INDEX, len(seasons) - 1)]
+        correct_name = tie_field.display_name_by_season[tie_season]
+        wrong_name = wrong_field.display_name_by_season[tie_season]
+        records.append(
+            {
+                "defect_id": f"DEF-ALIASTIE-{tie_season}-{tie_a_id}",
+                "type": "ambiguous_alias_tie",
+                "field_id": tie_a_id,
+                "season": tie_season,
+                "raw_name": ALIAS_TIE_MISSPELLING,
+                "naive_wrong_field_id": tie_b_id,
+                "detail": (
+                    f"Cost ledger name {ALIAS_TIE_MISSPELLING!r} in season {tie_season} "
+                    f"doesn't exactly match any boundary name, and {correct_name!r} and "
+                    f"{wrong_name!r} have identical acreage that season -- acreage alone "
+                    "can't disambiguate, and string similarity favors the wrong field "
+                    f"({ALIAS_TIE_NAIVE_WRONG_MATCH!r}, verified via "
+                    "difflib.get_close_matches)."
+                ),
+                "expected_detection": (
+                    "This must reach alias_resolution.py's ambiguous_match confirmation "
+                    "path (2 acreage candidates) rather than being auto-approved; an "
+                    "unconfirmed or auto-approved resolution silently attributes "
+                    f"{correct_name!r}'s cost row to {wrong_name!r} instead, dropping "
+                    f"{correct_name!r}'s profit record for {tie_season} entirely."
+                ),
+                "ground_truth_correction": (
+                    f"{ALIAS_TIE_MISSPELLING!r} refers to {tie_a_id} ({correct_name!r}), "
+                    f"not {tie_b_id} ({wrong_name!r})."
+                ),
+            }
+        )
 
     for season in plan.no_monitor_seasons:
         records.append(
