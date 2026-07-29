@@ -1,0 +1,29 @@
+[project]
+name = "farm-model"
+version = "0.1.0"
+description = "Precision Farm MCP: bounded Gemma integration (parse + narrate only)"
+requires-python = ">=3.11"
+dependencies = [
+    "ollama>=0.6",
+    "pydantic>=2.6",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "farm-core"]
+
+[tool.uv.sources]
+farm-core = { path = "../core", editable = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]

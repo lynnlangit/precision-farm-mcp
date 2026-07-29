@@ -1,0 +1,35 @@
+[project]
+name = "mcp-cost-ledger"
+version = "0.1.0"
+description = "Precision Farm MCP: mcp-cost-ledger server"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=2.13",
+    "mcp>=1.0",
+    "duckdb>=1.0",
+    "pydantic>=2.6",
+    "farm-core",
+]
+
+[project.scripts]
+mcp-cost-ledger = "mcp_cost_ledger.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+farm-core = { path = "../../core", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]

@@ -1,0 +1,29 @@
+[project]
+name = "farm-core"
+version = "0.1.0"
+description = "Shared data plane and domain logic for Precision Farm MCP"
+requires-python = ">=3.11"
+dependencies = [
+    "duckdb>=1.0",
+    "pydantic>=2.6",
+    "openpyxl>=3.1",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]

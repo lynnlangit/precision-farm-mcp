@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Precision Farm MCP: generated synthetic data is fully reproducible from
+# `generator/` + --seed, so only its generated README is tracked.
+data/synthetic/*
+!data/synthetic/README.md

@@ -1,0 +1,35 @@
+[project]
+name = "farm-data-gen"
+version = "1.0.0"
+description = "Deterministic synthetic data generator for Precision Farm MCP"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "openpyxl>=3.1",
+]
+
+[project.scripts]
+farm-data-gen = "farm_data_gen.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]

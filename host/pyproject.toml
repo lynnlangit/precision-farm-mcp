@@ -1,0 +1,38 @@
+[project]
+name = "farm-host"
+version = "0.1.0"
+description = "Precision Farm MCP: host application (MCP client/router, query planner)"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0",
+    "farm-core",
+    "farm-model",
+]
+
+[project.scripts]
+farm-cli = "farm_host.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+farm-core = { path = "../core", editable = true }
+farm-model = { path = "../model", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]

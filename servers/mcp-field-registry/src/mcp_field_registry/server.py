@@ -1,0 +1,101 @@
+"""MCP server: canonical field identity and naming-drift alias resolution.
+Thin transport wrapper around farm_core.field_identity /
+farm_core.alias_resolution -- Phase 1's hardest problem, exposed as tools.
+"""
+
+from __future__ import annotations
+
+import functools
+import os
+from pathlib import Path
+from typing import Any
+
+from fastmcp import FastMCP
+from mcp.types import ToolAnnotations
+
+from farm_core.audit import AuditLog
+from farm_core.pipeline import build_farm_snapshot
+
+mcp = FastMCP("field-registry")
+
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
+AUDIT_LOG_PATH = Path(os.getenv("FARM_AUDIT_LOG", str(_REPO_ROOT / "data" / "audit.jsonl")))
+
+
+@functools.lru_cache(maxsize=1)
+def _snapshot():
+    return build_farm_snapshot(DATA_DIR)
+
+
+@functools.lru_cache(maxsize=1)
+def _audit_log() -> AuditLog:
+    return AuditLog(AUDIT_LOG_PATH)
+
+
+def _provenance() -> dict[str, Any]:
+    snap = _snapshot()
+    return {
+        "data_dir": str(snap.data_dir),
+        "built_at": snap.built_at,
+        "source_file_count": len(snap.source_files),
+    }
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+def resolve_field_identity() -> dict:
+    """Return the full resolved canonical field timeline: every canonical
+    field's display name by season, and every split/merge/rename/rental-loss
+    event, resolved from raw boundary files alone.
+
+    Returns:
+        {"canonical_fields": {...}, "identity_events": [...], "provenance": {...}}
+    """
+    snap = _snapshot()
+    _audit_log().log("tool_call", tool="resolve_field_identity")
+    payload = snap.identity.to_json()
+    return {**payload, "provenance": _provenance()}
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+def resolve_field_name(raw_name: str, season: int) -> dict:
+    """Resolve a farmer-visible field name (as it appears in the cost ledger,
+    drift and all) for a given season to the stable canonical boundary name.
+
+    Args:
+        raw_name: The name as recorded that season (e.g. "north eighty").
+        season: The season year the name was recorded in.
+
+    Returns:
+        {"canonical_boundary_name": "...", "method": "exact"|"alias",
+        "provenance": {...}} on success, or {"error": "...", "code":
+        "not_found"} if the name was never recorded in that season.
+    """
+    snap = _snapshot()
+    if season not in snap.seasons:
+        return {
+            "error": f"unknown season {season}; known seasons are {snap.seasons}",
+            "code": "invalid_input",
+        }
+
+    active_names = {
+        lineage.display_name_by_season.get(season) for lineage in snap.identity.lineages.values()
+    }
+    if raw_name in active_names:
+        resolved, method = raw_name, "exact"
+    else:
+        resolved = snap.alias_map.get((season, raw_name))
+        method = "alias" if resolved else None
+
+    if resolved is None:
+        return {
+            "error": f"{raw_name!r} was not recorded in season {season}",
+            "code": "not_found",
+        }
+
+    _audit_log().log("tool_call", tool="resolve_field_name", raw_name=raw_name, season=season)
+    return {"canonical_boundary_name": resolved, "method": method, "provenance": _provenance()}
+
+
+if __name__ == "__main__":
+    mcp.run()
