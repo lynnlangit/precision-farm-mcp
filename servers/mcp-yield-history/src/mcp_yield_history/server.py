@@ -12,12 +12,47 @@ from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import BaseModel
 
 from farm_core import pipeline
 from farm_core.audit import AuditLog
 from farm_core.reconciliation import reconcile_yield_vs_scale
 
 mcp = FastMCP("yield-history")
+
+
+# Tool functions build one of these, then return its .model_dump() -- see
+# mcp_report_export.server for why (a bare Pydantic return type makes
+# FastMCP's client-side schema validation reject the refusal shape; a Union
+# return type wraps every response in a {"result": ...} envelope). Real
+# enforcement happens at construction time, not via the advertised MCP schema.
+class SnapshotProvenance(BaseModel):
+    data_dir: str
+    built_at: str
+    source_file_count: int
+
+
+class YieldReconciliationEntry(BaseModel):
+    field_name: str
+    season: int
+    scale_total_bu: float
+    monitor_total_bu: float | None
+    pct_diff: float | None
+    totals_discrepancy: bool
+    coverage_gap_bins: int | None
+    coverage_gap_flagged: bool
+    note: str
+
+
+class YieldReconciliationResult(YieldReconciliationEntry):
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class ListYieldReconciliationResult(BaseModel):
+    results: list[YieldReconciliationEntry]
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
@@ -98,7 +133,9 @@ def get_yield_reconciliation(field_name: str, season: int) -> dict:
     _audit_log().log(
         "tool_call", tool="get_yield_reconciliation", field_name=field_name, season=season
     )
-    return {**dataclasses.asdict(match), "provenance": _provenance()}
+    return YieldReconciliationResult(
+        **dataclasses.asdict(match), provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
@@ -121,7 +158,9 @@ def list_yield_reconciliation(season: int) -> dict:
         }
     _audit_log().log("tool_call", tool="list_yield_reconciliation", season=season)
     results = [dataclasses.asdict(r) for r in _reconciliation() if r.season == season]
-    return {"results": results, "provenance": _provenance()}
+    return ListYieldReconciliationResult(
+        results=results, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
 
 
 if __name__ == "__main__":

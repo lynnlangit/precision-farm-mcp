@@ -71,16 +71,19 @@ async def answer_question(question: str, audit_log: AuditLog) -> str:
     args = _tool_args(query)
 
     async with MCPFleet([server]) as fleet:
-        result = await fleet.call(server, tool, **args)
+        tool_result = await fleet.call(server, tool, **args)
     audit_log.log("tool_call", server=server, tool=tool, args=args)
 
+    result = tool_result.data
     if "error" in result:
         audit_log.log("tool_refused", server=server, tool=tool, code=result.get("code"))
         return f"{result['error']} (code: {result.get('code')})"
 
-    narration = narrate_verified(question, result)
+    outcome = narrate_verified(question, result, untrusted_paths=tool_result.untrusted_paths)
+    if outcome.truncated:
+        audit_log.log("payload_truncated", server=server, tool=tool)
     audit_log.log("narration", question=question)
-    return narration
+    return outcome.text
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

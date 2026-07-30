@@ -221,3 +221,10 @@ __marimo__/
 # `generator/` + --seed, so only its generated README is tracked.
 data/synthetic/*
 !data/synthetic/README.md
+
+# Runtime state generated locally by farm-ingest/farm-cli (real usage
+# questions, machine-specific confirmed mappings) -- not fixture data,
+# regenerates locally per the README quick start.
+data/audit.jsonl
+data/audit.jsonl.pre-a1-fix
+data/confirmed_mappings.json

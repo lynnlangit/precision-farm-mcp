@@ -17,6 +17,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import BaseModel
 
 from farm_core import governance, pipeline
 from farm_core.audit import AuditLog
@@ -24,6 +25,61 @@ from farm_core.profitability import bad_field_or_bad_year as _bad_field_or_bad_y
 from farm_core.profitability import which_fields_made_money as _which_fields_made_money
 
 mcp = FastMCP("report-export")
+
+
+# Tool functions build one of these, then return its .model_dump() -- not the
+# model instance itself, and not `Model | dict` as the declared return type.
+# Verified empirically: a bare Pydantic return type makes FastMCP's client-side
+# schema validation reject the {"error", "code"} refusal shape, and a Union
+# return type makes FastMCP wrap every response in a {"result": ...} envelope
+# (x-fastmcp-wrap-result), breaking every existing caller's direct-key access.
+# Returning .model_dump() from a function still annotated -> dict sidesteps
+# both: the wire shape is unchanged, and real enforcement happens at
+# construction time (a missing required field raises ValidationError inside
+# the tool function, before serialization), not via the advertised MCP schema.
+class SnapshotProvenance(BaseModel):
+    data_dir: str
+    built_at: str
+    source_file_count: int
+
+
+class FieldProfitResult(BaseModel):
+    canonical_id: str
+    display_name: str
+    seasons: list[int]
+    total_profit: float
+    total_revenue: float
+    total_cost: float
+
+
+class WhichFieldsMadeMoneyResult(BaseModel):
+    """`modeled` is reserved for Phase C's future model output (e.g. a
+    weather-attributed decomposition of a shortfall) -- see A2/A3 in
+    docs/plans. Nothing populates it yet; every value above is measured or
+    derived. Keeping the field on every response now (rather than adding it
+    only when Phase C needs it) means a modeled value can only ever end up
+    somewhere other than here by a reviewable authoring mistake, not a
+    silent tagging omission.
+    """
+
+    results: list[FieldProfitResult]
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class BadFieldOrBadYearResult(BaseModel):
+    canonical_id: str
+    verdict: str
+    evidence: dict[str, Any]
+    field_name: str
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class ExportProfitabilityResult(BaseModel):
+    exported_to: str
+    redacted: bool
+    modeled: dict[str, Any] | None = None
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
@@ -97,7 +153,9 @@ def which_fields_made_money(seasons: list[int]) -> dict:
 
     _audit_log().log("tool_call", tool="which_fields_made_money", seasons=seasons)
     results = _which_fields_made_money(snap.profit_records, seasons)
-    return {"results": results, "provenance": _provenance()}
+    return WhichFieldsMadeMoneyResult(
+        results=results, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
@@ -128,7 +186,9 @@ def bad_field_or_bad_year(field_name: str) -> dict:
     current_name = snap.identity.lineages[canonical_id].display_name_by_season[
         max(snap.identity.lineages[canonical_id].active_seasons)
     ]
-    return {**result, "field_name": current_name, "provenance": _provenance()}
+    return BadFieldOrBadYearResult(
+        **result, field_name=current_name, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False))
@@ -172,7 +232,7 @@ def export_profitability(
     except governance.WriteNotAllowed as e:
         return {"error": str(e), "code": "write_not_allowed"}
 
-    return {"exported_to": path, "redacted": not allow_identifying}
+    return ExportProfitabilityResult(exported_to=path, redacted=not allow_identifying).model_dump()
 
 
 if __name__ == "__main__":

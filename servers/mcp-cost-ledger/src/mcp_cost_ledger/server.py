@@ -13,12 +13,58 @@ from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import BaseModel
 
 from farm_core import pipeline
 from farm_core.audit import AuditLog
 from farm_core.reconciliation import reconcile_cost_ledger_vs_as_applied
 
 mcp = FastMCP("cost-ledger")
+
+
+# Tool functions build one of these, then return its .model_dump() -- see
+# mcp_report_export.server for why (a bare Pydantic return type makes
+# FastMCP's client-side schema validation reject the refusal shape; a Union
+# return type wraps every response in a {"result": ...} envelope). Real
+# enforcement happens at construction time, not via the advertised MCP schema.
+class SnapshotProvenance(BaseModel):
+    data_dir: str
+    built_at: str
+    source_file_count: int
+    mapping_version: str | None = None
+
+
+class GetCostLedgerRowResult(BaseModel):
+    field_name: str
+    seed_cost_per_ac: float
+    fertilizer_cost_per_ac: float
+    chemical_cost_per_ac: float
+    fuel_cost_per_ac: float
+    cash_rent_per_ac: float
+    cost_basis: str
+    # Farmer-authored free text from the ledger's own Notes column -- the one
+    # reachable untrusted-text surface A4 sanitizes before this ever reaches
+    # the model (see mcp_client.py / narrator.py).
+    notes: str | None
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class CostReconciliationEntry(BaseModel):
+    field_name: str
+    season: int
+    line_item: str
+    ledger_cost_per_ac: float
+    as_applied_derived_cost_per_ac: float | None
+    pct_diff: float | None
+    outlier_flagged: bool
+    note: str
+
+
+class GetCostReconciliationResult(BaseModel):
+    results: list[CostReconciliationEntry]
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
@@ -106,17 +152,17 @@ def get_cost_ledger_row(field_name: str, season: int) -> dict:
         }
 
     _audit_log().log("tool_call", tool="get_cost_ledger_row", field_name=field_name, season=season)
-    return {
-        "field_name": field_name,
-        "seed_cost_per_ac": match[1],
-        "fertilizer_cost_per_ac": match[2],
-        "chemical_cost_per_ac": match[3],
-        "fuel_cost_per_ac": match[4],
-        "cash_rent_per_ac": match[5],
-        "cost_basis": match[6],
-        "notes": match[8],
-        "provenance": _provenance(mapping_version=match[7]),
-    }
+    return GetCostLedgerRowResult(
+        field_name=field_name,
+        seed_cost_per_ac=match[1],
+        fertilizer_cost_per_ac=match[2],
+        chemical_cost_per_ac=match[3],
+        fuel_cost_per_ac=match[4],
+        cash_rent_per_ac=match[5],
+        cost_basis=match[6],
+        notes=match[8],
+        provenance=SnapshotProvenance(**_provenance(mapping_version=match[7])),
+    ).model_dump()
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
@@ -149,7 +195,9 @@ def get_cost_reconciliation(field_name: str, season: int) -> dict:
         for r in _cost_reconciliation()
         if r.field_name == field_name and r.season == season
     ]
-    return {"results": results, "provenance": _provenance()}
+    return GetCostReconciliationResult(
+        results=results, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
 
 
 if __name__ == "__main__":

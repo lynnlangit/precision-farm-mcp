@@ -76,6 +76,72 @@ class GroundingResult:
         return not self.ungrounded_numbers
 
 
+def _close(a: float, b: float) -> bool:
+    return a == b or (b != 0 and abs(a - b) / abs(b) <= _ROUNDING_TOLERANCE)
+
+
+def _without_provenance(payload: object) -> object:
+    """Strips the snapshot-provenance subtree (data_dir/built_at/
+    mapping_version/source_file_count) before grounding. This is operational
+    metadata, never a fact the narrator should be citing or grounding
+    against -- and built_at in particular is an ISO timestamp string, which
+    grounded_numbers() would otherwise number-mine (year, hour, seconds,
+    timezone offset), letting small incidental digits like "0" or "23" count
+    as "grounded" by coincidence.
+    """
+    if isinstance(payload, dict):
+        return {k: v for k, v in payload.items() if k != "provenance"}
+    return payload
+
+
+def check_narration_grounded_by_provenance(
+    narration: str, payload: object, question: str | None = None
+) -> tuple[GroundingResult, GroundingResult | None]:
+    """The A3 split: grounds narrated numbers against a payload's "modeled"
+    subtree (Phase C's model output) and everything else (measured/derived)
+    separately, so Phase B can report two rates instead of one that blends
+    fact with simulation. This is purely a reporting split -- the safety gate
+    stays check_narration_grounded()'s single union-based check below, which
+    already recurses into a "modeled" key like any other, unchanged.
+
+    Returns (measured_or_derived, modeled). modeled is None when the payload
+    carries no "modeled" key at all -- reported as "no modeled values
+    present", not a misleading 0/0 rate.
+    """
+    narration_numbers = extract_numbers(narration)
+
+    modeled_payload = payload.get("modeled") if isinstance(payload, dict) else None
+    non_modeled_payload = (
+        {k: v for k, v in payload.items() if k != "modeled"}
+        if isinstance(payload, dict)
+        else payload
+    )
+
+    measured_or_derived_grounded = grounded_numbers(_without_provenance(non_modeled_payload))
+    if question:
+        measured_or_derived_grounded |= extract_numbers(question)
+    measured_or_derived = GroundingResult(
+        ungrounded_numbers=[
+            n
+            for n in sorted(narration_numbers)
+            if not any(_close(n, g) or _close(n, abs(g)) for g in measured_or_derived_grounded)
+        ]
+    )
+
+    if not modeled_payload:
+        return measured_or_derived, None
+
+    modeled_grounded = grounded_numbers(modeled_payload)
+    modeled = GroundingResult(
+        ungrounded_numbers=[
+            n
+            for n in sorted(narration_numbers)
+            if not any(_close(n, g) or _close(n, abs(g)) for g in modeled_grounded)
+        ]
+    )
+    return measured_or_derived, modeled
+
+
 # Numeric grounding alone can't catch this: a narration can cite only real
 # payload numbers and still draw the *opposite* conclusion from a categorical
 # verdict field. Observed for real from gemma3:4b on a loss_rate=1.0
@@ -147,12 +213,9 @@ def check_narration_grounded(
     subject of the question is not the same as inventing a fact about it.
     """
     narration_numbers = extract_numbers(narration)
-    payload_numbers = grounded_numbers(payload)
+    payload_numbers = grounded_numbers(_without_provenance(payload))
     if question:
         payload_numbers |= extract_numbers(question)
-
-    def _close(a: float, b: float) -> bool:
-        return a == b or (b != 0 and abs(a - b) / abs(b) <= _ROUNDING_TOLERANCE)
 
     ungrounded = []
     for n in sorted(narration_numbers):

@@ -12,11 +12,42 @@ from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import BaseModel
 
 from farm_core import pipeline
 from farm_core.audit import AuditLog
 
 mcp = FastMCP("field-registry")
+
+
+# Tool functions build one of these, then return its .model_dump() -- see
+# mcp_report_export.server for why (a bare Pydantic return type makes
+# FastMCP's client-side schema validation reject the refusal shape; a Union
+# return type wraps every response in a {"result": ...} envelope). Real
+# enforcement happens at construction time, not via the advertised MCP schema.
+class SnapshotProvenance(BaseModel):
+    data_dir: str
+    built_at: str
+    source_file_count: int
+
+
+class CanonicalFieldInfo(BaseModel):
+    display_name_by_season: dict[str, str]
+    active_seasons: list[int]
+
+
+class ResolveFieldIdentityResult(BaseModel):
+    canonical_fields: dict[str, CanonicalFieldInfo]
+    identity_events: list[dict[str, Any]]
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class ResolveFieldNameResult(BaseModel):
+    canonical_boundary_name: str
+    method: str
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
@@ -78,7 +109,7 @@ def resolve_field_identity() -> dict:
     snap = _snapshot()
     _audit_log().log("tool_call", tool="resolve_field_identity")
     payload = snap.identity.to_json()
-    return {**payload, "provenance": _provenance()}
+    return ResolveFieldIdentityResult(**payload, provenance=SnapshotProvenance(**_provenance())).model_dump()
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
@@ -119,7 +150,9 @@ def resolve_field_name(raw_name: str, season: int) -> dict:
         }
 
     _audit_log().log("tool_call", tool="resolve_field_name", raw_name=raw_name, season=season)
-    return {"canonical_boundary_name": resolved, "method": method, "provenance": _provenance()}
+    return ResolveFieldNameResult(
+        canonical_boundary_name=resolved, method=method, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
 
 
 if __name__ == "__main__":

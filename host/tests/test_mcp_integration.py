@@ -35,7 +35,8 @@ DIRECT_SNAPSHOT = pipeline.load_query_time_snapshot(
 async def test_which_fields_made_money_matches_direct_call():
     seasons = [2021, 2022, 2023, 2024, 2025]
     async with MCPFleet(["report-export"]) as fleet:
-        mcp_result = await fleet.call("report-export", "which_fields_made_money", seasons=seasons)
+        tool_result = await fleet.call("report-export", "which_fields_made_money", seasons=seasons)
+    mcp_result = tool_result.data
     direct_result = which_fields_made_money(DIRECT_SNAPSHOT.profit_records, seasons)
     assert mcp_result["results"] == direct_result
 
@@ -45,12 +46,12 @@ async def test_bad_field_and_bad_year_match_direct_calls_through_mcp():
     catastrophic_id = DIRECT_SNAPSHOT.canonical_id_for_name("East 80")
 
     async with MCPFleet(["report-export"]) as fleet:
-        mcp_marginal = await fleet.call(
+        mcp_marginal = (await fleet.call(
             "report-export", "bad_field_or_bad_year", field_name="Marginal Eighty"
-        )
-        mcp_catastrophic = await fleet.call(
+        )).data
+        mcp_catastrophic = (await fleet.call(
             "report-export", "bad_field_or_bad_year", field_name="East 80"
-        )
+        )).data
 
     direct_marginal = bad_field_or_bad_year(DIRECT_SNAPSHOT.profit_records, marginal_id)
     direct_catastrophic = bad_field_or_bad_year(DIRECT_SNAPSHOT.profit_records, catastrophic_id)
@@ -66,15 +67,19 @@ async def test_bad_field_and_bad_year_match_direct_calls_through_mcp():
 
 async def test_report_export_structured_refusals_and_annotations():
     async with MCPFleet(["report-export"]) as fleet:
-        bad_season = await fleet.call("report-export", "which_fields_made_money", seasons=[1999])
+        bad_season = (
+            await fleet.call("report-export", "which_fields_made_money", seasons=[1999])
+        ).data
         assert bad_season["code"] == "invalid_input"
 
-        empty_seasons = await fleet.call("report-export", "which_fields_made_money", seasons=[])
+        empty_seasons = (
+            await fleet.call("report-export", "which_fields_made_money", seasons=[])
+        ).data
         assert empty_seasons["code"] == "invalid_input"
 
-        unknown_field = await fleet.call(
+        unknown_field = (await fleet.call(
             "report-export", "bad_field_or_bad_year", field_name="Not A Real Field"
-        )
+        )).data
         assert unknown_field["code"] == "not_found"
 
         tools = await fleet.sessions["report-export"].list_tools()
@@ -87,22 +92,22 @@ async def test_report_export_structured_refusals_and_annotations():
 async def test_export_is_write_gated_through_mcp(tmp_path):
     out_path = tmp_path / "export.json"
     async with MCPFleet(["report-export"]) as fleet:
-        blocked = await fleet.call("report-export", "export_profitability", path=str(out_path))
+        blocked = (await fleet.call("report-export", "export_profitability", path=str(out_path))).data
         assert blocked["code"] == "write_not_allowed"
         assert not out_path.exists()
 
-        allowed = await fleet.call(
+        allowed = (await fleet.call(
             "report-export", "export_profitability", path=str(out_path), allow_write=True
-        )
+        )).data
         assert allowed["exported_to"] == str(out_path)
     assert out_path.exists()
 
 
 async def test_field_registry_resolution_matches_direct():
     async with MCPFleet(["field-registry"]) as fleet:
-        mcp_result = await fleet.call(
+        mcp_result = (await fleet.call(
             "field-registry", "resolve_field_name", raw_name="north eighty", season=2017
-        )
+        )).data
     expected = DIRECT_SNAPSHOT.alias_map[(2017, "north eighty")]
     assert mcp_result["canonical_boundary_name"] == expected
 
@@ -112,46 +117,48 @@ async def test_yield_reconciliation_matches_direct():
     match = next(r for r in direct if r.field_name == "Coulee Field" and r.season == 2021)
 
     async with MCPFleet(["yield-history"]) as fleet:
-        mcp_result = await fleet.call(
+        mcp_result = (await fleet.call(
             "yield-history", "get_yield_reconciliation", field_name="Coulee Field", season=2021
-        )
+        )).data
     assert mcp_result["totals_discrepancy"] == match.totals_discrepancy
     assert abs(mcp_result["pct_diff"] - match.pct_diff) < 1e-9
 
 
 async def test_unknown_field_in_cost_ledger_server_refused():
     async with MCPFleet(["cost-ledger"]) as fleet:
-        result = await fleet.call(
+        result = (await fleet.call(
             "cost-ledger", "get_cost_ledger_row", field_name="Not A Real Field", season=2020
-        )
+        )).data
     assert result["code"] == "not_found"
 
 
 async def test_as_applied_returns_empty_not_error_for_older_season():
     async with MCPFleet(["as-applied"]) as fleet:
-        result = await fleet.call(
+        result = (await fleet.call(
             "as-applied", "get_as_applied_events", field_name="West 120", season=2016
-        )
+        )).data
     assert result["events"] == []
 
 
 async def test_as_applied_structured_refusal_for_unknown_season():
     async with MCPFleet(["as-applied"]) as fleet:
-        result = await fleet.call(
+        result = (await fleet.call(
             "as-applied", "get_as_applied_events", field_name="West 120", season=1999
-        )
+        )).data
     assert result["code"] == "invalid_input"
 
 
 async def test_yield_history_structured_refusals():
     async with MCPFleet(["yield-history"]) as fleet:
-        not_found = await fleet.call(
+        not_found = (await fleet.call(
             "yield-history",
             "get_yield_reconciliation",
             field_name="Not A Real Field",
             season=2021,
-        )
+        )).data
         assert not_found["code"] == "not_found"
 
-        invalid_season = await fleet.call("yield-history", "list_yield_reconciliation", season=1999)
+        invalid_season = (
+            await fleet.call("yield-history", "list_yield_reconciliation", season=1999)
+        ).data
         assert invalid_season["code"] == "invalid_input"

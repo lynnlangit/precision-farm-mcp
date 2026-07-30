@@ -14,28 +14,34 @@ later phases; building toward them now would be speculative structure.
 
 ```mermaid
 flowchart TD
-    CLI["Farmer CLI"]
-    Gemma["Gemma 3:4b via Ollama<br/>parses the question, narrates the result — nothing else"]
+    Farmer(("Farmer"))
 
-    subgraph Host["Host application — deterministic, all arithmetic lives here"]
-        Planner["Query dispatch"]
-        Recon["Reconciliation"]
-        AuditExport["Audit log + export policy"]
-    end
+    Farmer -->|"once, interactively,<br/>per new/changed data"| Ingest["farm-ingest"]
+    Farmer -->|"any question, any time"| CLI["farm-cli"]
 
-    Router["MCP client / tool router — stdio child processes, no network"]
+    Ingest --> Gate["ConfirmationGate<br/>propose → human confirms → persist"]
+    Gate --> Store[("confirmed_mappings.json<br/>versioned — a correction appends,<br/>never overwrites")]
+    Gate -.-> Audit
 
-    subgraph Servers["MCP servers"]
+    CLI --> Parser["Gemma 3:4b<br/>question → validated query — nothing else"]
+    Parser --> Router["MCP client / tool router<br/>stdio child processes, no network"]
+
+    subgraph Servers["MCP servers — non-interactive, query-time, fail closed"]
         FR["field-registry"]
         YH["yield-history"]
         AA["as-applied"]
-        CL["cost-ledger"]
+        CL2["cost-ledger"]
         RE["report-export"]
     end
 
-    DB[("DuckDB — 10 seasons, local files only")]
+    Router --> Servers
+    Store -->|"read-only —<br/>a server can never prompt a human"| Servers
+    Servers -->|"unconfirmed ⇒ confirmation_required<br/>refusal, never a guess"| Router
+    Servers --> DB[("DuckDB — 10 seasons, local files only")]
+    Servers -.-> Audit[("audit.jsonl<br/>hash-chained — safe under concurrent<br/>host + server process writes")]
 
-    CLI --> Gemma --> Host --> Router --> Servers --> DB
+    Router --> Narrator["Gemma 3:4b<br/>result → plain language. Farmer free text is<br/>delimited as untrusted data first — nothing else"]
+    Narrator -->|"plain-language answer"| Answer(("Farmer"))
 ```
 
 Gemma touches a question at exactly two points — turning it into a
@@ -45,6 +51,20 @@ alter a number, and never resolves an ambiguous field name on its own. That
 line is structural (the model layer has no import path to a database or MCP
 client at all — see `model/tests/test_model_bounded.py`), not just a prompt
 instruction.
+
+Confirmation is split the same way, structurally: an MCP server is a
+non-interactive stdio subprocess and can never prompt a human, so every
+naming-drift alias, identity event, and column mapping is proposed,
+confirmed, and persisted once by `farm-ingest` — with a human physically
+present — and every query-time server only ever reads that persisted
+answer, refusing outright (`confirmation_required`) rather than guessing if
+it isn't there yet. Every decision, tool call, and refusal is written to a
+single hash-chained audit log that stays verifiable even though the host
+process and every spawned server write to it concurrently. And any farmer-
+authored free text (a cost-ledger note) that reaches Gemma's narration step
+is delimited as untrusted data first, redacted from the numeric-grounding
+check entirely, and never treated as an instruction — proven against an
+injected-prompt defect in the synthetic data, not just asserted.
 
 ## Quick start
 
@@ -68,8 +88,8 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 |---|---|
 | `generator/` | Deterministic synthetic-data generator: 10 seasons, ~12 fields, every defect (naming drift, splits/merges, sensor calibration error, messy spreadsheets) deliberately injected and recorded in `ground_truth.json` |
 | `core/` (`farm_core`) | Shared library: DuckDB ingestion, field-identity resolution, reconciliation, the profitability engine, audit log, governance |
-| `servers/mcp-*` | Five FastMCP servers exposing `farm_core` as MCP tools (Pydantic I/O, `readOnlyHint`, structured refusals) |
-| `host/` (`farm_host`) | The host application: MCP client/router (stdio), the CLI |
+| `servers/mcp-*` | Five FastMCP servers exposing `farm_core` as MCP tools (Pydantic I/O, `readOnlyHint`, structured refusals, a `modeled` field reserved for future model output) |
+| `host/` (`farm_host`) | The host application: MCP client/router (stdio, untrusted-text sanitization), `farm-ingest` (human-present confirmation) and `farm-cli` (query, fails closed) |
 | `model/` (`farm_model`) | The bounded Gemma layer: question → query, result → narration, plus the verification that keeps it bounded |
 | `docs/EVAL_QUESTIONS.md` | Ten independent evaluation questions, each verifiable against `ground_truth.json` |
 
@@ -83,7 +103,10 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
    it's the riskiest piece.
 2. **Spreadsheet ingestion with human confirmation.** Every farmer's ledger
    is different. A column-mapping is proposed, confirmed once per header
-   shape, and persisted for reuse — never guessed silently.
+   shape by `farm-ingest` with a human physically present, and persisted for
+   reuse — an MCP server is a non-interactive stdio subprocess and can never
+   ask, so query time only ever reads what was already confirmed, refusing
+   rather than guessing if it wasn't.
 3. **Reconciliation.** Two independent paths exist to several figures
    (yield monitor vs. scale tickets, ledger cost vs. as-applied cost).
    Where they disagree is a feature, surfaced neutrally, never asserted as
@@ -91,7 +114,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 ## Verification
 
-83 tests across the four packages, plus the 10 evaluation questions,
+93 tests across the four packages, plus the 10 evaluation questions,
 all currently green:
 
 ```bash
@@ -100,11 +123,18 @@ for pkg in generator core host model; do (cd $pkg && uv run pytest -q); done
 
 Notably: computed profit matches `ground_truth.json` for every field/season
 not carrying a deliberate defect; every injected defect is detected by its
-defect ID; no code path opens a non-loopback network connection
-(`host/tests/test_no_network.py`); and narration is verified both
-numerically grounded in its payload and non-contradictory of any
-categorical verdict it's given, with a deterministic fallback if the model
-can't manage either after a retry.
+defect ID, including a naming-drift alias deliberately made ambiguous
+(`DEF-ALIASTIE`) to prove auto-approval produces a confidently wrong answer
+where confirmation produces the right one; no code path opens a
+non-loopback network connection (`host/tests/test_no_network.py`); the audit
+log's hash chain verifies even after real concurrent writes from the host
+process and two live server subprocesses
+(`host/tests/test_audit_multiprocess.py`); a prompt-injection defect planted
+in a cost-ledger note (`DEF-INJECTION`) is proven to leave the narration
+unaffected, not just non-crashing (`host/tests/test_injection_defect.py`);
+and narration is verified both numerically grounded in its payload and
+non-contradictory of any categorical verdict it's given, with a
+deterministic fallback if the model can't manage either after a retry.
 
 ## License
 

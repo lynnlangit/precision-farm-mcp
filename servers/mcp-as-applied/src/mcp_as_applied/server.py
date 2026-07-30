@@ -12,11 +12,38 @@ from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import BaseModel
 
 from farm_core import pipeline
 from farm_core.audit import AuditLog
 
 mcp = FastMCP("as-applied")
+
+
+# Tool functions build one of these, then return its .model_dump() -- see
+# mcp_report_export.server for why (a bare Pydantic return type makes
+# FastMCP's client-side schema validation reject the refusal shape; a Union
+# return type wraps every response in a {"result": ...} envelope). Real
+# enforcement happens at construction time, not via the advertised MCP schema.
+class SnapshotProvenance(BaseModel):
+    data_dir: str
+    built_at: str
+    source_file_count: int
+
+
+class AsAppliedEvent(BaseModel):
+    timestamp: str
+    product: str
+    rate: float
+    rate_unit: str
+    lat: float
+    lon: float
+
+
+class GetAsAppliedEventsResult(BaseModel):
+    events: list[AsAppliedEvent]
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
@@ -108,7 +135,9 @@ def get_as_applied_events(field_name: str, season: int) -> dict:
         }
         for r in rows
     ]
-    return {"events": events, "provenance": _provenance()}
+    return GetAsAppliedEventsResult(
+        events=events, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
 
 
 if __name__ == "__main__":
