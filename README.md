@@ -1,10 +1,20 @@
 # Precision Farm MCP
 
-A local-first, offline agricultural decision-support tool for one farmer's
-laptop. It answers retrospective questions about a farm's own ten-season
-record — *"which fields made money"*, *"was the north eighty a bad field or
-a bad year"* — using an MCP (Model Context Protocol) architecture adapted
-from [precision-medicine-mcp](https://github.com/lynnlangit/precision-medicine-mcp).
+A local-first, offline decision-support tool for one farmer's laptop. Ask a
+plain-English question about your own farm's ten-season record — costs,
+yields, profit — and get back an answer grounded entirely in your own
+files, never a prediction or a guess.
+
+![farm-cli answering a question from a real run](docs/images/farm-cli-example.svg)
+
+Under the hood, a small local model (Gemma 3B via Ollama) only ever turns
+the question into a structured lookup and turns the computed answer into
+plain language — it never touches the data or the arithmetic. Everything
+else (field identity across years of renames/splits/merges, cost-ledger
+ingestion, yield reconciliation, profitability) is deterministic Python,
+checked against a synthetic ground-truth dataset, using an MCP (Model
+Context Protocol) architecture adapted from
+[precision-medicine-mcp](https://github.com/lynnlangit/precision-medicine-mcp).
 
 **v1 is retrospective arithmetic only.** No yield prediction, no crop
 simulation, no prescriptive recommendations, no remote sensing. Those are
@@ -44,27 +54,18 @@ flowchart TD
     Narrator -->|"plain-language answer"| Answer(("Farmer"))
 ```
 
-Gemma touches a question at exactly two points — turning it into a
-validated query, and turning an already-computed result into plain
-language. It never sees raw data, never holds a tool that could compute or
-alter a number, and never resolves an ambiguous field name on its own. That
-line is structural (the model layer has no import path to a database or MCP
-client at all — see `model/tests/test_model_bounded.py`), not just a prompt
-instruction.
+Gemma touches a question at exactly two points — parsing it into a
+validated query, and narrating a computed result. It never sees raw data,
+computes a number, or resolves an ambiguous name itself; the model layer
+can't import a database or MCP client (`model/tests/test_model_bounded.py`).
 
-Confirmation is split the same way, structurally: an MCP server is a
-non-interactive stdio subprocess and can never prompt a human, so every
-naming-drift alias, identity event, and column mapping is proposed,
-confirmed, and persisted once by `farm-ingest` — with a human physically
-present — and every query-time server only ever reads that persisted
-answer, refusing outright (`confirmation_required`) rather than guessing if
-it isn't there yet. Every decision, tool call, and refusal is written to a
-single hash-chained audit log that stays verifiable even though the host
-process and every spawned server write to it concurrently. And any farmer-
-authored free text (a cost-ledger note) that reaches Gemma's narration step
-is delimited as untrusted data first, redacted from the numeric-grounding
-check entirely, and never treated as an instruction — proven against an
-injected-prompt defect in the synthetic data, not just asserted.
+Confirmation is structural. A server can't prompt a human, so `farm-ingest`
+confirms and persists every alias, event, and mapping once, with a human
+present; servers read that record, refusing (`confirmation_required`)
+rather than guessing. Every decision lands in one hash-chained,
+concurrency-safe audit log. Ledger notes reaching Gemma are delimited as
+untrusted, excluded from grounding, and never followed as instructions —
+proven against an injected-prompt defect.
 
 ## Quick start
 
