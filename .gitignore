@@ -228,3 +228,4 @@ data/synthetic/*
 data/audit.jsonl
 data/audit.jsonl.pre-a1-fix
 data/confirmed_mappings.json
+.DS_Store

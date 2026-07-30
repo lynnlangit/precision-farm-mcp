@@ -122,20 +122,22 @@ all currently green:
 for pkg in generator core host model; do (cd $pkg && uv run pytest -q); done
 ```
 
-Notably: computed profit matches `ground_truth.json` for every field/season
-not carrying a deliberate defect; every injected defect is detected by its
-defect ID, including a naming-drift alias deliberately made ambiguous
-(`DEF-ALIASTIE`) to prove auto-approval produces a confidently wrong answer
-where confirmation produces the right one; no code path opens a
-non-loopback network connection (`host/tests/test_no_network.py`); the audit
-log's hash chain verifies even after real concurrent writes from the host
-process and two live server subprocesses
-(`host/tests/test_audit_multiprocess.py`); a prompt-injection defect planted
-in a cost-ledger note (`DEF-INJECTION`) is proven to leave the narration
-unaffected, not just non-crashing (`host/tests/test_injection_defect.py`);
-and narration is verified both numerically grounded in its payload and
-non-contradictory of any categorical verdict it's given, with a
-deterministic fallback if the model can't manage either after a retry.
+Notably:
+
+- 💰 **Profit matches ground truth** for every field/season without a
+  deliberate defect
+- 🔍 **Every injected defect is caught by its ID** — including
+  `DEF-ALIASTIE`, proving auto-approval gives a confidently *wrong* answer
+  where confirmation gives the right one
+- 🌐 **Zero non-loopback network calls** (`test_no_network.py`)
+- 🔗 **Audit log stays tamper-evident** under real concurrent writes from
+  the host process and two live server subprocesses
+  (`test_audit_multiprocess.py`)
+- 🛡️ **Prompt injection has no effect** — `DEF-INJECTION` proves the
+  narration is unaffected, not just non-crashing (`test_injection_defect.py`)
+- ✅ **Narration is grounded and consistent** — every number traces to the
+  payload, no verdict is contradicted, with a deterministic fallback if the
+  model can't manage both after a retry
 
 ## License
 
