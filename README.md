@@ -90,7 +90,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 ## Verification
 
-93 tests across the four packages, plus the 10 evaluation questions,
+106 tests across the four packages, plus the 10 evaluation questions,
 all currently green:
 
 ```bash
@@ -113,6 +113,9 @@ Notably:
 - ✅ **Narration is grounded and consistent** — every number traces to the
   payload, no verdict is contradicted, with a deterministic fallback if the
   model can't manage both after a retry
+- 📊 **Governance is measurable, not just asserted** — `farm-metrics`
+  reports HITL catch rate, tool grounding, narration faithfulness, and
+  sovereignty integrity straight from the audit log
 
 ## License
 

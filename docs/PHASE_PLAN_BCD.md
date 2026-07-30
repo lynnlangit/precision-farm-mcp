@@ -1,10 +1,10 @@
 # Precision Farm MCP — Remaining Plan: Phases B, C, D
 
-This is the continuation of the multi-session design-review plan. **Phase A
-is complete and merged** (see status below). This file preserves the full
+This is the continuation of the multi-session design-review plan. **Phases
+A and B are complete** (see status below). This file preserves the full
 B/C/D spec verbatim from the original review so a future session can resume
 without re-deriving context. Start a future session by reading this file in
-full before planning Phase B.
+full before planning Phase C.
 
 ## Status as of this writing
 
@@ -44,11 +44,42 @@ full before planning Phase B.
   - 93 tests green across 4 packages (generator 10, core 39, host 26,
     model 18). README updated: new intro + example + architecture diagram
     reflecting the ingest/query split, confirmation gate, audit log, and
-    untrusted-text boundary.
+    untrusted-text boundary. README's diagram later simplified for a
+    farmer audience; the detailed diagram moved to `docs/ARCHITECTURE.md`.
+- **Phase B** (metrics + architecture doc) — done, this session:
+  - **B1**: `core/src/farm_core/metrics.py` (pure functions) +
+    `farm-metrics` CLI, reporting HITL catch rate, tool grounding (2
+    rates), narration faithfulness, and sovereignty integrity from
+    `AuditLog.entries()`. Found along the way: two of the four metrics had
+    no data to read — `narrate_verified()` already computed grounding and
+    attempt/fallback info but the `narration` audit event only logged
+    `question`. Fixed by adding `attempts_used`/`used_fallback` to
+    `NarrationOutcome` and enriching the `narration` event with
+    `grounded`/`modeled_grounded`/`attempts`/`used_fallback`. Every rate is
+    `null` (not `0`) when its denominator is zero; legacy narration events
+    predating this change are counted and excluded, not miscounted.
+    `network_calls_attempted` is reported as a structural `0` citing
+    `test_no_network.py`'s two checks, not literally tallied from the
+    audit log (nothing there could ever produce a nonzero count).
+  - **B2**: `docs/ARCHITECTURE.md` gained a built/deferred/diverged
+    component table, a roadmap table, and a "known future tensions"
+    section recording the weather/sync-boundary trade-off before Phase C
+    needs it. `docs/test_architecture_doc.py` (standalone, no project venv
+    needed) asserts the diagram's server list matches `servers/`.
+  - Found and fixed a real, pre-existing, order-dependent bug in
+    `host/tests/test_no_network.py`'s own fixture while adding a new
+    live-Ollama test: `ollama.chat` is a bound method captured once at
+    import time, so a connection warmed by an earlier live-Ollama test in
+    the same run gets reused rather than reconnected, making the
+    fixture's own sanity check fail with no real non-loopback connection
+    ever happening. Fixed by rebinding to a fresh `Client().chat` in the
+    fixture — the actual security assertion (`assert not non_local`) was
+    never touched or weakened.
+  - 106 tests green across 4 packages (generator 10, core 50, host 28,
+    model 18), plus `docs/test_architecture_doc.py` passing standalone.
 
-**Not yet started: Phases B, C, D below.** Per the working agreement,
-check in for approval before starting Phase B, and again before C, and
-again before D.
+**Not yet started: Phases C, D below.** Per the working agreement, check
+in for approval before starting Phase C, and again before D.
 
 ---
 
@@ -240,6 +271,6 @@ no trust-contract change, and needs nothing from B or C.
 ## Where to resume
 
 Start a new session with: *"Read docs/PHASE_PLAN_BCD.md, then start with a
-Phase B plan only"* — this mirrors how Phase A was kicked off (plan first,
-`ExitPlanMode` for approval, then implement B1 → B2 in order, stopping for
-approval before C).
+Phase C plan only"* — this mirrors how Phases A and B were kicked off (plan
+first, `ExitPlanMode` for approval, then implement C1 → C2 → C3 → C4 in
+order, stopping for approval before D).

@@ -54,7 +54,9 @@ def _tool_args(query: QueryObject) -> dict:
     raise ValueError(f"no tool mapping for intent {query.intent!r}")  # pragma: no cover
 
 
-async def answer_question(question: str, audit_log: AuditLog) -> str:
+async def answer_question(
+    question: str, audit_log: AuditLog, env_overrides: dict[str, str] | None = None
+) -> str:
     audit_log.log("query", question=question)
 
     query = parse_question(question, SEASONS)
@@ -70,7 +72,7 @@ async def answer_question(question: str, audit_log: AuditLog) -> str:
     tool = _INTENT_TO_TOOL[query.intent]
     args = _tool_args(query)
 
-    async with MCPFleet([server]) as fleet:
+    async with MCPFleet([server], env_overrides=env_overrides) as fleet:
         tool_result = await fleet.call(server, tool, **args)
     audit_log.log("tool_call", server=server, tool=tool, args=args)
 
@@ -82,7 +84,16 @@ async def answer_question(question: str, audit_log: AuditLog) -> str:
     outcome = narrate_verified(question, result, untrusted_paths=tool_result.untrusted_paths)
     if outcome.truncated:
         audit_log.log("payload_truncated", server=server, tool=tool)
-    audit_log.log("narration", question=question)
+    audit_log.log(
+        "narration",
+        question=question,
+        grounded=outcome.measured_or_derived_grounding.is_grounded,
+        modeled_grounded=(
+            outcome.modeled_grounding.is_grounded if outcome.modeled_grounding else None
+        ),
+        attempts=outcome.attempts_used,
+        used_fallback=outcome.used_fallback,
+    )
     return outcome.text
 
 

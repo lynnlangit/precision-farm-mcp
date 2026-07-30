@@ -280,6 +280,8 @@ class NarrationOutcome:
     truncated: bool
     measured_or_derived_grounding: GroundingResult
     modeled_grounding: GroundingResult | None
+    attempts_used: int
+    used_fallback: bool
 
 
 def narrate_verified(
@@ -329,6 +331,8 @@ def narrate_verified(
                 truncated=truncated,
                 measured_or_derived_grounding=measured_or_derived,
                 modeled_grounding=modeled,
+                attempts_used=attempt + 1,
+                used_fallback=False,
             )
         prompt += _RETRY_SUFFIX
 
@@ -341,4 +345,6 @@ def narrate_verified(
         truncated=truncated,
         measured_or_derived_grounding=measured_or_derived,
         modeled_grounding=modeled,
+        attempts_used=max_attempts,
+        used_fallback=True,
     )

@@ -48,6 +48,50 @@ concurrency-safe audit log. Ledger notes reaching Gemma are delimited as
 untrusted, excluded from grounding, and never followed as instructions —
 proven against an injected-prompt defect.
 
+## Component status
+
+| Component | Status | Note |
+|---|---|---|
+| Ingest/query confirmation split, `ConfirmationGate` | Built | |
+| 5 MCP servers, `farm-cli`, `farm-ingest` | Built | |
+| Hash-chained, concurrency-safe audit log | Built | Fixed in Phase A — the host process and every spawned server write to it |
+| Provenance (`modeled` subtree), grounding split | Built | Nothing populates `modeled` yet — it's the seam Phase C lands in |
+| Untrusted-text handling, payload capping | Built | |
+| Governance metrics harness (`farm-metrics`) | Built | Phase B |
+| **Diverged:** confirmation resolved inline at query time | — | The original shape assumed a server could ask when unsure. Phase 0's audit found MCP servers are non-interactive stdio subprocesses that can never prompt a human, forcing the ingest/query split instead — a structural fix, not a config option |
+| Weather ingestion, attribution model | Deferred | Phase C |
+| Zone-level (sub-field) profitability | Deferred | Phase D |
+| Remote sensing | Deferred | No phase yet — out of v1 scope by design |
+| Agronomy reference data (cultivar calibration, etc.) | Deferred | Phase C's `core/expectation.py` is deliberately a *relative* expectation model specifically to avoid needing this |
+| Prescriptive crop model / recommendations | Deferred | No phase yet — explicitly out of v1 scope (see the README) |
+| Live weather / any sync boundary | Deferred | See known future tension below |
+
+## Roadmap
+
+| Deferred component | Needed by |
+|---|---|
+| Weather ingestion, attribution model | Phase C |
+| Zone-level profitability | Phase D |
+| Agronomy reference data | Phase C (only if absolute, not relative, expectation is ever required) |
+| Live weather / sync boundary | Not yet scheduled — see known future tension |
+| Remote sensing | Not yet scheduled |
+| Prescriptive crop model | Not yet scheduled |
+
+## Known future tensions
+
+**Weather stays synthetic through Phase C, on purpose.** With real weather
+the true decomposition of a shortfall is unknowable, so an attribution
+claim would be unfalsifiable; with generated weather it's known exactly,
+because the generator caused it. Synthetic weather also means Phase C adds
+zero new attack surface to `host/tests/test_no_network.py`'s guarantee.
+
+Live weather, if ever added, would need a sync boundary and would weaken
+"no outbound network" to "no network at query time" — a real, deliberate
+future divergence from the current all-local design. That trade-off is
+recorded here now, deliberately, rather than discovered later:
+**`test_no_network.py` is not weakened in this build**, and any future
+change that touches it should update this section first.
+
 ## See also
 
 - [README](../README.md) — the simple picture, quick start, and repository layout

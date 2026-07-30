@@ -36,6 +36,21 @@ FORBIDDEN_NETWORK_MODULES = {
 
 @pytest.fixture
 def track_connections(monkeypatch):
+    # ollama.chat is a bound method captured on a Client() built once at
+    # import time (ollama/__init__.py: "_client = Client(); chat =
+    # _client.chat") -- not a lazy lookup, so it keeps reusing that same
+    # client's pooled connection for the rest of the process. If an earlier
+    # live-Ollama test in this run already warmed one up (order-dependent
+    # -- e.g. test_injection_defect.py, if it runs first), that socket gets
+    # reused here rather than reconnected, so this fixture's own sanity
+    # check below would fail with no real non-loopback connection ever
+    # having happened. Rebinding to a fresh Client()'s .chat makes the
+    # observation window reliable regardless of run order; it doesn't
+    # change what's verified.
+    import ollama
+
+    ollama.chat = ollama.Client().chat
+
     connections: list = []
     original_connect = socket.socket.connect
 
