@@ -20,52 +20,25 @@ Context Protocol) architecture adapted from
 simulation, no prescriptive recommendations, no remote sensing. Those are
 later phases; building toward them now would be speculative structure.
 
-## Architecture
+## How it works
 
 ```mermaid
-flowchart TD
-    Farmer(("Farmer"))
-
-    Farmer -->|"once, interactively,<br/>per new/changed data"| Ingest["farm-ingest"]
-    Farmer -->|"any question, any time"| CLI["farm-cli"]
-
-    Ingest --> Gate["ConfirmationGate<br/>propose → human confirms → persist"]
-    Gate --> Store[("confirmed_mappings.json<br/>versioned — a correction appends,<br/>never overwrites")]
-    Gate -.-> Audit
-
-    CLI --> Parser["Gemma 3:4b<br/>question → validated query — nothing else"]
-    Parser --> Router["MCP client / tool router<br/>stdio child processes, no network"]
-
-    subgraph Servers["MCP servers — non-interactive, query-time, fail closed"]
-        FR["field-registry"]
-        YH["yield-history"]
-        AA["as-applied"]
-        CL2["cost-ledger"]
-        RE["report-export"]
-    end
-
-    Router --> Servers
-    Store -->|"read-only —<br/>a server can never prompt a human"| Servers
-    Servers -->|"unconfirmed ⇒ confirmation_required<br/>refusal, never a guess"| Router
-    Servers --> DB[("DuckDB — 10 seasons, local files only")]
-    Servers -.-> Audit[("audit.jsonl<br/>hash-chained — safe under concurrent<br/>host + server process writes")]
-
-    Router --> Narrator["Gemma 3:4b<br/>result → plain language. Farmer free text is<br/>delimited as untrusted data first — nothing else"]
-    Narrator -->|"plain-language answer"| Answer(("Farmer"))
+flowchart LR
+    You(("🧑‍🌾 You"))
+    You -->|"ask a question"| Tool["Precision Farm MCP"]
+    Tool -->|"looks at"| Data[("Your farm's own records<br/>— stays on your laptop")]
+    Data --> Tool
+    Tool -->|"plain-language answer"| You
 ```
 
-Gemma touches a question at exactly two points — parsing it into a
-validated query, and narrating a computed result. It never sees raw data,
-computes a number, or resolves an ambiguous name itself; the model layer
-can't import a database or MCP client (`model/tests/test_model_bounded.py`).
+Every answer comes only from your own records — never a guess, never sent
+anywhere else. If something in your data is unclear (a misspelled field
+name, an odd spreadsheet column), the tool asks you once, up front, and
+remembers your answer — it never guesses quietly.
 
-Confirmation is structural. A server can't prompt a human, so `farm-ingest`
-confirms and persists every alias, event, and mapping once, with a human
-present; servers read that record, refusing (`confirmation_required`)
-rather than guessing. Every decision lands in one hash-chained,
-concurrency-safe audit log. Ledger notes reaching Gemma are delimited as
-untrusted, excluded from grounding, and never followed as instructions —
-proven against an injected-prompt defect.
+For the full technical design — the MCP servers, the confirmation and
+audit system, how the model is kept from inventing numbers — see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Quick start
 
@@ -92,7 +65,9 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 | `servers/mcp-*` | Five FastMCP servers exposing `farm_core` as MCP tools (Pydantic I/O, `readOnlyHint`, structured refusals, a `modeled` field reserved for future model output) |
 | `host/` (`farm_host`) | The host application: MCP client/router (stdio, untrusted-text sanitization), `farm-ingest` (human-present confirmation) and `farm-cli` (query, fails closed) |
 | `model/` (`farm_model`) | The bounded Gemma layer: question → query, result → narration, plus the verification that keeps it bounded |
+| `docs/ARCHITECTURE.md` | The full technical architecture and diagram |
 | `docs/EVAL_QUESTIONS.md` | Ten independent evaluation questions, each verifiable against `ground_truth.json` |
+| `docs/PHASE_PLAN_BCD.md` | The remaining roadmap (metrics + architecture doc, weather/attribution, zone-level profitability) — start here to resume |
 
 ## The three hard problems
 
