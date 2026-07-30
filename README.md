@@ -7,6 +7,8 @@ files, never a prediction or a guess.
 
 ![farm-cli answering a question from a real run](docs/images/farm-cli-example.svg)
 
+[![Precision Farm MCP data flow](docs/data-flow.gif)](docs/data-flow.mp4)
+
 Under the hood, a small local model (Gemma 3B via Ollama) only ever turns
 the question into a structured lookup and turns the computed answer into
 plain language — it never touches the data or the arithmetic. Everything
