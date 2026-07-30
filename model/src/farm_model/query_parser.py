@@ -40,14 +40,19 @@ season", "the past three seasons"), put ONLY the count in \
 If neither is stated, leave both empty.
   Example: "how did 2019 and 2020 compare" -> seasons=[2019, 2020].
   Example: "last three years" -> season_count_from_latest=3, seasons=null.
-- bad_field_or_bad_year: classifies one field's profit history. Requires \
-"field_name" exactly as the farmer said it.
+- bad_field_or_bad_year: classifies one field's profit history. The phrasing \
+"was X a bad field or a bad year" / "was X a bad field or just a bad year" \
+is ALWAYS this intent, never explain_shortfall, even though it contains the \
+words "bad year". Requires "field_name" exactly as the farmer said it.
 - resolve_field_name: looks up what a name meant in a specific season. \
 Requires "raw_name" and "season".
 - yield_reconciliation: compares yield monitor vs scale ticket totals for \
 one field/season. Requires "field_name" and "season".
 - cost_reconciliation: compares ledger costs vs as-applied-derived costs for \
 one field/season. Requires "field_name" and "season".
+- explain_shortfall: only for a question starting with "why" or "what \
+caused", e.g. "why was X a bad year". Requires "field_name" exactly as the \
+farmer said it.
 - unrecognized: the question asks for something else entirely -- a \
 prediction, a recommendation, a yield forecast, a prescription map, anything \
 not a lookup against past records. Use this rather than forcing a fit.

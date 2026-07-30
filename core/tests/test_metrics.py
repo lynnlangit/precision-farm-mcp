@@ -6,6 +6,7 @@ metric actually reads.
 """
 
 from farm_core.metrics import (
+    attribution_backtest,
     build_report,
     hitl_catch_rate,
     narration_faithfulness,
@@ -135,3 +136,25 @@ def test_build_report_shape():
         "sovereignty_integrity",
     }
     assert report["entries_analyzed"] == 1
+
+
+# --- Phase C: attribution_backtest -- the one metric needing a live snapshot ---
+
+
+def test_attribution_backtest_reports_a_real_error_measure(farm_snapshot):
+    result = attribution_backtest(farm_snapshot)
+    assert result["attributed"] > 0
+    assert result["mae"] is not None
+    assert result["mae"] >= 0
+    assert result["rmse"] >= result["mae"]
+
+
+def test_build_report_omits_attribution_backtest_without_a_snapshot():
+    report = build_report([{"event": "confirmation_accepted"}])
+    assert "attribution_backtest" not in report
+
+
+def test_build_report_includes_attribution_backtest_with_a_snapshot(farm_snapshot):
+    report = build_report([{"event": "confirmation_accepted"}], snapshot=farm_snapshot)
+    assert "attribution_backtest" in report
+    assert report["attribution_backtest"]["attributed"] > 0

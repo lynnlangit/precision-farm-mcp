@@ -36,6 +36,10 @@ Every defect below is deliberate and recorded in `ground_truth.json` under `defe
 
 - `DEF-BASIS-2018` (season 2018): The 2018 cost tab reports Seed/Fertilizer/Chemical/Fuel/Cash Rent as total dollars for the field, not $/ac as in every other season -- the column headers say so, but a parser assuming a constant basis across seasons would misread it by ~acres-fold.
 
+### Management shortfall (yield override)
+
+- `DEF-MGMTSHORTFALL-2023-root_11` (season 2023): 'Coulee Field''s 2023 yield was deliberately knocked to 65% of what that season's weather and soil alone would have produced -- a direct management-shortfall override under otherwise ordinary weather, not a weather effect.
+
 ### Field merge
 
 - `evt_merge_root_07_root_08` (season 2022): Elevator Forty and Depot Forty merged into Elevator Forty-Depot Forty starting season 2022.
@@ -96,12 +100,16 @@ Every defect below is deliberate and recorded in `ground_truth.json` under `defe
 - `DEF-UNIT-2024` (season 2024): As-applied nitrogen recorded in lb_N/ac for 2024.
 - `DEF-UNIT-2025` (season 2025): As-applied nitrogen recorded in gal/ac of 32% UAN product for 2025; convert using 3.5392 lb N per gallon.
 
+### Weather shortfall (forced drought)
+
+- `DEF-WEATHERSHORTFALL-2018-root_01` (season 2018): 2018's precipitation was deliberately forced to 35% of its otherwise-generated total -- a genuine drought shared by every field active that season (including 'West 120'), not a management failure.
+
 ### Yield monitor calibration error
 
-- `DEF-CAL-2019-root_03` (season 2019): Yield monitor total (6,871 bu) is +6.9% off the scale ticket total (6,426 bu) on Home Quarter.
-- `DEF-CAL-2021-root_11` (season 2021): Yield monitor total (13,748 bu) is -3.4% off the scale ticket total (14,228 bu) on Coulee Field.
-- `DEF-CAL-2023-root_12` (season 2023): Yield monitor total (25,642 bu) is +3.8% off the scale ticket total (24,697 bu) on Section Corner.
-- `DEF-CAL-2024-root_11` (season 2024): Yield monitor total (15,107 bu) is -5.9% off the scale ticket total (16,047 bu) on Coulee Field.
+- `DEF-CAL-2019-root_03` (season 2019): Yield monitor total (5,008 bu) is +6.9% off the scale ticket total (4,683 bu) on Home Quarter.
+- `DEF-CAL-2021-root_11` (season 2021): Yield monitor total (13,468 bu) is -3.4% off the scale ticket total (13,938 bu) on Coulee Field.
+- `DEF-CAL-2023-root_12` (season 2023): Yield monitor total (25,513 bu) is +3.8% off the scale ticket total (24,573 bu) on Section Corner.
+- `DEF-CAL-2024-root_11` (season 2024): Yield monitor total (12,947 bu) is -5.9% off the scale ticket total (13,752 bu) on Coulee Field.
 
 ## Field identity
 

@@ -11,10 +11,10 @@
     <text x="20" y="66" fill="#28c840">$</text>
     <text x="36" y="66"><tspan fill="#e8e8e8">farm-cli </tspan><tspan fill="#7ec1ff">"was the north eighty a bad field or a bad year"</tspan></text>
 
-    <text x="20" y="106" fill="#e8e8e8">The North Eighty field was consistently profitable over the past ten</text>
-    <text x="20" y="130" fill="#e8e8e8">seasons, with an average profit of $128.72 per acre. There were no</text>
-    <text x="20" y="154" fill="#e8e8e8">losses recorded during this time, indicating it wasn't a bad year for</text>
-    <text x="20" y="178" fill="#e8e8e8">farming in that area.</text>
+    <text x="20" y="106" fill="#e8e8e8">The North Eighty had one clear outlier season over the past ten</text>
+    <text x="20" y="130" fill="#e8e8e8">years -- 2018 -- well below its typical $62.81/acre median profit.</text>
+    <text x="20" y="154" fill="#e8e8e8">Every other season was unremarkable, so this reads as a bad year,</text>
+    <text x="20" y="178" fill="#e8e8e8">not a chronically bad field.</text>
 
     <text x="20" y="218" fill="#28c840">$</text>
     <rect x="34" y="207" width="8" height="16" fill="#e8e8e8">

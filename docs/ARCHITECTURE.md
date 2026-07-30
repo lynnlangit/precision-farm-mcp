@@ -23,6 +23,7 @@ flowchart TD
         AA["as-applied"]
         CL2["cost-ledger"]
         RE["report-export"]
+        WH["weather-history"]
     end
 
     Router --> Servers
@@ -55,14 +56,14 @@ proven against an injected-prompt defect.
 | Ingest/query confirmation split, `ConfirmationGate` | Built | |
 | 5 MCP servers, `farm-cli`, `farm-ingest` | Built | |
 | Hash-chained, concurrency-safe audit log | Built | Fixed in Phase A — the host process and every spawned server write to it |
-| Provenance (`modeled` subtree), grounding split | Built | Nothing populates `modeled` yet — it's the seam Phase C lands in |
+| Provenance (`modeled` subtree), grounding split | Built | Populated by Phase C's weather/soil attribution on `bad_year` verdicts (`report-export.bad_field_or_bad_year`) — everywhere else it's still `null`, honestly, not a gap |
 | Untrusted-text handling, payload capping | Built | |
-| Governance metrics harness (`farm-metrics`) | Built | Phase B |
+| Governance metrics harness (`farm-metrics`) | Built | Phase B; gained an `attribution_backtest` section in Phase C |
 | **Diverged:** confirmation resolved inline at query time | — | The original shape assumed a server could ask when unsure. Phase 0's audit found MCP servers are non-interactive stdio subprocesses that can never prompt a human, forcing the ingest/query split instead — a structural fix, not a config option |
-| Weather ingestion, attribution model | Deferred | Phase C |
+| Weather ingestion, attribution model | Built | Phase C — synthetic daily weather + static soil AWC (`mcp-weather-history`), a *relative* expectation model (`core/expectation.py`) decomposing a shortfall into a weather-driven `season_effect` and an unexplained `residual`, and `QueryIntent.EXPLAIN_SHORTFALL` for "why" questions |
 | Zone-level (sub-field) profitability | Deferred | Phase D |
 | Remote sensing | Deferred | No phase yet — out of v1 scope by design |
-| Agronomy reference data (cultivar calibration, etc.) | Deferred | Phase C's `core/expectation.py` is deliberately a *relative* expectation model specifically to avoid needing this |
+| Agronomy reference data (cultivar calibration, etc.) | Deferred | `core/expectation.py` is deliberately a *relative* expectation model, which turned out not to need this after all |
 | Prescriptive crop model / recommendations | Deferred | No phase yet — explicitly out of v1 scope (see the README) |
 | Live weather / any sync boundary | Deferred | See known future tension below |
 
@@ -70,20 +71,22 @@ proven against an injected-prompt defect.
 
 | Deferred component | Needed by |
 |---|---|
-| Weather ingestion, attribution model | Phase C |
 | Zone-level profitability | Phase D |
-| Agronomy reference data | Phase C (only if absolute, not relative, expectation is ever required) |
 | Live weather / sync boundary | Not yet scheduled — see known future tension |
 | Remote sensing | Not yet scheduled |
 | Prescriptive crop model | Not yet scheduled |
+| Agronomy reference data | Not yet scheduled — only if an absolute (not relative) expectation model is ever required |
 
 ## Known future tensions
 
-**Weather stays synthetic through Phase C, on purpose.** With real weather
-the true decomposition of a shortfall is unknowable, so an attribution
-claim would be unfalsifiable; with generated weather it's known exactly,
-because the generator caused it. Synthetic weather also means Phase C adds
-zero new attack surface to `host/tests/test_no_network.py`'s guarantee.
+**Weather is synthetic, on purpose.** With real weather the true
+decomposition of a shortfall is unknowable, so an attribution claim would
+be unfalsifiable; with generated weather it's known exactly, because the
+generator caused it — verified directly by forcing one season's weather
+into a real drought and confirming `core/expectation.py`'s attribution
+correctly assigns it to weather, not management (`core/tests/
+test_expectation.py`). Synthetic weather also means Phase C added zero new
+attack surface to `host/tests/test_no_network.py`'s guarantee.
 
 Live weather, if ever added, would need a sync boundary and would weaken
 "no outbound network" to "no network at query time" — a real, deliberate

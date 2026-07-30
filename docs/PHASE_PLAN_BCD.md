@@ -1,10 +1,10 @@
 # Precision Farm MCP — Remaining Plan: Phases B, C, D
 
 This is the continuation of the multi-session design-review plan. **Phases
-A and B are complete** (see status below). This file preserves the full
+A, B, and C are complete** (see status below). This file preserves the full
 B/C/D spec verbatim from the original review so a future session can resume
 without re-deriving context. Start a future session by reading this file in
-full before planning Phase C.
+full before planning Phase D.
 
 ## Status as of this writing
 
@@ -77,9 +77,65 @@ full before planning Phase C.
     never touched or weakened.
   - 106 tests green across 4 packages (generator 10, core 50, host 28,
     model 18), plus `docs/test_architecture_doc.py` passing standalone.
+- **Phase C** (the world model, aimed backwards) — done, this session:
+  - **C1**: `generator/src/farm_data_gen/weather.py` — one AR(1)-
+    autocorrelated daily weather series per season (precip, temp min/max),
+    shared across every field active that season. `economics.
+    assign_soil_awc` gives each field a static AWC draw; yield became
+    causal (water deficit buffered by AWC, plus a small heat penalty, on
+    top of the existing baseline draw). Found and fixed along the way: the
+    original `CATASTROPHIC_YIELD_FACTOR` (0.25) no longer safely dominated
+    once weather added its own profit variance — tightened to 0.10, and
+    `stress_yield_k`/`min_yield_multiplier` tuned so ordinary weather
+    variance stays real but doesn't spuriously trigger the MAD-outlier rule
+    on its own (verified empirically against seed=42).
+  - **C3**: `DEF-WEATHERSHORTFALL` (a forced-drought season, shared farm-
+    wide) and `DEF-MGMTSHORTFALL` (a direct management-multiplier override
+    under ordinary weather), both structurally guaranteed regardless of
+    seed. Recorded in `ground_truth.json` both as defect records and as
+    top-level `weathershortfall`/`mgmtshortfall` keys.
+  - **C2**: Qualitative fixtures pinned and asserted
+    (`generator/tests/test_qualitative_fixtures.py`): Marginal Eighty still
+    chronically unprofitable, East 80 still exactly one outlier season,
+    `DEF-ALIASTIE`/`DEF-INJECTION` still fire, the coverage gap still
+    exists. `generator/src/farm_data_gen/eval_questions.py` now generates
+    `docs/EVAL_QUESTIONS.md` from `ground_truth.json` (never hand-edited
+    again); its field selections are computed dynamically, not hardcoded,
+    after forcing drought onto the field the old doc used as its "boring"
+    negative-control example changed that field's own story.
+    `host/tests/test_eval_questions.py` and the README CLI-mockup screenshot
+    refreshed against the regenerated data.
+  - **C4**: `core/src/farm_core/expectation.py` — a *relative* expectation
+    model (no cultivar calibration): `expected_yield = field's own average
+    × weather_multiplier(season, AWC)`, decomposed into `season_effect`
+    (weather-driven) and `residual` (unexplained). New `mcp-weather-history`
+    server. `bad_field_or_bad_year` gains `modeled.attribution` for
+    `bad_year` verdicts (one entry per outlier season) — the verdict itself
+    is unchanged, attribution only ever supplements it. New
+    `QueryIntent.EXPLAIN_SHORTFALL` for "why" questions, routed to the same
+    tool. `farm-metrics` gained an `attribution_backtest` section
+    (MAE/RMSE over every attributable field/season, published not hidden).
+  - Found and fixed a real bug in `verification.
+    check_narration_grounded_by_provenance` while wiring C4 end to end: a
+    narration correctly citing one real number from `evidence` and one real
+    number from `modeled` in the same sentence — exactly what an attribution
+    narration does — failed *both* grounding channels, because each channel
+    only recognized its own numbers. Never caught earlier because `modeled`
+    was always `None` before Phase C, so no narration could ever have
+    exercised this path. Fixed so a number grounded in either channel is
+    never counted against the other; only a genuine fabrication (grounded
+    in neither) fails a channel — `host/tests/test_metrics_cli.py`'s real-
+    question test caught it live.
+  - `docs/ARCHITECTURE.md` updated: weather ingestion/attribution moved
+    Deferred → Built, `weather-history` added to the server diagram, the
+    "known future tensions" section's synthetic-weather rationale confirmed
+    (not just planned).
+  - 130 tests green across 4 packages (generator 16, core 59, host 34,
+    model 20), plus `docs/test_architecture_doc.py` passing standalone.
+    `test_no_network.py` unchanged and unweakened.
 
-**Not yet started: Phases C, D below.** Per the working agreement, check
-in for approval before starting Phase C, and again before D.
+**Not yet started: Phase D below.** Per the working agreement, check in
+for approval before starting it.
 
 ---
 
@@ -271,6 +327,5 @@ no trust-contract change, and needs nothing from B or C.
 ## Where to resume
 
 Start a new session with: *"Read docs/PHASE_PLAN_BCD.md, then start with a
-Phase C plan only"* — this mirrors how Phases A and B were kicked off (plan
-first, `ExitPlanMode` for approval, then implement C1 → C2 → C3 → C4 in
-order, stopping for approval before D).
+Phase D plan only"* — this mirrors how Phases A, B, and C were kicked off
+(plan first, `ExitPlanMode` for approval, then implement).

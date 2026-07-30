@@ -99,6 +99,21 @@ CREATE TABLE IF NOT EXISTS as_applied_events (
     lon DOUBLE NOT NULL,
     source_file VARCHAR NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS weather_daily (
+    season INTEGER NOT NULL,
+    date DATE NOT NULL,
+    precip_mm DOUBLE NOT NULL,
+    temp_min_c DOUBLE NOT NULL,
+    temp_max_c DOUBLE NOT NULL,
+    source_file VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS soil_awc (
+    field_name VARCHAR NOT NULL,
+    awc_in DOUBLE NOT NULL,
+    source_file VARCHAR NOT NULL
+);
 """
 
 

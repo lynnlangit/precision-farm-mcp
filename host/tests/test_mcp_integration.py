@@ -12,6 +12,7 @@ entirely -- the ~1-2s per-server startup cost is worth paying per test for
 that robustness.
 """
 
+import json
 from pathlib import Path
 
 from farm_core import pipeline
@@ -162,3 +163,55 @@ async def test_yield_history_structured_refusals():
             await fleet.call("yield-history", "list_yield_reconciliation", season=1999)
         ).data
         assert invalid_season["code"] == "invalid_input"
+
+
+async def test_get_season_weather_returns_a_real_aggregate():
+    async with MCPFleet(["weather-history"]) as fleet:
+        result = (await fleet.call("weather-history", "get_season_weather", season=2018)).data
+    assert result["total_precip_mm"] > 0
+    assert result["heat_stress_days"] >= 0
+
+
+async def test_get_season_weather_structured_refusal_for_unknown_season():
+    async with MCPFleet(["weather-history"]) as fleet:
+        result = (await fleet.call("weather-history", "get_season_weather", season=1999)).data
+    assert result["code"] == "invalid_input"
+
+
+async def test_get_field_soil_resolves_a_naming_drift_alias():
+    async with MCPFleet(["weather-history"]) as fleet:
+        result = (
+            await fleet.call("weather-history", "get_field_soil", field_name="north eighty")
+        ).data
+    assert result["field_name"] == "N 80"
+    assert result["awc_in"] > 0
+
+
+async def test_get_field_soil_structured_refusal_for_unknown_field():
+    async with MCPFleet(["weather-history"]) as fleet:
+        result = (
+            await fleet.call("weather-history", "get_field_soil", field_name="Not A Real Field")
+        ).data
+    assert result["code"] == "not_found"
+
+
+async def test_bad_field_or_bad_year_carries_weather_attribution_for_the_forced_drought():
+    ground_truth = json.loads((DATA_DIR / "ground_truth.json").read_text())
+    ws = ground_truth["weathershortfall"]
+    name = ground_truth["canonical_fields"][ws["field_id"]]["display_name_by_season"][
+        str(ws["season"])
+    ]
+
+    async with MCPFleet(["report-export"]) as fleet:
+        result = (
+            await fleet.call("report-export", "bad_field_or_bad_year", field_name=name)
+        ).data
+
+    assert result["verdict"] == "bad_year"
+    entries = {a["season"]: a for a in result["modeled"]["attribution"]}
+    assert ws["season"] in entries
+    entry = entries[ws["season"]]
+    assert entry["calibrated"] is True
+    assert abs(entry["season_effect"]) > abs(entry["residual"]), (
+        "the forced drought should be explained mostly by weather, not left as residual"
+    )

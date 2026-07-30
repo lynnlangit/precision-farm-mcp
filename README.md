@@ -90,7 +90,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 ## Verification
 
-106 tests across the four packages, plus the 10 evaluation questions,
+130 tests across the four packages, plus the 10 evaluation questions,
 all currently green:
 
 ```bash

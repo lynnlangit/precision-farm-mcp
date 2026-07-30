@@ -16,12 +16,20 @@ from .boundaries import build_boundaries_by_season
 from .config import SimConfig
 from .cost_ledger import build_cost_ledger_workbook
 from .defects import plan_defects
+from .eval_questions import render_eval_questions
 from .farm import build_farm
 from .ground_truth import build_ground_truth
 from .readme import render_readme
 from .scale_tickets import build_scale_tickets_by_season
+from .weather import build_soil_awc_csv, build_weather_csv_by_season
 from .writer import write_json, write_text, write_workbook
 from .yield_monitor import build_yield_monitor_files
+
+# docs/EVAL_QUESTIONS.md is a top-level repo doc, not a generated-data
+# artifact under --out, so it needs a real repo-root path rather than one
+# relative to cwd -- a bare "docs/..." path scatters a stray copy wherever
+# the process happens to be running from (tests included).
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -58,7 +66,7 @@ def build_config(args: argparse.Namespace) -> SimConfig:
     return config
 
 
-def generate(config: SimConfig, out_dir: Path) -> None:
+def generate(config: SimConfig, out_dir: Path) -> dict:
     farm = build_farm(config)
     plan = plan_defects(farm)
 
@@ -69,6 +77,11 @@ def generate(config: SimConfig, out_dir: Path) -> None:
     scale_tickets_by_season = build_scale_tickets_by_season(farm)
     for season, csv_text in scale_tickets_by_season.items():
         write_text(out_dir / "scale_tickets" / f"scale_tickets_{season}.csv", csv_text)
+
+    weather_by_season_csv = build_weather_csv_by_season(farm)
+    for season, csv_text in weather_by_season_csv.items():
+        write_text(out_dir / "weather" / f"weather_{season}.csv", csv_text)
+    write_text(out_dir / "weather" / "soil_awc.csv", build_soil_awc_csv(farm))
 
     yield_monitor_files, ym_defects = build_yield_monitor_files(farm, plan)
     for _key, (filename, csv_text) in sorted(yield_monitor_files.items()):
@@ -86,12 +99,19 @@ def generate(config: SimConfig, out_dir: Path) -> None:
 
     write_text(out_dir / "README.md", render_readme(config, ground_truth))
 
+    return ground_truth
+
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         config = build_config(args)
-        generate(config, args.out)
+        ground_truth = generate(config, args.out)
+        # docs/EVAL_QUESTIONS.md is a top-level repo doc, not part of --out's
+        # generated-data tree -- only written by the CLI entry point, never
+        # by generate() itself (which tests call directly against a tmp_path
+        # out_dir and must have no side effect outside it).
+        write_text(_REPO_ROOT / "docs" / "EVAL_QUESTIONS.md", render_eval_questions(ground_truth))
     except (ValueError, AssertionError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

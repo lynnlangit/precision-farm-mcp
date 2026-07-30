@@ -28,21 +28,50 @@ async def test_metrics_report_reflects_a_real_answered_question(tmp_path):
     }
     audit_log = AuditLog(audit_path)
 
+    # Marginal Eighty is a chronic bad_field -- report-export never attaches
+    # modeled.attribution to a bad_field verdict (see mcp-report-export's
+    # server.py), so this exercises the "no modeled data yet" path even
+    # though Phase C is live; the modeled-data path is covered separately
+    # below.
     await answer_question(
-        "was the north eighty a bad field or a bad year", audit_log, env_overrides=env
+        "was the marginal eighty a bad field or a bad year", audit_log, env_overrides=env
     )
 
     report = build_report(AuditLog(audit_path).entries())
 
     assert report["tool_grounding"]["narrations_analyzed"] == 1
     assert report["narration_faithfulness"]["narrations_analyzed"] == 1
-    # Nothing modeled exists yet (Phase C's seam) -- must be null, not 0/0.
+    # No modeled data for a bad_field verdict -- must be null, not 0/0.
     assert report["tool_grounding"]["modeled_rate"] is None
     assert report["tool_grounding"]["narrations_with_modeled_data"] == 0
     # No confirmation prompts and no exports happened on this path.
     assert report["hitl_catch_rate"]["rate"] is None
     assert report["sovereignty_integrity"]["exports_performed"] == 0
     assert report["sovereignty_integrity"]["network_calls_attempted"] == 0
+
+
+async def test_metrics_report_reflects_modeled_attribution_for_a_bad_year(tmp_path):
+    """Phase C: a bad_year verdict carries modeled.attribution, and a
+    faithful narration citing both the evidence figure and the modeled
+    figure must be counted as grounded in both channels (see verification.
+    check_narration_grounded_by_provenance).
+    """
+    audit_path = tmp_path / "audit.jsonl"
+    env = {
+        "FARM_DATA_DIR": str(DATA_DIR),
+        "FARM_AUDIT_LOG": str(audit_path),
+        "FARM_CONFIRM_STORE": str(CONFIRM_STORE),
+    }
+    audit_log = AuditLog(audit_path)
+
+    await answer_question(
+        "was the north eighty a bad field or a bad year", audit_log, env_overrides=env
+    )
+
+    report = build_report(AuditLog(audit_path).entries())
+
+    assert report["tool_grounding"]["narrations_with_modeled_data"] == 1
+    assert report["tool_grounding"]["modeled_rate"] == 1.0
 
 
 def test_metrics_cli_prints_json_and_writes_out_file(tmp_path, capsys):

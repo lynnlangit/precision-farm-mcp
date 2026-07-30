@@ -107,6 +107,14 @@ def check_narration_grounded_by_provenance(
     Returns (measured_or_derived, modeled). modeled is None when the payload
     carries no "modeled" key at all -- reported as "no modeled values
     present", not a misleading 0/0 rate.
+
+    A number grounded in one channel is never counted against the other: a
+    narration citing both a real `evidence` figure and a real `modeled`
+    figure in the same sentence (Phase C's attribution supplementing a
+    verdict) must not fail *both* channels just because each channel only
+    recognizes its own numbers. Only a number grounded in *neither* channel
+    -- a genuine fabrication -- counts against either one, matching
+    check_narration_grounded()'s single safety-gate check below.
     """
     narration_numbers = extract_numbers(narration)
 
@@ -120,25 +128,25 @@ def check_narration_grounded_by_provenance(
     measured_or_derived_grounded = grounded_numbers(_without_provenance(non_modeled_payload))
     if question:
         measured_or_derived_grounded |= extract_numbers(question)
-    measured_or_derived = GroundingResult(
-        ungrounded_numbers=[
-            n
-            for n in sorted(narration_numbers)
-            if not any(_close(n, g) or _close(n, abs(g)) for g in measured_or_derived_grounded)
-        ]
-    )
+    modeled_grounded = grounded_numbers(modeled_payload) if modeled_payload else set()
+
+    def _grounded_in(n: float, grounded: set[float]) -> bool:
+        return any(_close(n, g) or _close(n, abs(g)) for g in grounded)
+
+    # A number grounded in either channel is grounded, full stop -- the same
+    # ungrounded set applies to both GroundingResults; only a fabrication
+    # (grounded in neither) counts against either channel.
+    ungrounded_numbers = [
+        n
+        for n in sorted(narration_numbers)
+        if not _grounded_in(n, measured_or_derived_grounded) and not _grounded_in(n, modeled_grounded)
+    ]
+    measured_or_derived = GroundingResult(ungrounded_numbers=ungrounded_numbers)
 
     if not modeled_payload:
         return measured_or_derived, None
 
-    modeled_grounded = grounded_numbers(modeled_payload)
-    modeled = GroundingResult(
-        ungrounded_numbers=[
-            n
-            for n in sorted(narration_numbers)
-            if not any(_close(n, g) or _close(n, abs(g)) for g in modeled_grounded)
-        ]
-    )
+    modeled = GroundingResult(ungrounded_numbers=ungrounded_numbers)
     return measured_or_derived, modeled
 
 

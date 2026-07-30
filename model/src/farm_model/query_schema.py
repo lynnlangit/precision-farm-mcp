@@ -14,6 +14,7 @@ from pydantic import BaseModel, model_validator
 class QueryIntent(str, Enum):
     WHICH_FIELDS_MADE_MONEY = "which_fields_made_money"
     BAD_FIELD_OR_BAD_YEAR = "bad_field_or_bad_year"
+    EXPLAIN_SHORTFALL = "explain_shortfall"
     RESOLVE_FIELD_NAME = "resolve_field_name"
     YIELD_RECONCILIATION = "yield_reconciliation"
     COST_RECONCILIATION = "cost_reconciliation"
@@ -32,6 +33,7 @@ class QueryIntent(str, Enum):
 _REQUIRED_FIELDS: dict[QueryIntent, tuple[str, ...]] = {
     QueryIntent.WHICH_FIELDS_MADE_MONEY: (),
     QueryIntent.BAD_FIELD_OR_BAD_YEAR: ("field_name",),
+    QueryIntent.EXPLAIN_SHORTFALL: ("field_name",),
     QueryIntent.RESOLVE_FIELD_NAME: ("raw_name", "season"),
     QueryIntent.YIELD_RECONCILIATION: ("field_name", "season"),
     QueryIntent.COST_RECONCILIATION: ("field_name", "season"),

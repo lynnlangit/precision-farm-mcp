@@ -140,6 +140,9 @@ def build_yield_monitor_files(
                         "type": "yield_monitor_calibration_error",
                         "field_id": field_id,
                         "season": season,
+                        "monitor_total_bu": round(monitor_total_bu, 1),
+                        "scale_ticket_total_bu": round(true_total_bu, 1),
+                        "pct_diff": round(error_pct * 100, 1),
                         "detail": (
                             f"Yield monitor total ({monitor_total_bu:,.0f} bu) is "
                             f"{error_pct * 100:+.1f}% off the scale ticket total "
@@ -162,6 +165,7 @@ def build_yield_monitor_files(
                         "type": "missing_swath",
                         "field_id": field_id,
                         "season": season,
+                        "gap_fraction": round(plan.missing_swath["gap_fraction"], 3),
                         "detail": (
                             f"GPS dropout on {name}: no yield monitor points recorded in "
                             f"the eastern {plan.missing_swath['gap_fraction'] * 100:.0f}% "

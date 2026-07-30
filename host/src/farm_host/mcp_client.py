@@ -88,6 +88,7 @@ SERVERS: dict[str, tuple[str, str]] = {
     "as-applied": ("mcp-as-applied", "mcp_as_applied"),
     "cost-ledger": ("mcp-cost-ledger", "mcp_cost_ledger"),
     "report-export": ("mcp-report-export", "mcp_report_export"),
+    "weather-history": ("mcp-weather-history", "mcp_weather_history"),
 }
 
 

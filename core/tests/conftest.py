@@ -15,6 +15,7 @@ from farm_core import (
     ingest_scale_tickets,
     ingest_unit_prices,
     ingest_yield_monitor,
+    pipeline,
     profitability,
 )
 
@@ -68,3 +69,13 @@ def profit_records(full_ingest, identity_resolution):
     return profitability.compute_profitability(
         full_ingest["con"], identity_resolution, full_ingest["alias_map"]
     )
+
+
+@pytest.fixture(scope="session")
+def farm_snapshot():
+    """A full FarmSnapshot (weather/soil included) built via the same
+    pipeline.build_farm_snapshot every MCP server and the CLI use --
+    separate from full_ingest above since expectation.py needs weather_daily
+    and soil_awc, which that older, more narrowly-scoped fixture predates.
+    """
+    return pipeline.build_farm_snapshot(DATA_DIR, confirm.auto_approve)

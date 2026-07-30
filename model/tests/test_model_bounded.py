@@ -78,6 +78,12 @@ def test_parses_bad_field_or_bad_year_with_drifted_field_name(known_seasons):
     assert result.field_name is not None and "north eighty" in result.field_name.lower()
 
 
+def test_parses_why_phrasing_as_explain_shortfall_not_bad_field_or_bad_year(known_seasons):
+    result = parse_question("Why was West 120 a bad year in 2018?", known_seasons)
+    assert result.intent == QueryIntent.EXPLAIN_SHORTFALL
+    assert result.field_name is not None and "west 120" in result.field_name.lower()
+
+
 def test_relative_season_window_resolved_deterministically_not_by_model(known_seasons):
     result = parse_question("Which fields made money in the last five years?", known_seasons)
     assert result.intent == QueryIntent.WHICH_FIELDS_MADE_MONEY
@@ -167,24 +173,43 @@ _FAKE_MODELED_PAYLOAD = {
 
 
 def test_narration_grounded_by_provenance_splits_measured_from_modeled():
+    """A narration legitimately citing a real number from *each* channel in
+    the same sentence -- Phase C's attribution supplementing a verdict, e.g.
+    "$139.24/ac median, weather explains 42.5 bu of the gap" -- must not
+    fail *both* channels just because each channel only recognizes its own
+    numbers. A number grounded in one channel is never counted against the
+    other; only a genuine fabrication (grounded in neither) fails a channel.
+    Caught for real once Phase C started populating `modeled` on an actual
+    query (bad_field_or_bad_year for a field with an outlier season):
+    host/tests/test_metrics_cli.py's real-question test tripped this exact
+    false negative on both channels at once.
+    """
     narration = "The median was $139.24/ac; weather explains 42.5 bu of the gap."
 
     measured_or_derived, modeled = check_narration_grounded_by_provenance(
         narration, _FAKE_MODELED_PAYLOAD
     )
 
-    # Each bucket only grounds numbers that actually live in it -- a number
-    # that's only in the *other* bucket shows up as ungrounded from this
-    # bucket's own narrow perspective, which is exactly what makes the two
-    # rates distinct rather than both just re-deriving the union check.
-    assert 42.5 in measured_or_derived.ungrounded_numbers
-    assert 139.24 not in measured_or_derived.ungrounded_numbers
-    assert 139.24 in modeled.ungrounded_numbers
-    assert 42.5 not in modeled.ungrounded_numbers
+    assert measured_or_derived.is_grounded
+    assert modeled.is_grounded
 
     # The safety gate itself is untouched: both numbers are grounded
     # *somewhere* in the combined payload, so the unified check still passes.
     assert check_narration_grounded(narration, _FAKE_MODELED_PAYLOAD).is_grounded
+
+
+def test_narration_grounded_by_provenance_still_catches_a_true_fabrication():
+    narration = "The median was $139.24/ac; weather explains 999.0 bu of the gap."
+
+    measured_or_derived, modeled = check_narration_grounded_by_provenance(
+        narration, _FAKE_MODELED_PAYLOAD
+    )
+
+    # 999.0 is grounded in neither channel -- a real fabrication, not a
+    # cross-channel citation, so it must still fail both.
+    assert not measured_or_derived.is_grounded
+    assert not modeled.is_grounded
+    assert not check_narration_grounded(narration, _FAKE_MODELED_PAYLOAD).is_grounded
 
 
 def test_narration_grounded_by_provenance_reports_no_modeled_data_as_none():

@@ -24,6 +24,7 @@ from . import (
     ingest_cost_ledger_names,
     ingest_scale_tickets,
     ingest_unit_prices,
+    ingest_weather,
     ingest_yield_monitor,
     profitability,
 )
@@ -80,6 +81,7 @@ def build_farm_snapshot(data_dir: Path, confirm_fn: confirm_mod.ConfirmFn) -> Fa
     ingest_scale_tickets.ingest_scale_tickets(con, data_dir)
     ingest_yield_monitor.ingest_yield_monitor(con, data_dir)
     ingest_as_applied.ingest_as_applied(con, data_dir)
+    ingest_weather.ingest_weather(con, data_dir)
 
     identity = field_identity.resolve_field_identity(con, SEASONS, confirm_fn)
     aliases = alias_resolution.resolve_all_aliases(con, SEASONS, confirm_fn)
@@ -96,6 +98,8 @@ def build_farm_snapshot(data_dir: Path, confirm_fn: confirm_mod.ConfirmFn) -> Fa
                 "scale_ticket_loads",
                 "yield_monitor_points",
                 "as_applied_events",
+                "weather_daily",
+                "soil_awc",
             )
             for row in con.execute(f"SELECT DISTINCT source_file FROM {table}").fetchall()
         }

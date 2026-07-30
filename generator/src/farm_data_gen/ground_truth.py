@@ -117,4 +117,6 @@ def build_ground_truth(
         "defects": defects,
         "marginal_field_id": find_marginal_field_id(farm.identity),
         "catastrophic_year": find_catastrophic_info(farm.identity, farm.records),
+        "weathershortfall": farm.weathershortfall,
+        "mgmtshortfall": farm.mgmtshortfall,
     }

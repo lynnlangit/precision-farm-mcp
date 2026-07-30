@@ -23,15 +23,17 @@ async def test_q2_east_80_is_a_genuine_one_season_outlier():
     r = result.data
     assert r["verdict"] == "bad_year"
     assert r["evidence"]["outlier_seasons"] == [2020]
-    assert r["evidence"]["median_profit_per_acre"] == 139.24
+    assert r["evidence"]["median_profit_per_acre"] == 68.18
 
 
-async def test_q3_west_120_is_a_normal_unremarkable_field():
+async def test_q3_south_160_south_is_a_normal_unremarkable_field():
     async with MCPFleet(["report-export"]) as fleet:
-        result = await fleet.call("report-export", "bad_field_or_bad_year", field_name="West 120")
+        result = await fleet.call(
+            "report-export", "bad_field_or_bad_year", field_name="South 160 South"
+        )
     r = result.data
     assert r["verdict"] == "consistently_profitable"
-    assert r["evidence"]["loss_rate"] == 0.3
+    assert r["evidence"]["loss_rate"] == 0.17
 
 
 async def test_q4_ranking_over_relative_five_year_window():
@@ -41,9 +43,9 @@ async def test_q4_ranking_over_relative_five_year_window():
         )
     r = result.data
     assert r["results"][0]["display_name"] == "East 80"
-    assert r["results"][0]["total_profit"] == 162146.32
+    assert r["results"][0]["total_profit"] == 135533.57
     assert r["results"][-1]["display_name"] == "Marginal Eighty"
-    assert r["results"][-1]["total_profit"] == -87773.68
+    assert r["results"][-1]["total_profit"] == -112044.66
 
 
 async def test_q5_ranking_over_explicit_named_years():
@@ -51,7 +53,7 @@ async def test_q5_ranking_over_explicit_named_years():
         result = await fleet.call("report-export", "which_fields_made_money", seasons=[2019, 2020])
     r = result.data
     assert r["results"][0]["display_name"] == "Depot Forty"
-    assert r["results"][0]["total_profit"] == 44527.24
+    assert r["results"][0]["total_profit"] == 17549.9
 
 
 async def test_q6_naming_drift_resolution():

@@ -21,6 +21,8 @@ from pydantic import BaseModel
 
 from farm_core import governance, pipeline
 from farm_core.audit import AuditLog
+from farm_core.expectation import AttributionUnavailable
+from farm_core.expectation import compute_attribution as _compute_attribution
 from farm_core.profitability import bad_field_or_bad_year as _bad_field_or_bad_year
 from farm_core.profitability import which_fields_made_money as _which_fields_made_money
 
@@ -68,6 +70,15 @@ class WhichFieldsMadeMoneyResult(BaseModel):
 
 
 class BadFieldOrBadYearResult(BaseModel):
+    """`modeled.attribution` is populated only for a `bad_year` verdict --
+    one entry per outlier season, each Phase C's weather/soil expectation
+    model (farm_core.expectation) decomposing that season's shortfall into
+    a weather-driven `season_effect` and an unexplained `residual`. The
+    `verdict` itself is unchanged by this: it's a purely statistical
+    classification that needs no weather data and stays the primary
+    answer; attribution only ever supplements it, never replaces it.
+    """
+
     canonical_id: str
     verdict: str
     evidence: dict[str, Any]
@@ -186,8 +197,25 @@ def bad_field_or_bad_year(field_name: str) -> dict:
     current_name = snap.identity.lineages[canonical_id].display_name_by_season[
         max(snap.identity.lineages[canonical_id].active_seasons)
     ]
+
+    modeled = None
+    outlier_seasons = result.get("evidence", {}).get("outlier_seasons")
+    if result.get("verdict") == "bad_year" and outlier_seasons:
+        attributions = []
+        for outlier_season in outlier_seasons:
+            try:
+                attribution = _compute_attribution(snap, canonical_id, outlier_season)
+            except AttributionUnavailable:
+                continue
+            attributions.append({"season": outlier_season, **attribution.to_json()})
+        if attributions:
+            modeled = {"attribution": attributions}
+
     return BadFieldOrBadYearResult(
-        **result, field_name=current_name, provenance=SnapshotProvenance(**_provenance())
+        **result,
+        field_name=current_name,
+        provenance=SnapshotProvenance(**_provenance()),
+        modeled=modeled,
     ).model_dump()
 
 

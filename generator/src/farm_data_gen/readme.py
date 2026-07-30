@@ -22,6 +22,8 @@ _DEFECT_TYPE_LABELS = {
     "cost_basis_total_dollars": "Spreadsheet mess: total-dollars cost basis",
     "transposed_digit": "Spreadsheet mess: transposed digit",
     "unit_inconsistency": "Unit inconsistency (N rate)",
+    "weather_shortfall": "Weather shortfall (forced drought)",
+    "management_shortfall": "Management shortfall (yield override)",
 }
 
 

@@ -11,12 +11,22 @@ provenance` already uses for "no modeled data yet". Narration events logged
 before this module existed lack the fields these metrics need (`grounded`,
 `attempts`, ...); such entries are counted and excluded, not silently
 treated as a failure.
+
+`attribution_backtest` is the one exception to "pure over audit entries":
+it needs a live `FarmSnapshot` (Phase C's weather/soil data, not anything
+logged to the audit trail), so it's a separate function taking a snapshot
+directly, and `build_report` only includes it when a snapshot is passed.
 """
 
 from __future__ import annotations
 
 import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from . import expectation
+
+if TYPE_CHECKING:
+    from .pipeline import FarmSnapshot
 
 _CONFIRMATION_EVENTS = ("confirmation_accepted", "confirmation_corrected", "confirmation_refused")
 
@@ -138,8 +148,27 @@ def sovereignty_integrity(entries: list[dict]) -> dict[str, Any]:
     }
 
 
-def build_report(entries: list[dict]) -> dict[str, Any]:
+def attribution_backtest(snapshot: FarmSnapshot) -> dict[str, Any]:
+    """Expected vs. observed yield (bu/ac) across every field/season with
+    enough history and weather coverage to attribute -- farm_core.
+    expectation's relative expectation model, published here rather than
+    left as an internal implementation detail (per the working agreement:
+    a model's real error rate is reported, not hidden).
+    """
+    result = expectation.backtest(snapshot)
     return {
+        "definition": (
+            "MAE/RMSE of expected vs. observed yield (bu/ac) over every "
+            "field/season farm_core.expectation could attribute; "
+            "'skipped' counts field/seasons refused for too little history "
+            "or missing weather coverage, not a failure"
+        ),
+        **result,
+    }
+
+
+def build_report(entries: list[dict], snapshot: FarmSnapshot | None = None) -> dict[str, Any]:
+    report = {
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "entries_analyzed": len(entries),
         "hitl_catch_rate": hitl_catch_rate(entries),
@@ -147,3 +176,6 @@ def build_report(entries: list[dict]) -> dict[str, Any]:
         "narration_faithfulness": narration_faithfulness(entries),
         "sovereignty_integrity": sovereignty_integrity(entries),
     }
+    if snapshot is not None:
+        report["attribution_backtest"] = attribution_backtest(snapshot)
+    return report

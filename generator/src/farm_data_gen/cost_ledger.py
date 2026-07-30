@@ -275,6 +275,8 @@ def _write_cost_tab(
                     "type": "transposed_digit",
                     "field_id": row.field_id,
                     "season": season,
+                    "ledger_value": seed,
+                    "correct_value": correct_value,
                     "detail": (
                         f"Seed cost cell for {row.field_name} in {season} reads "
                         f"{seed} instead of the correct {correct_value}."

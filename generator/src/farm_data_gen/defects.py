@@ -125,6 +125,8 @@ def build_structural_defect_records(farm: FarmModel, plan: DefectPlan) -> list[d
             "type": "naming_drift",
             "field_id": drift_field.field_id,
             "season": None,
+            "canonical_name": canonical_name,
+            "variants_by_season": {str(s): v for s, v in variants_by_season.items()},
             "detail": (
                 f"'{canonical_name}' appears in the cost ledger's Field column under "
                 "different spellings by season: "
@@ -179,6 +181,62 @@ def build_structural_defect_records(farm: FarmModel, plan: DefectPlan) -> list[d
                 ),
             }
         )
+
+    ws = farm.weathershortfall
+    ws_field = farm.identity.canonical_fields[ws["field_id"]]
+    ws_name = ws_field.display_name_by_season[ws["season"]]
+    records.append(
+        {
+            "defect_id": f"DEF-WEATHERSHORTFALL-{ws['season']}-{ws['field_id']}",
+            "type": "weather_shortfall",
+            "field_id": ws["field_id"],
+            "season": ws["season"],
+            "true_cause": "weather",
+            "detail": (
+                f"{ws['season']}'s precipitation was deliberately forced to "
+                f"{farm.config.weathershortfall_drought_factor:.0%} of its otherwise-generated "
+                f"total -- a genuine drought shared by every field active that season "
+                f"(including {ws_name!r}), not a management failure."
+            ),
+            "expected_detection": (
+                "core/expectation.py's attribution must show a large weather-driven "
+                f"season_effect and a near-zero residual for {ws_name!r} in "
+                f"{ws['season']} -- weather alone should explain the shortfall."
+            ),
+            "ground_truth_correction": (
+                f"{ws['season']} was a bad YEAR for {ws_name!r}, not a bad field: "
+                "normal management, forced drought weather."
+            ),
+        }
+    )
+
+    ms = farm.mgmtshortfall
+    ms_field = farm.identity.canonical_fields[ms["field_id"]]
+    ms_name = ms_field.display_name_by_season[ms["season"]]
+    records.append(
+        {
+            "defect_id": f"DEF-MGMTSHORTFALL-{ms['season']}-{ms['field_id']}",
+            "type": "management_shortfall",
+            "field_id": ms["field_id"],
+            "season": ms["season"],
+            "true_cause": "management",
+            "detail": (
+                f"{ms_name!r}'s {ms['season']} yield was deliberately knocked to "
+                f"{farm.config.mgmtshortfall_multiplier:.0%} of what that season's weather "
+                "and soil alone would have produced -- a direct management-shortfall "
+                "override under otherwise ordinary weather, not a weather effect."
+            ),
+            "expected_detection": (
+                "core/expectation.py's attribution must show ordinary weather for "
+                f"{ms['season']} but a large unexplained residual for {ms_name!r} -- "
+                "weather does NOT explain this shortfall."
+            ),
+            "ground_truth_correction": (
+                f"{ms['season']} was a bad FIELD (management) year for {ms_name!r}, "
+                "not a bad weather year."
+            ),
+        }
+    )
 
     for season in plan.no_monitor_seasons:
         records.append(

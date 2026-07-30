@@ -28,6 +28,7 @@ DEFAULT_AUDIT_LOG = REPO_ROOT / "data" / "audit.jsonl"
 _INTENT_TO_SERVER: dict[QueryIntent, str] = {
     QueryIntent.WHICH_FIELDS_MADE_MONEY: "report-export",
     QueryIntent.BAD_FIELD_OR_BAD_YEAR: "report-export",
+    QueryIntent.EXPLAIN_SHORTFALL: "report-export",
     QueryIntent.RESOLVE_FIELD_NAME: "field-registry",
     QueryIntent.YIELD_RECONCILIATION: "yield-history",
     QueryIntent.COST_RECONCILIATION: "cost-ledger",
@@ -36,6 +37,11 @@ _INTENT_TO_SERVER: dict[QueryIntent, str] = {
 _INTENT_TO_TOOL: dict[QueryIntent, str] = {
     QueryIntent.WHICH_FIELDS_MADE_MONEY: "which_fields_made_money",
     QueryIntent.BAD_FIELD_OR_BAD_YEAR: "bad_field_or_bad_year",
+    # Same underlying tool as bad_field_or_bad_year -- once C4 lands, its
+    # response already carries modeled.attribution, so "why was X a bad
+    # year" and "was X a bad field or a bad year" are the same lookup,
+    # just recognized as different question shapes at the parsing layer.
+    QueryIntent.EXPLAIN_SHORTFALL: "bad_field_or_bad_year",
     QueryIntent.RESOLVE_FIELD_NAME: "resolve_field_name",
     QueryIntent.YIELD_RECONCILIATION: "get_yield_reconciliation",
     QueryIntent.COST_RECONCILIATION: "get_cost_reconciliation",
@@ -45,7 +51,7 @@ _INTENT_TO_TOOL: dict[QueryIntent, str] = {
 def _tool_args(query: QueryObject) -> dict:
     if query.intent == QueryIntent.WHICH_FIELDS_MADE_MONEY:
         return {"seasons": query.seasons}
-    if query.intent == QueryIntent.BAD_FIELD_OR_BAD_YEAR:
+    if query.intent in (QueryIntent.BAD_FIELD_OR_BAD_YEAR, QueryIntent.EXPLAIN_SHORTFALL):
         return {"field_name": query.field_name}
     if query.intent == QueryIntent.RESOLVE_FIELD_NAME:
         return {"raw_name": query.raw_name, "season": query.season}
