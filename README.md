@@ -62,12 +62,12 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 |---|---|
 | `generator/` | Deterministic synthetic-data generator: 10 seasons, ~12 fields, every defect (naming drift, splits/merges, sensor calibration error, messy spreadsheets) deliberately injected and recorded in `ground_truth.json` |
 | `core/` (`farm_core`) | Shared library: DuckDB ingestion, field-identity resolution, reconciliation, the profitability engine, audit log, governance |
-| `servers/mcp-*` | Five FastMCP servers exposing `farm_core` as MCP tools (Pydantic I/O, `readOnlyHint`, structured refusals, a `modeled` field reserved for future model output) |
+| `servers/mcp-*` | Six FastMCP servers exposing `farm_core` as MCP tools (Pydantic I/O, `readOnlyHint`, structured refusals, a `modeled` field reserved for model output) |
 | `host/` (`farm_host`) | The host application: MCP client/router (stdio, untrusted-text sanitization), `farm-ingest` (human-present confirmation) and `farm-cli` (query, fails closed) |
 | `model/` (`farm_model`) | The bounded Gemma layer: question → query, result → narration, plus the verification that keeps it bounded |
 | `docs/ARCHITECTURE.md` | The full technical architecture and diagram |
-| `docs/EVAL_QUESTIONS.md` | Ten independent evaluation questions, each verifiable against `ground_truth.json` |
-| `docs/PHASE_PLAN_BCD.md` | The remaining roadmap (metrics + architecture doc, weather/attribution, zone-level profitability) — start here to resume |
+| `docs/EVAL_QUESTIONS.md` | Eleven independent evaluation questions, each verifiable against `ground_truth.json` |
+| `docs/PHASE_PLAN_BCD.md` | The phase history and roadmap |
 
 ## The three hard problems
 
@@ -90,7 +90,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 ## Verification
 
-130 tests across the four packages, plus the 10 evaluation questions,
+150 tests across the four packages, plus the 11 evaluation questions,
 all currently green:
 
 ```bash

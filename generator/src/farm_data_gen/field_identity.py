@@ -70,6 +70,12 @@ ALIAS_TIE_MISSPELLING = "Hom Corner"
 ALIAS_TIE_NAIVE_WRONG_MATCH = "Section Corner"
 ALIAS_TIE_SEASON_INDEX = 7
 
+# Deliberate defect (DEF-BADZONE, Phase D): root_12 is the passive side of
+# the alias tie above (no altered data of its own outside season index 7),
+# so a different season on the same field is a genuinely clean pick for a
+# separate, unrelated defect -- see config.badzone_season_index.
+BADZONE_FIELD_ID = "root_12"
+
 _EXTRA_FIELD_BASE_NAMES = [
     "Grain Bin Quarter",
     "Windbreak Forty",

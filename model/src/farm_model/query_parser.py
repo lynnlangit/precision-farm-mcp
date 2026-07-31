@@ -53,6 +53,12 @@ one field/season. Requires "field_name" and "season".
 - explain_shortfall: only for a question starting with "why" or "what \
 caused", e.g. "why was X a bad year". Requires "field_name" exactly as the \
 farmer said it.
+- zone_profitability: asks about PART of one named field, e.g. "which part \
+of X is losing money", "is any part of X unprofitable". Requires \
+"field_name" and "season".
+- unprofitable_zones_in_profitable_fields: asks about the WHOLE farm, no \
+field named, e.g. "what share of acres are losing money in otherwise good \
+fields". Requires nothing.
 - unrecognized: the question asks for something else entirely -- a \
 prediction, a recommendation, a yield forecast, a prescription map, anything \
 not a lookup against past records. Use this rather than forcing a fit.

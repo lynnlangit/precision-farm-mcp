@@ -50,6 +50,7 @@ DETERMINISTIC_STRING_FIELDS = frozenset(
         "run",
         "pending_key",
         "exported_to",
+        "unavailable_reason",
     }
 )
 

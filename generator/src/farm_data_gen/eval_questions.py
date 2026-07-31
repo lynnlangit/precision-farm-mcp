@@ -100,6 +100,7 @@ def render_eval_questions(ground_truth: dict) -> str:
     cat = ground_truth["catastrophic_year"]
     ws = ground_truth["weathershortfall"]
     ms = ground_truth["mgmtshortfall"]
+    bad_zone = ground_truth.get("bad_zone")
 
     marginal_verdict, marginal_evidence = _classify(_profits_by_season(ground_truth, marginal_id))
     cat_verdict, cat_evidence = _classify(_profits_by_season(ground_truth, cat["field_id"]))
@@ -270,6 +271,34 @@ def render_eval_questions(ground_truth: dict) -> str:
         f"{rental_lost_event['effective_season']}; no boundary exists for this field from "
         f"{rental_lost_event['effective_season'] + 1} onward.",
         "",
+    ]
+
+    if bad_zone is not None:
+        bz_name = ground_truth["canonical_fields"][bad_zone["field_id"]][
+            "display_name_by_season"
+        ][str(bad_zone["season"])]
+        # No dollar figure here, deliberately: zone-level numbers are computed
+        # by farm_core.zone_profitability from raw yield_monitor_points at
+        # query time, not stored in ground_truth.json -- reproducing them here
+        # would mean either depending on farm_core (forbidden, real package
+        # boundary) or duplicating the point-grid arithmetic (fragile,
+        # unlike questions 1-5's plain reimplementation of the classifier).
+        lines += [
+            "### 11. A hidden bad patch inside a fine field",
+            f"**Q:** Is any part of {bz_name} losing money in {bad_zone['season']}, even "
+            "though the field overall is profitable?",
+            f'**Tool:** `report-export.zone_profitability(field_name="{bz_name}", '
+            f"season={bad_zone['season']})`",
+            f"**Verifiable answer:** Zone {bad_zone['zone_index']} shows a negative "
+            f"`profit`, while {bz_name}'s field-level profit for {bad_zone['season']} "
+            "(`profitability.<field>.*.profit`) stays positive and exactly matches the "
+            "no-defect figure -- the shortfall is confined to one zone, not visible in "
+            f"the field total. Ground truth: `DEF-BADZONE-{bad_zone['season']}-"
+            f"{bad_zone['field_id']}`.",
+            "",
+        ]
+
+    lines += [
         "---",
         "",
         "## What these are testing collectively",
@@ -284,7 +313,13 @@ def render_eval_questions(ground_truth: dict) -> str:
         "- **7-9** exercise all three reconciliation defects Phase 2 was built to catch, "
         "including the one (#8) specifically designed so a naive totals-only check would "
         "pass it silently.",
-        "",
     ]
+    if bad_zone is not None:
+        lines.append(
+            "- **11** exercises Phase D's zone-level profitability -- a shortfall that's "
+            "genuinely invisible at the field level, only visible once yield_monitor_points "
+            "are gridded into zones."
+        )
+    lines.append("")
 
     return "\n".join(lines) + "\n"

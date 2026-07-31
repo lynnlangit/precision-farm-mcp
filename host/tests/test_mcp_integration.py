@@ -19,6 +19,10 @@ from farm_core import pipeline
 from farm_core.audit import AuditLog
 from farm_core.profitability import bad_field_or_bad_year, which_fields_made_money
 from farm_core.reconciliation import reconcile_yield_vs_scale
+from farm_core.zone_profitability import (
+    compute_zone_profitability,
+    unprofitable_zones_in_profitable_fields,
+)
 from farm_host.mcp_client import MCPFleet
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -215,3 +219,79 @@ async def test_bad_field_or_bad_year_carries_weather_attribution_for_the_forced_
     assert abs(entry["season_effect"]) > abs(entry["residual"]), (
         "the forced drought should be explained mostly by weather, not left as residual"
     )
+
+
+async def test_zone_profitability_matches_direct_call():
+    ground_truth = json.loads((DATA_DIR / "ground_truth.json").read_text())
+    bad_zone = ground_truth["bad_zone"]
+    name = ground_truth["canonical_fields"][bad_zone["field_id"]]["display_name_by_season"][
+        str(bad_zone["season"])
+    ]
+    canonical_id = DIRECT_SNAPSHOT.canonical_id_for_name(name)
+
+    async with MCPFleet(["report-export"]) as fleet:
+        mcp_result = (
+            await fleet.call(
+                "report-export", "zone_profitability", field_name=name, season=bad_zone["season"]
+            )
+        ).data
+
+    direct_result = compute_zone_profitability(DIRECT_SNAPSHOT, canonical_id, bad_zone["season"])
+    assert mcp_result["field_profit"] == direct_result.field_profit
+    assert [z["profit"] for z in mcp_result["zones"]] == [z.profit for z in direct_result.zones]
+
+
+async def test_zone_profitability_shows_def_badzone_as_negative():
+    ground_truth = json.loads((DATA_DIR / "ground_truth.json").read_text())
+    bad_zone = ground_truth["bad_zone"]
+    name = ground_truth["canonical_fields"][bad_zone["field_id"]]["display_name_by_season"][
+        str(bad_zone["season"])
+    ]
+
+    async with MCPFleet(["report-export"]) as fleet:
+        result = (
+            await fleet.call(
+                "report-export", "zone_profitability", field_name=name, season=bad_zone["season"]
+            )
+        ).data
+
+    target = result["zones"][bad_zone["zone_index"]]
+    assert target["available"] is True
+    assert target["profit"] < 0
+    assert result["field_profit"] > 0
+
+
+async def test_zone_profitability_structured_refusal_for_uncovered_season():
+    async with MCPFleet(["report-export"]) as fleet:
+        result = (
+            await fleet.call(
+                "report-export", "zone_profitability", field_name="West 120", season=2016
+            )
+        ).data
+    assert result["code"] == "invalid_input"
+
+
+async def test_zone_profitability_structured_refusal_for_unknown_field():
+    async with MCPFleet(["report-export"]) as fleet:
+        result = (
+            await fleet.call(
+                "report-export",
+                "zone_profitability",
+                field_name="Not A Real Field",
+                season=2024,
+            )
+        ).data
+    assert result["code"] == "not_found"
+
+
+async def test_unprofitable_zones_summary_matches_direct_call():
+    async with MCPFleet(["report-export"]) as fleet:
+        mcp_result = (
+            await fleet.call("report-export", "unprofitable_zones_in_profitable_fields")
+        ).data
+    direct_result = unprofitable_zones_in_profitable_fields(DIRECT_SNAPSHOT)
+    assert (
+        mcp_result["pct_acres_unprofitable_in_profitable_fields"]
+        == direct_result["pct_acres_unprofitable_in_profitable_fields"]
+    )
+    assert mcp_result["acres_examined"] == direct_result["acres_examined"]

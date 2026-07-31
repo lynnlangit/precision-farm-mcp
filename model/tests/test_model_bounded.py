@@ -84,6 +84,23 @@ def test_parses_why_phrasing_as_explain_shortfall_not_bad_field_or_bad_year(know
     assert result.field_name is not None and "west 120" in result.field_name.lower()
 
 
+def test_parses_zone_question_as_zone_profitability(known_seasons):
+    result = parse_question(
+        "Is any part of Section Corner losing money in 2024?", known_seasons
+    )
+    assert result.intent == QueryIntent.ZONE_PROFITABILITY
+    assert result.field_name is not None and "section corner" in result.field_name.lower()
+    assert result.season == 2024
+
+
+def test_parses_farmwide_question_as_unprofitable_zones_summary(known_seasons):
+    result = parse_question(
+        "What share of acres are losing money in otherwise good fields?", known_seasons
+    )
+    assert result.intent == QueryIntent.UNPROFITABLE_ZONES_IN_PROFITABLE_FIELDS
+    assert result.field_name is None
+
+
 def test_relative_season_window_resolved_deterministically_not_by_model(known_seasons):
     result = parse_question("Which fields made money in the last five years?", known_seasons)
     assert result.intent == QueryIntent.WHICH_FIELDS_MADE_MONEY

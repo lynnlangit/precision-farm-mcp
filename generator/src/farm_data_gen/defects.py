@@ -19,6 +19,7 @@ from .field_identity import (
     ALIAS_TIE_MISSPELLING,
     ALIAS_TIE_NAIVE_WRONG_MATCH,
     ALIAS_TIE_SEASON_INDEX,
+    BADZONE_FIELD_ID,
     scaled_indices,
 )
 
@@ -32,6 +33,7 @@ class DefectPlan:
     spreadsheet_mess: dict  # keyed defect assignments, see below
     total_dollars_season: int
     transposed_digit: dict  # {season, field_id, original, transposed}
+    bad_zone: dict | None  # {field_id, season, zone_index} or None if the field isn't in the roster
 
 
 def plan_defects(farm: FarmModel) -> DefectPlan:
@@ -94,6 +96,16 @@ def plan_defects(farm: FarmModel) -> DefectPlan:
         "blank_rows_season": seasons[min(5, len(seasons) - 1)],
     }
 
+    bad_zone = None
+    if BADZONE_FIELD_ID in farm.identity.canonical_fields:
+        bad_zone_season = seasons[min(config.badzone_season_index, len(seasons) - 1)]
+        if BADZONE_FIELD_ID in farm.fields_active_in(bad_zone_season):
+            bad_zone = {
+                "field_id": BADZONE_FIELD_ID,
+                "season": bad_zone_season,
+                "zone_index": config.badzone_zone_index,
+            }
+
     return DefectPlan(
         no_monitor_seasons=no_monitor_seasons,
         calibration_errors=calibration_errors,
@@ -102,6 +114,7 @@ def plan_defects(farm: FarmModel) -> DefectPlan:
         spreadsheet_mess=spreadsheet_mess,
         total_dollars_season=total_dollars_season,
         transposed_digit={"season": transposed_season, "field_id": transposed_field_id},
+        bad_zone=bad_zone,
     )
 
 

@@ -79,6 +79,11 @@ class SimConfig:
     weathershortfall_season_index: int = 2  # season for the forced drought
     mgmtshortfall_season_index: int = 7  # a different season, normal weather, forced management
 
+    # Zone-level profitability (Phase D)
+    badzone_season_index: int = 8  # must fall within the newest as_applied_seasons_count window
+    badzone_zone_index: int = 0  # which of the 2x2 grid zones (see core.zone_profitability)
+    badzone_weight_factor: float = 0.15  # yield-monitor point weight multiplier inside the zone
+
     # Boundary CRS mix: season indices (0-based) whose GeoJSON is EPSG:26914
     # (NAD83 / UTM zone 14N) instead of the default EPSG:4326.
     utm_crs_season_indices: tuple[int, ...] = (1, 3, 4, 7)

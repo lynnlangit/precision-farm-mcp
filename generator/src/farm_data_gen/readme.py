@@ -24,6 +24,7 @@ _DEFECT_TYPE_LABELS = {
     "unit_inconsistency": "Unit inconsistency (N rate)",
     "weather_shortfall": "Weather shortfall (forced drought)",
     "management_shortfall": "Management shortfall (yield override)",
+    "bad_zone": "Zone-level shortfall (sub-field, field total unaffected)",
 }
 
 

@@ -54,14 +54,15 @@ proven against an injected-prompt defect.
 | Component | Status | Note |
 |---|---|---|
 | Ingest/query confirmation split, `ConfirmationGate` | Built | |
-| 5 MCP servers, `farm-cli`, `farm-ingest` | Built | |
+| 6 MCP servers, `farm-cli`, `farm-ingest` | Built | |
 | Hash-chained, concurrency-safe audit log | Built | Fixed in Phase A — the host process and every spawned server write to it |
 | Provenance (`modeled` subtree), grounding split | Built | Populated by Phase C's weather/soil attribution on `bad_year` verdicts (`report-export.bad_field_or_bad_year`) — everywhere else it's still `null`, honestly, not a gap |
 | Untrusted-text handling, payload capping | Built | |
 | Governance metrics harness (`farm-metrics`) | Built | Phase B; gained an `attribution_backtest` section in Phase C |
 | **Diverged:** confirmation resolved inline at query time | — | The original shape assumed a server could ask when unsure. Phase 0's audit found MCP servers are non-interactive stdio subprocesses that can never prompt a human, forcing the ingest/query split instead — a structural fix, not a config option |
 | Weather ingestion, attribution model | Built | Phase C — synthetic daily weather + static soil AWC (`mcp-weather-history`), a *relative* expectation model (`core/expectation.py`) decomposing a shortfall into a weather-driven `season_effect` and an unexplained `residual`, and `QueryIntent.EXPLAIN_SHORTFALL` for "why" questions |
-| Zone-level (sub-field) profitability | Deferred | Phase D |
+| Zone-level (sub-field) profitability | Built | Phase D — `core/zone_profitability.py` grids each field into a 2x2 set of zones and computes per-zone profit for the seasons with as-applied coverage; `report-export.zone_profitability` (per field) and `.unprofitable_zones_in_profitable_fields` (farm-wide headline figure) |
+| **Diverged:** zone cost is field-uniform, not spatially resolved | — | The Phase D spec called for joining yield points to as-applied events spatially. Checked against the actual generated data: `as_applied_events` has exactly 5 rows per field/season (one per product), each a single decorative lat/lon with an already field-wide rate — nothing to join per zone. Cost genuinely has no spatial resolution in this data model (ledger rows are `cost_basis: "per_acre"`, uniform by construction), so zone cost reuses the field's own authoritative `total_cost/acres` uniformly; only yield is actually zone-resolved, from `yield_monitor_points`' hundreds of real per-point readings |
 | Remote sensing | Deferred | No phase yet — out of v1 scope by design |
 | Agronomy reference data (cultivar calibration, etc.) | Deferred | `core/expectation.py` is deliberately a *relative* expectation model, which turned out not to need this after all |
 | Prescriptive crop model / recommendations | Deferred | No phase yet — explicitly out of v1 scope (see the README) |
@@ -71,7 +72,6 @@ proven against an injected-prompt defect.
 
 | Deferred component | Needed by |
 |---|---|
-| Zone-level profitability | Phase D |
 | Live weather / sync boundary | Not yet scheduled — see known future tension |
 | Remote sensing | Not yet scheduled |
 | Prescriptive crop model | Not yet scheduled |
@@ -98,5 +98,5 @@ change that touches it should update this section first.
 ## See also
 
 - [README](../README.md) — the simple picture, quick start, and repository layout
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — ten independent evaluation questions
-- [PHASE_PLAN_BCD.md](PHASE_PLAN_BCD.md) — the remaining roadmap
+- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — eleven independent evaluation questions
+- [PHASE_PLAN_BCD.md](PHASE_PLAN_BCD.md) — the phase history and roadmap

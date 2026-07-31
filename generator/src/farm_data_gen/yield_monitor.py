@@ -23,11 +23,36 @@ _HEADER = ["timestamp", "lat", "lon", "wet_bu_ac", "dry_bu_ac", "moisture_pct"]
 
 _NATURAL_NOISE_RANGE = (0.995, 1.005)
 
+# Mirrors core/src/farm_core/zone_profitability.py's grid exactly (2x2,
+# row-major index) -- kept in sync by hand, same rationale as every other
+# small formula this package can't import from farm_core (real package
+# boundary, generator has zero dependency on farm_core).
+_ZONE_GRID_ROWS = 2
+_ZONE_GRID_COLS = 2
+
 
 def _bbox(ring: list[tuple[float, float]]) -> tuple[float, float, float, float]:
     lons = [p[0] for p in ring[:-1]]
     lats = [p[1] for p in ring[:-1]]
     return min(lons), max(lons), min(lats), max(lats)
+
+
+def _zone_index(
+    lon: float, lat: float, min_lon: float, max_lon: float, min_lat: float, max_lat: float
+) -> int:
+    lon_span = max_lon - min_lon
+    lat_span = max_lat - min_lat
+    col = (
+        min(_ZONE_GRID_COLS - 1, max(0, int((lon - min_lon) / lon_span * _ZONE_GRID_COLS)))
+        if lon_span
+        else 0
+    )
+    row = (
+        min(_ZONE_GRID_ROWS - 1, max(0, int((lat - min_lat) / lat_span * _ZONE_GRID_ROWS)))
+        if lat_span
+        else 0
+    )
+    return row * _ZONE_GRID_COLS + col
 
 
 def build_yield_monitor_files(
@@ -41,6 +66,9 @@ def build_yield_monitor_files(
         (e["field_id"], e["season"]): e["error_pct"] for e in plan.calibration_errors
     }
     swath_key = (plan.missing_swath["field_id"], plan.missing_swath["season"])
+    bad_zone_key = (
+        (plan.bad_zone["field_id"], plan.bad_zone["season"]) if plan.bad_zone else None
+    )
 
     files: dict[tuple[str, int], tuple[str, str]] = {}
     defect_records: list[dict] = []
@@ -90,6 +118,18 @@ def build_yield_monitor_files(
             point_count = len(lons)
             weight_r = rng_mod.derive_rng(config.random_seed, field_id, "point_weights", season)
             raw_weights = weight_r.uniform(0.7, 1.3, size=point_count)
+
+            if key == bad_zone_key:
+                target_zone = plan.bad_zone["zone_index"]
+                for i in range(point_count):
+                    zone = _zone_index(lons[i], lats[i], min_lon, max_lon, min_lat, max_lat)
+                    if zone == target_zone:
+                        raw_weights[i] *= config.badzone_weight_factor
+
+            # Renormalizing after the bias above conserves the field's total
+            # monitor bushels exactly -- the other zones compensate upward,
+            # so DEF-BADZONE changes only the within-field distribution,
+            # never the field's own total yield/revenue/profit.
             weights = raw_weights / raw_weights.sum()
             dry_bushels = weights * monitor_total_bu
             area_per_point_ac = record.acres / point_count
@@ -179,6 +219,33 @@ def build_yield_monitor_files(
                         "ground_truth_correction": (
                             "Not a real unharvested area -- do not treat the gap as zero "
                             "yield; total bushels for the field are unaffected."
+                        ),
+                    }
+                )
+            if key == bad_zone_key:
+                target_zone = plan.bad_zone["zone_index"]
+                defect_records.append(
+                    {
+                        "defect_id": f"DEF-BADZONE-{season}-{field_id}",
+                        "type": "bad_zone",
+                        "field_id": field_id,
+                        "season": season,
+                        "target_zone_index": target_zone,
+                        "detail": (
+                            f"Zone {target_zone} of {name} in {season} has yield-monitor "
+                            f"points deliberately biased to {config.badzone_weight_factor:.0%} "
+                            "of their normal weight -- a genuinely unprofitable sub-area "
+                            "inside a field whose total profit is unaffected, because the "
+                            "other zones compensate to conserve the field's true total yield."
+                        ),
+                        "expected_detection": (
+                            "Gridding yield_monitor_points into zones and computing "
+                            "zone-level profit should show this zone as the field's worst, "
+                            "and negative, even though the field's total profit is normal."
+                        ),
+                        "ground_truth_correction": (
+                            f"{name}'s total yield/revenue/profit for {season} is unaffected "
+                            "-- only the within-field distribution changed."
                         ),
                     }
                 )

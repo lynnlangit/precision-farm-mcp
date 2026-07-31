@@ -119,4 +119,5 @@ def build_ground_truth(
         "catastrophic_year": find_catastrophic_info(farm.identity, farm.records),
         "weathershortfall": farm.weathershortfall,
         "mgmtshortfall": farm.mgmtshortfall,
+        "bad_zone": plan.bad_zone,
     }

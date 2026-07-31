@@ -32,6 +32,10 @@ Every defect below is deliberate and recorded in `ground_truth.json` under `defe
 
 - `DEF-ALIASTIE-2023-root_03` (season 2023): Cost ledger name 'Hom Corner' in season 2023 doesn't exactly match any boundary name, and 'Home Quarter' and 'Section Corner' have identical acreage that season -- acreage alone can't disambiguate, and string similarity favors the wrong field ('Section Corner', verified via difflib.get_close_matches).
 
+### Zone-level shortfall (sub-field, field total unaffected)
+
+- `DEF-BADZONE-2024-root_12` (season 2024): Zone 0 of Section Corner in 2024 has yield-monitor points deliberately biased to 15% of their normal weight -- a genuinely unprofitable sub-area inside a field whose total profit is unaffected, because the other zones compensate to conserve the field's true total yield.
+
 ### Spreadsheet mess: total-dollars cost basis
 
 - `DEF-BASIS-2018` (season 2018): The 2018 cost tab reports Seed/Fertilizer/Chemical/Fuel/Cash Rent as total dollars for the field, not $/ac as in every other season -- the column headers say so, but a parser assuming a constant basis across seasons would misread it by ~acres-fold.

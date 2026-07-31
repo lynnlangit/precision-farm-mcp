@@ -1,10 +1,10 @@
-# Precision Farm MCP — Remaining Plan: Phases B, C, D
+# Precision Farm MCP — Plan: Phases B, C, D
 
-This is the continuation of the multi-session design-review plan. **Phases
-A, B, and C are complete** (see status below). This file preserves the full
-B/C/D spec verbatim from the original review so a future session can resume
-without re-deriving context. Start a future session by reading this file in
-full before planning Phase D.
+This is the continuation of the multi-session design-review plan. **All
+phases (A, B, C, and D) are complete** (see status below). This file
+preserves the full B/C/D spec verbatim from the original review, plus the
+full status history, so a future session can resume without re-deriving
+context.
 
 ## Status as of this writing
 
@@ -133,9 +133,80 @@ full before planning Phase D.
   - 130 tests green across 4 packages (generator 16, core 59, host 34,
     model 20), plus `docs/test_architecture_doc.py` passing standalone.
     `test_no_network.py` unchanged and unweakened.
+- **Phase D** (zone-level profitability) — done, this session:
+  - **Key finding that reshaped the design**, checked against the actual
+    generated data before writing any code: `as_applied_events` has no
+    real spatial resolution to join against (5 rows per field/season, one
+    per product, each a single decorative lat/lon with an already
+    field-wide rate). The spec's literal "join yield points to as-applied
+    events spatially" wasn't viable. Resolution: cost genuinely has no
+    spatial resolution anywhere in this data model (ledger rows are
+    `cost_basis: "per_acre"`, uniform by construction), so zone cost
+    reuses the field's own authoritative `total_cost/acres`
+    (`profitability.ProfitRecord`) uniformly across every zone; only
+    yield is actually zone-resolved, from `yield_monitor_points`'
+    hundreds of real per-point readings. Recorded as a `Diverged` row in
+    `docs/ARCHITECTURE.md`, stated plainly, not silently reinterpreted.
+  - New `core/src/farm_core/zone_profitability.py`: fixed 2x2 zone grid
+    (exact, since field boundaries are confirmed axis-aligned
+    rectangles); `compute_zone_profitability(snapshot, canonical_id,
+    season)` refuses (`ZoneProfitabilityUnavailable`) for an unknown
+    field or a season without as-applied coverage (discovered from the
+    data, never hardcoded); a zone with fewer than `ZONE_MIN_POINTS`
+    yield-monitor points is reported `available: false`, never
+    estimated, alongside sibling zones that do have enough points.
+    `unprofitable_zones_in_profitable_fields(snapshot)` is the headline
+    figure: of the acres in fields genuinely profitable overall that
+    season, what share sat in a zone with negative zone-level profit.
+  - Two new tools on the existing `mcp-report-export` server (no new
+    server needed — Phase D's spec, unlike Phase C's, didn't call for
+    one): `zone_profitability` and `unprofitable_zones_in_profitable_
+    fields`.
+  - New `QueryIntent.ZONE_PROFITABILITY` and `.UNPROFITABLE_ZONES_IN_
+    PROFITABLE_FIELDS` — two distinct intents/tools, not one tool with
+    two phrasings like Phase C's `EXPLAIN_SHORTFALL`, since these are
+    genuinely different computations (per-field detail vs. farm-wide
+    aggregate), not two phrasings of the same lookup. Verified live
+    against gemma3:4b that the new prompt bullets don't regress the
+    existing field-level intents' disambiguation (the exact kind of
+    prompt-length regression Phase C hit once and fixed by keeping each
+    bullet short and explicit).
+  - New generator defect `DEF-BADZONE`: `root_12` ("Section Corner"),
+    season 2024, zone 0 — the one clean, unclaimed field/season inside
+    the as-applied window. Mechanism: bias the already-generated
+    yield-monitor point weights downward for points in the target zone,
+    before the existing per-point weight normalization — since that
+    normalization already conserves the field's total monitor bushels
+    regardless of point placement, the field's total yield/revenue/
+    profit is automatically unchanged; only the within-field
+    distribution shifts. Verified: zone 0 shows a genuinely negative
+    profit (~-$11,944) while the field's total profit stays positive and
+    exactly matches the no-defect figure (~$5,896).
+  - Found and fixed a real gap while running the full suite: the A4
+    completeness test (`test_every_response_model_string_field_is_
+    classified`) correctly caught that the new `unavailable_reason`
+    field wasn't classified in `farm_host/mcp_client.py` — added to
+    `DETERMINISTIC_STRING_FIELDS` (a fixed small set of reason codes,
+    never farmer-authored text).
+  - New eval question (#11): kept deliberately sign-only, not a dollar
+    figure — zone-level numbers are computed by `farm_core.
+    zone_profitability` from raw points at query time, not stored in
+    `ground_truth.json`, so `generator/eval_questions.py` can't honestly
+    reproduce them without depending on `farm_core` (forbidden) or
+    duplicating the point-grid arithmetic (fragile).
+  - `docs/ARCHITECTURE.md` updated: zone-level profitability moved
+    Deferred → Built, the as-applied-spatial-resolution finding recorded
+    as a `Diverged` row, roadmap table updated; also fixed two stale
+    counts left over from Phase C ("5 MCP servers" → 6, in both
+    `ARCHITECTURE.md` and the main `README.md`).
+  - 150 tests green across 4 packages (generator 16, core 73, host 39,
+    model 22), plus `docs/test_architecture_doc.py` passing standalone.
+    `test_no_network.py` unchanged and unweakened — no new server, no new
+    network surface.
 
-**Not yet started: Phase D below.** Per the working agreement, check in
-for approval before starting it.
+**All phases complete.** No further phase is planned; per the original
+spec, Phase D was deliberately last (highest farmer-perceived value,
+lowest technical risk, no trust-contract change).
 
 ---
 
@@ -326,6 +397,12 @@ no trust-contract change, and needs nothing from B or C.
 
 ## Where to resume
 
-Start a new session with: *"Read docs/PHASE_PLAN_BCD.md, then start with a
-Phase D plan only"* — this mirrors how Phases A, B, and C were kicked off
-(plan first, `ExitPlanMode` for approval, then implement).
+All planned phases (A, B, C, D) are complete. There is no next phase
+queued — the roadmap table above lists what's still deferred
+(zone-level profitability's own remaining edges aside, mainly live
+weather/sync boundary, remote sensing, a prescriptive crop model, and
+absolute agronomy calibration), none of it scheduled. A future session
+picking any of these back up should read this file in full first, then
+follow the same discipline every phase here did: plan first, `ExitPlan
+Mode` for approval, implement, verify, stop and report before scope
+creeps into the next thing.

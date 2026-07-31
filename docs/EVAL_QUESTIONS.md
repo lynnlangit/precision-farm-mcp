@@ -60,6 +60,11 @@ uv run --project host farm-cli "<question>"
 **Tool:** `field-registry.resolve_field_name(raw_name="Township Rd 12", season=2021)`
 **Verifiable answer:** A structured refusal -- `{"code": "not_found"}` -- never a guess. Ground truth: `evt_rental_lost_root_09`, lease ended after season 2020; no boundary exists for this field from 2021 onward.
 
+### 11. A hidden bad patch inside a fine field
+**Q:** Is any part of Section Corner losing money in 2024, even though the field overall is profitable?
+**Tool:** `report-export.zone_profitability(field_name="Section Corner", season=2024)`
+**Verifiable answer:** Zone 0 shows a negative `profit`, while Section Corner's field-level profit for 2024 (`profitability.<field>.*.profit`) stays positive and exactly matches the no-defect figure -- the shortfall is confined to one zone, not visible in the field total. Ground truth: `DEF-BADZONE-2024-root_12`.
+
 ---
 
 ## What these are testing collectively
@@ -68,4 +73,5 @@ uv run --project host farm-cli "<question>"
 - **4-5** exercise the deterministic relative-vs-explicit season resolution -- the model extracts a count or explicit years; a plain Python function resolves either into concrete seasons, never the model's own arithmetic.
 - **6, 10** exercise field-identity resolution at its two extremes: a name that resolves through drift, and a name that correctly resolves to nothing at all.
 - **7-9** exercise all three reconciliation defects Phase 2 was built to catch, including the one (#8) specifically designed so a naive totals-only check would pass it silently.
+- **11** exercises Phase D's zone-level profitability -- a shortfall that's genuinely invisible at the field level, only visible once yield_monitor_points are gridded into zones.
 

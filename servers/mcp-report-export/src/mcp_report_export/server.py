@@ -25,6 +25,13 @@ from farm_core.expectation import AttributionUnavailable
 from farm_core.expectation import compute_attribution as _compute_attribution
 from farm_core.profitability import bad_field_or_bad_year as _bad_field_or_bad_year
 from farm_core.profitability import which_fields_made_money as _which_fields_made_money
+from farm_core.zone_profitability import ZoneProfitabilityUnavailable
+from farm_core.zone_profitability import (
+    compute_zone_profitability as _compute_zone_profitability,
+)
+from farm_core.zone_profitability import (
+    unprofitable_zones_in_profitable_fields as _unprofitable_zones_in_profitable_fields,
+)
 
 mcp = FastMCP("report-export")
 
@@ -83,6 +90,46 @@ class BadFieldOrBadYearResult(BaseModel):
     verdict: str
     evidence: dict[str, Any]
     field_name: str
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class ZoneEntry(BaseModel):
+    zone_index: int
+    acres: float
+    available: bool
+    point_count: int
+    yield_bu_ac: float | None = None
+    revenue: float | None = None
+    cost: float | None = None
+    profit: float | None = None
+    unavailable_reason: str | None = None
+
+
+class ZoneProfitabilityResult(BaseModel):
+    """Derived arithmetic (Phase D), not modeled -- zone cost reuses the
+    field's own authoritative $/acre uniformly (see farm_core.
+    zone_profitability's module docstring for why: cost has no spatial
+    resolution anywhere in this data model), only yield is actually
+    zone-resolved. `modeled` is reserved but never populated here.
+    """
+
+    canonical_id: str
+    season: int
+    field_name: str
+    field_acres: float
+    field_profit: float
+    zones: list[ZoneEntry]
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class UnprofitableZonesSummaryResult(BaseModel):
+    seasons_examined: list[int]
+    field_seasons_examined: int
+    acres_examined: float
+    acres_unprofitable: float
+    pct_acres_unprofitable_in_profitable_fields: float | None
     provenance: SnapshotProvenance
     modeled: dict[str, Any] | None = None
 
@@ -216,6 +263,79 @@ def bad_field_or_bad_year(field_name: str) -> dict:
         field_name=current_name,
         provenance=SnapshotProvenance(**_provenance()),
         modeled=modeled,
+    ).model_dump()
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+@_confirmation_guarded
+def zone_profitability(field_name: str, season: int) -> dict:
+    """Grid a field into a 2x2 set of management zones and compute
+    per-zone profit -- surfaces a shortfall that's invisible in the
+    field-level total because other zones compensate for it.
+
+    Args:
+        field_name: The farmer-visible field name, current or historical.
+        season: The season year. Only available for seasons with
+            as-applied input-log coverage (the newest few seasons) --
+            cost has no spatial resolution to derive zone cost from
+            otherwise.
+
+    Returns:
+        {"zones": [...], "field_profit": ..., "provenance": {...}} on
+        success, or {"error": "...", "code": "not_found"} for an
+        unrecognized field name, or {"error": "...", "code":
+        "invalid_input"} for a season without as-applied coverage. A
+        zone with too few yield-monitor points to compute reliably is
+        included with `"available": false`, never estimated.
+    """
+    snap = _snapshot()
+    canonical_id = snap.canonical_id_for_name(field_name)
+    if canonical_id is None:
+        return {
+            "error": f"no field named {field_name!r} was found in the record",
+            "code": "not_found",
+        }
+
+    try:
+        result = _compute_zone_profitability(snap, canonical_id, season)
+    except ZoneProfitabilityUnavailable as e:
+        return {"error": e.reason, "code": "invalid_input"}
+
+    _audit_log().log(
+        "tool_call", tool="zone_profitability", field_name=field_name, season=season
+    )
+    current_name = snap.identity.lineages[canonical_id].display_name_by_season[
+        max(snap.identity.lineages[canonical_id].active_seasons)
+    ]
+    return ZoneProfitabilityResult(
+        canonical_id=result.canonical_id,
+        season=result.season,
+        field_name=current_name,
+        field_acres=result.field_acres,
+        field_profit=result.field_profit,
+        zones=[ZoneEntry(**z.to_json()) for z in result.zones],
+        provenance=SnapshotProvenance(**_provenance()),
+    ).model_dump()
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+@_confirmation_guarded
+def unprofitable_zones_in_profitable_fields() -> dict:
+    """The headline zone-profitability figure: across every field/season
+    that was genuinely profitable overall, what share of its acres sat
+    in a zone with negative zone-level profit anyway.
+
+    Returns:
+        {"pct_acres_unprofitable_in_profitable_fields": ..., "acres_examined":
+        ..., "acres_unprofitable": ..., "provenance": {...}}.
+        `pct_acres_unprofitable_in_profitable_fields` is null (not 0) if no
+        acres were examinable at all.
+    """
+    snap = _snapshot()
+    summary = _unprofitable_zones_in_profitable_fields(snap)
+    _audit_log().log("tool_call", tool="unprofitable_zones_in_profitable_fields")
+    return UnprofitableZonesSummaryResult(
+        **summary, provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
 
 
