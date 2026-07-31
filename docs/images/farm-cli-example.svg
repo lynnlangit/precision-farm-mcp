@@ -1,24 +1,193 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="820" height="300" viewBox="0 0 820 300" role="img" aria-label="Terminal showing farm-cli in use">
-  <rect x="0" y="0" width="820" height="300" rx="10" fill="#1e1e1e"/>
-  <rect x="0" y="0" width="820" height="34" rx="10" fill="#2d2d2d"/>
-  <rect x="0" y="24" width="820" height="10" fill="#2d2d2d"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="460" viewBox="0 0 960 460" role="img" aria-label="Animated terminal cycling through farm-cli's evaluation questions and real answers">
+  <style>
+    
+    @keyframes q0 {
+      0%, 0.0% { opacity: 0; }
+      0.758% { opacity: 1; }
+      8.333% { opacity: 1; }
+      9.091%, 100% { opacity: 0; }
+    }
+    .q0 { animation: q0 46.2s linear infinite; }
+    
+
+    @keyframes q1 {
+      0%, 9.091% { opacity: 0; }
+      9.849% { opacity: 1; }
+      17.424% { opacity: 1; }
+      18.182%, 100% { opacity: 0; }
+    }
+    .q1 { animation: q1 46.2s linear infinite; }
+    
+
+    @keyframes q2 {
+      0%, 18.182% { opacity: 0; }
+      18.94% { opacity: 1; }
+      26.515% { opacity: 1; }
+      27.273%, 100% { opacity: 0; }
+    }
+    .q2 { animation: q2 46.2s linear infinite; }
+    
+
+    @keyframes q3 {
+      0%, 27.273% { opacity: 0; }
+      28.031% { opacity: 1; }
+      35.606% { opacity: 1; }
+      36.364%, 100% { opacity: 0; }
+    }
+    .q3 { animation: q3 46.2s linear infinite; }
+    
+
+    @keyframes q4 {
+      0%, 36.364% { opacity: 0; }
+      37.122% { opacity: 1; }
+      44.697% { opacity: 1; }
+      45.455%, 100% { opacity: 0; }
+    }
+    .q4 { animation: q4 46.2s linear infinite; }
+    
+
+    @keyframes q5 {
+      0%, 45.455% { opacity: 0; }
+      46.213% { opacity: 1; }
+      53.787% { opacity: 1; }
+      54.545%, 100% { opacity: 0; }
+    }
+    .q5 { animation: q5 46.2s linear infinite; }
+    
+
+    @keyframes q6 {
+      0%, 54.545% { opacity: 0; }
+      55.303% { opacity: 1; }
+      62.878% { opacity: 1; }
+      63.636%, 100% { opacity: 0; }
+    }
+    .q6 { animation: q6 46.2s linear infinite; }
+    
+
+    @keyframes q7 {
+      0%, 63.636% { opacity: 0; }
+      64.394% { opacity: 1; }
+      71.969% { opacity: 1; }
+      72.727%, 100% { opacity: 0; }
+    }
+    .q7 { animation: q7 46.2s linear infinite; }
+    
+
+    @keyframes q8 {
+      0%, 72.727% { opacity: 0; }
+      73.485% { opacity: 1; }
+      81.06% { opacity: 1; }
+      81.818%, 100% { opacity: 0; }
+    }
+    .q8 { animation: q8 46.2s linear infinite; }
+    
+
+    @keyframes q9 {
+      0%, 81.818% { opacity: 0; }
+      82.576% { opacity: 1; }
+      90.151% { opacity: 1; }
+      90.909%, 100% { opacity: 0; }
+    }
+    .q9 { animation: q9 46.2s linear infinite; }
+    
+
+    @keyframes q10 {
+      0%, 90.909% { opacity: 0; }
+      91.667% { opacity: 1; }
+      99.242% { opacity: 1; }
+      100.0%, 100% { opacity: 0; }
+    }
+    .q10 { animation: q10 46.2s linear infinite; }
+    
+  </style>
+  <rect x="0" y="0" width="960" height="460" rx="10" fill="#1e1e1e"/>
+  <rect x="0" y="0" width="960" height="34" rx="10" fill="#2d2d2d"/>
+  <rect x="0" y="24" width="960" height="10" fill="#2d2d2d"/>
   <circle cx="20" cy="17" r="6" fill="#ff5f57"/>
   <circle cx="40" cy="17" r="6" fill="#febc2e"/>
   <circle cx="60" cy="17" r="6" fill="#28c840"/>
-  <text x="410" y="22" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#9b9b9b">farmer@macbook — farm-cli</text>
+  <text x="480" y="22" text-anchor="middle" font-family="-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="12" fill="#9b9b9b">farmer@macbook — farm-cli</text>
+  <g transform="translate(0,20)">
+    <style>
+      .prompt { fill:#28c840; }
+      .cmd { fill:#7ec1ff; }
+    </style>
+    
+    <g class="q0" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Was the Marginal Eighty a bad field or just</tspan><tspan x="24" dy="21">a bad year?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">The data shows that the Marginal Eighty field consistently</tspan><tspan x="24" dy="21">experienced significant losses over the past ten seasons,</tspan><tspan x="24" dy="21">from 2016 to 2025.  This resulted in a loss rate of 1.0</tspan><tspan x="24" dy="21">across all those years. Therefore, based on this evidence,</tspan><tspan x="24" dy="21">it appears to have been a bad field rather than simply a</tspan><tspan x="24" dy="21">poor year.</tspan></text>
+      <text x="24" y="280" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 1 of 11</text>
+    </g>
+    
 
-  <g font-family="'SF Mono', Menlo, Consolas, 'Courier New', monospace" font-size="14">
-    <text x="20" y="66" fill="#28c840">$</text>
-    <text x="36" y="66"><tspan fill="#e8e8e8">farm-cli </tspan><tspan fill="#7ec1ff">"was the north eighty a bad field or a bad year"</tspan></text>
+    <g class="q1" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Was East 80 a bad field or just a bad year?"</tspan></text>
+      <text x="24" y="107" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">Based on our analysis of East 80 over the past ten</tspan><tspan x="24" dy="21">seasons, the 2020 season produced significantly lower</tspan><tspan x="24" dy="21">profits compared to the median profit of $68.18 per acre.</tspan><tspan x="24" dy="21">The field itself had a negative effect of -7.75, but</tspan><tspan x="24" dy="21">combined with the seasonal impact (-5.16), resulted in an</tspan><tspan x="24" dy="21">overall residual loss of -$89.09 for that year. Therefore,</tspan><tspan x="24" dy="21">it appears the lower yield was primarily due to a bad year</tspan><tspan x="24" dy="21">rather than inherent issues with the East 80 field.</tspan></text>
+      <text x="24" y="301" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 2 of 11</text>
+    </g>
+    
 
-    <text x="20" y="106" fill="#e8e8e8">The North Eighty had one clear outlier season over the past ten</text>
-    <text x="20" y="130" fill="#e8e8e8">years -- 2018 -- well below its typical $62.81/acre median profit.</text>
-    <text x="20" y="154" fill="#e8e8e8">Every other season was unremarkable, so this reads as a bad year,</text>
-    <text x="20" y="178" fill="#e8e8e8">not a chronically bad field.</text>
+    <g class="q2" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Was South 160 South a bad field or just a</tspan><tspan x="24" dy="21">bad year?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">South 160 South shows no chronic loss pattern (median</tspan><tspan x="24" dy="21">$175.41/ac) across 6 recorded seasons.</tspan></text>
+      <text x="24" y="196" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 3 of 11</text>
+    </g>
+    
 
-    <text x="20" y="218" fill="#28c840">$</text>
-    <rect x="34" y="207" width="8" height="16" fill="#e8e8e8">
-      <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
-    </rect>
+    <g class="q3" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Which fields made money in the last five</tspan><tspan x="24" dy="21">years?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">Based on the last five years of performance, East 80 made</tspan><tspan x="24" dy="21">the most money with a total profit of $135,533.57.</tspan><tspan x="24" dy="21">Elevator Forty-Depot Forty also performed well, generating</tspan><tspan x="24" dy="21">a profit of $125,093.7. Section Corner and N 80 each had</tspan><tspan x="24" dy="21">profits of $98,104.47 and $66,419.2 respectively.</tspan></text>
+      <text x="24" y="259" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 4 of 11</text>
+    </g>
+    
+
+    <g class="q4" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Which fields made money in 2019 and 2020?"</tspan></text>
+      <text x="24" y="107" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">Here’s an answer for the farmer based on the provided</tspan><tspan x="24" dy="21">data:  In 2019 and 2020, Depot Forty made a profit of</tspan><tspan x="24" dy="21">$17549.90, while Home Quarter also had a profit during</tspan><tspan x="24" dy="21">those years totaling -$5796.77.  South 160 South and South</tspan><tspan x="24" dy="21">160 generated profits of $4206.32 and $4830.72</tspan><tspan x="24" dy="21">respectively in 2020.</tspan></text>
+      <text x="24" y="259" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 5 of 11</text>
+    </g>
+    
+
+    <g class="q5" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "What does "north eighty" refer to in 2017?"</tspan></text>
+      <text x="24" y="107" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">The phrase "north eighty" refers to N 80. According to our</tspan><tspan x="24" dy="21">records from 2017, this is an alias representing a</tspan><tspan x="24" dy="21">specific location. The data indicates that “N 80” was</tspan><tspan x="24" dy="21">identified as “N 80”.</tspan></text>
+      <text x="24" y="217" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 6 of 11</text>
+    </g>
+    
+
+    <g class="q6" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Do the yield monitor and scale tickets agree</tspan><tspan x="24" dy="21">on Home Quarter in 2019?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">The yield monitor and scale tickets do not agree on the</tspan><tspan x="24" dy="21">Home Quarter yield for 2019. The scale recorded 4683.5</tspan><tspan x="24" dy="21">bushels, while the yield monitor reported</tspan><tspan x="24" dy="21">5008.214034934497 bushels. This represents a difference of</tspan><tspan x="24" dy="21">approximately +6.9%.</tspan></text>
+      <text x="24" y="259" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 7 of 11</text>
+    </g>
+    
+
+    <g class="q7" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Is there anything odd about the yield</tspan><tspan x="24" dy="21">monitor coverage on Marginal Eighty in 2024?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">The yield monitor data from Marginal Eighty in 2024 shows</tspan><tspan x="24" dy="21">a slight difference between the reported total yield and</tspan><tspan x="24" dy="21">the monitor's recorded yield. Specifically, the monitor</tspan><tspan x="24" dy="21">captured 17513.57 bu of corn, while the scale showed</tspan><tspan x="24" dy="21">17430.50 bu. There’s a small coverage gap identified by</tspan><tspan x="24" dy="21">the monitor, which wasn't caught with a standard totals</tspan><tspan x="24" dy="21">check.</tspan></text>
+      <text x="24" y="301" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 8 of 11</text>
+    </g>
+    
+
+    <g class="q8" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Does the seed cost on Riverside in 2022 look</tspan><tspan x="24" dy="21">right?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">I’m sorry, but the data doesn't show that the seed cost on</tspan><tspan x="24" dy="21">Riverside in 2022 looks right. Records indicate losses</tspan><tspan x="24" dy="21">occurred in 2018, 2019, 2020, 2022, and 2025 out of a</tspan><tspan x="24" dy="21">total of ten seasons.  Therefore, there appears to be an</tspan><tspan x="24" dy="21">issue with the data regarding that specific year.</tspan></text>
+      <text x="24" y="259" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 9 of 11</text>
+    </g>
+    
+
+    <g class="q9" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "What does "Township Rd 12" refer to in</tspan><tspan x="24" dy="21">2021?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">'Township Rd 12' was not recorded in season 2021 (code:</tspan><tspan x="24" dy="21">not_found)</tspan></text>
+      <text x="24" y="196" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 10 of 11</text>
+    </g>
+    
+
+    <g class="q10" opacity="0">
+      <text x="24" y="66" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan class="prompt">$ </tspan><tspan class="cmd">farm-cli "Is any part of Section Corner losing money</tspan><tspan x="24" dy="21">in 2024, even though the field overall is profitable?"</tspan></text>
+      <text x="24" y="128" fill="#e8e8e8" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="14"><tspan x="24" dy="0">Based on the data, Section Corner is losing money in 2024.</tspan><tspan x="24" dy="21">Specifically, Zone 0 has a profit of -11943.8. Despite the</tspan><tspan x="24" dy="21">overall field being profitable, this single zone's losses</tspan><tspan x="24" dy="21">outweigh its revenue.</tspan></text>
+      <text x="24" y="238" fill="#6a6a6a" font-family="'SF Mono',Menlo,Consolas,monospace" font-size="12">question 11 of 11</text>
+    </g>
+    
   </g>
 </svg>
