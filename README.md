@@ -40,6 +40,11 @@ For the full technical design — the MCP servers, the confirmation and
 audit system, how the model is kept from inventing numbers — see
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+**If you're a farmer trying this out rather than a developer**, skip
+straight to [docs/FARMER_GUIDE.md](docs/FARMER_GUIDE.md) — a plain-language
+walkthrough of what this does, how to set it up, how to try it with the
+included example data, and how to eventually load your own records.
+
 ## Quick start
 
 ```bash
@@ -65,6 +70,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 | `servers/mcp-*` | Six FastMCP servers exposing `farm_core` as MCP tools (Pydantic I/O, `readOnlyHint`, structured refusals, a `modeled` field reserved for model output) |
 | `host/` (`farm_host`) | The host application: MCP client/router (stdio, untrusted-text sanitization), `farm-ingest` (human-present confirmation) and `farm-cli` (query, fails closed) |
 | `model/` (`farm_model`) | The bounded Gemma layer: question → query, result → narration, plus the verification that keeps it bounded |
+| `docs/FARMER_GUIDE.md` | Plain-language setup and usage guide, no programming background assumed |
 | `docs/ARCHITECTURE.md` | The full technical architecture and diagram |
 | `docs/EVAL_QUESTIONS.md` | Eleven independent evaluation questions, each verifiable against `ground_truth.json` |
 | `docs/PHASE_PLAN_BCD.md` | The phase history and roadmap |
