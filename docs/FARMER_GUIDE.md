@@ -40,11 +40,17 @@ Three pieces of free software, installed once:
 1. **The code itself** — either downloaded as a folder or checked out with
    `git clone` if you were given a repository link.
 2. **`uv`** — the tool that installs and runs the Python programs in this
-   project. One-time install, on a Mac terminal:
+   project. One-time install:
 
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+   - **macOS / Linux (Terminal):**
+     ```bash
+     curl -LsSf https://astral.sh/uv/install.sh | sh
+     ```
+
+   - **Windows (PowerShell):**
+     ```powershell
+     powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+     ```
 
    (Windows and Linux installers are on [astral.sh/uv](https://astral.sh/uv).
    This tool is built to run on Windows too — the audit log's file locking,
