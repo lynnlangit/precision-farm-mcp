@@ -107,4 +107,4 @@ change that touches it should update this section first.
 - [README](../README.md) — the simple picture, quick start, and repository layout
 - [FARMER_GUIDE.md](FARMER_GUIDE.md) — plain-language setup and usage guide
 - [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — eleven independent evaluation questions
-- [PHASE_PLAN_BCD.md](PHASE_PLAN_BCD.md) — the phase history and roadmap
+- [PROJECT_HISTORY.md](PROJECT_HISTORY.md) — the phase history and roadmap

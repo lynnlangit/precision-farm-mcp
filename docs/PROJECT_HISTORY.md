@@ -1,10 +1,11 @@
-# Precision Farm MCP — Plan: Phases B, C, D
+# Precision Farm MCP — Project History
 
-This is the continuation of the multi-session design-review plan. **All
-phases (A, B, C, and D) are complete** (see status below). This file
-preserves the full B/C/D spec verbatim from the original review, plus the
-full status history, so a future session can resume without re-deriving
-context.
+**All phases (A, B, C, and D) are complete** (see status below); no phase
+is currently active or queued. This file is a historical record, not a
+live plan — it preserves the full B/C/D spec verbatim from the original
+design review, plus the full status history and post-phase work, so a
+future session can understand why things are built the way they are
+without re-deriving context.
 
 ## Status as of this writing
 

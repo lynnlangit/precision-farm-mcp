@@ -74,7 +74,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 | `docs/FARMER_GUIDE.md` | Plain-language setup and usage guide, no programming background assumed |
 | `docs/ARCHITECTURE.md` | The full technical architecture and diagram |
 | `docs/EVAL_QUESTIONS.md` | Eleven independent evaluation questions, each verifiable against `ground_truth.json` |
-| `docs/PHASE_PLAN_BCD.md` | The phase history and roadmap |
+| `docs/PROJECT_HISTORY.md` | The phase history and roadmap |
 
 ## The three hard problems
 

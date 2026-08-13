@@ -1,7 +1,7 @@
 """Phase C4 verification: the relative expectation model must actually tell
 a weather-caused shortfall apart from a management-caused one, using the two
 deliberately forced scenarios (DEF-WEATHERSHORTFALL, DEF-MGMTSHORTFALL) the
-generator guarantees regardless of --seed -- see docs/PHASE_PLAN_BCD.md's
+generator guarantees regardless of --seed -- see docs/PROJECT_HISTORY.md's
 Phase C3. If it can't tell them apart, the world model is decorative.
 """
 
