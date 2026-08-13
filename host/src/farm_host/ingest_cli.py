@@ -36,12 +36,35 @@ def _counting(gate: governance.ConfirmationGate) -> tuple[confirm.ConfirmFn, dic
     return wrapped, counts
 
 
+class SyntheticDataRequired(Exception):
+    """Raised by run_ingest when --auto-approve-synthetic-only is requested
+    against a data_dir outside data/synthetic/. Auto-approval is only safe
+    where every answer is already known (the example data): DEF-ALIASTIE
+    exists specifically to prove auto-approval gives a confidently wrong
+    answer on real records, so this flag must never reach a farmer's own
+    data even if they pass --data-dir themselves.
+    """
+
+
 def run_ingest(
-    data_dir: Path, confirm_store: Path, audit_log: AuditLog, recheck: bool = False
+    data_dir: Path,
+    confirm_store: Path,
+    audit_log: AuditLog,
+    recheck: bool = False,
+    auto_approve_synthetic_only: bool = False,
 ) -> dict[str, int]:
-    gate = governance.ConfirmationGate(
-        confirm_store, confirm.interactive_confirm, audit_log, recheck=recheck
-    )
+    if auto_approve_synthetic_only:
+        if not data_dir.resolve().is_relative_to(DEFAULT_DATA_DIR.resolve()):
+            raise SyntheticDataRequired(
+                f"--auto-approve-synthetic-only refuses to run against {data_dir} -- "
+                f"it only ever auto-approves the example data under {DEFAULT_DATA_DIR}. "
+                "Run farm-ingest without this flag for your own data."
+            )
+        confirm_fn_for_gate = confirm.auto_approve
+    else:
+        confirm_fn_for_gate = confirm.interactive_confirm
+
+    gate = governance.ConfirmationGate(confirm_store, confirm_fn_for_gate, audit_log, recheck=recheck)
     confirm_fn, counts = _counting(gate)
 
     try:
@@ -76,13 +99,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Re-ask every already-confirmed key too, instead of only new ones. "
         "A correction is appended as a new version, not overwritten.",
     )
+    parser.add_argument(
+        "--auto-approve-synthetic-only",
+        action="store_true",
+        help="Skip the interactive prompts and approve every proposal automatically. "
+        "Only for the example synthetic data (data/synthetic/ by default) -- for "
+        "workshop/demo setup and CI, never for your own data. Refuses (non-zero exit) "
+        "against any --data-dir outside data/synthetic/.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     audit_log = AuditLog(args.audit_log)
-    run_ingest(args.data_dir, args.confirm_store, audit_log, recheck=args.recheck)
+    try:
+        run_ingest(
+            args.data_dir,
+            args.confirm_store,
+            audit_log,
+            recheck=args.recheck,
+            auto_approve_synthetic_only=args.auto_approve_synthetic_only,
+        )
+    except SyntheticDataRequired as e:
+        print(f"\n{e}")
+        return 1
     return 0
 
 

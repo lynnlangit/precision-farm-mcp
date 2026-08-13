@@ -13,6 +13,7 @@ dependencies = [
 farm-cli = "farm_host.cli:main"
 farm-ingest = "farm_host.ingest_cli:main"
 farm-metrics = "farm_host.metrics_cli:main"
+farm-preflight = "farm_host.preflight_cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

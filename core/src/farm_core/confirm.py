@@ -53,9 +53,13 @@ class ConfirmationRejected(Exception):
 
 
 def auto_approve(request: ConfirmationRequest) -> ConfirmationResponse:
-    """Approves every proposal as-is. Only for tests that want to exercise the
-    downstream pipeline without exercising the confirm step itself -- never
-    wire this into the real CLI path.
+    """Approves every proposal as-is. For tests that want to exercise the
+    downstream pipeline without exercising the confirm step itself, and for
+    farm-ingest's --auto-approve-synthetic-only flag (see ingest_cli.py) --
+    that flag is the one real-CLI caller, and it's structurally restricted to
+    the example synthetic data directory: DEF-ALIASTIE exists specifically to
+    prove auto-approval gives a confidently wrong answer on real data, so
+    this must never be reachable outside a demo/workshop data directory.
     """
     return ConfirmationResponse(approved=True, answer=request.proposal)
 

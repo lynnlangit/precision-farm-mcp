@@ -114,17 +114,30 @@ def test_the_two_outcomes_are_both_visible_in_the_audit_log(tmp_path, ground_tru
 
 _AUTO_APPROVE_REF = re.compile(r"\bauto_approve\b")
 
+# The one sanctioned non-test reference: farm-ingest's
+# --auto-approve-synthetic-only flag (host/src/farm_host/ingest_cli.py),
+# which is itself structurally refused (SyntheticDataRequired) outside
+# data/synthetic/ -- see host/tests/test_ingest_cli.py. Everything else,
+# especially any MCP server (which must stay non-interactive and fail
+# closed with no exceptions), must never reference it.
+_ALLOWED_AUTO_APPROVE_REFERENCES = {"host/src/farm_host/ingest_cli.py"}
+
 
 def test_no_server_or_host_code_path_uses_auto_approve():
-    """auto_approve is a test-only shortcut (see confirm.py's docstring); a
-    server or the host CLI reaching production data through it would mean
-    the fail-closed default silently isn't fail-closed at all.
+    """auto_approve is a test-only shortcut (see confirm.py's docstring),
+    with exactly one sanctioned exception (see
+    _ALLOWED_AUTO_APPROVE_REFERENCES above); any other server or host code
+    path reaching production data through it would mean the fail-closed
+    default silently isn't fail-closed at all.
     """
     violations = []
     for base in (REPO_ROOT / "servers", REPO_ROOT / "host"):
         for path in base.rglob("*.py"):
             if "tests" in path.parts or path.name.startswith("test_"):
                 continue
+            relative = str(path.relative_to(REPO_ROOT))
+            if relative in _ALLOWED_AUTO_APPROVE_REFERENCES:
+                continue
             if _AUTO_APPROVE_REF.search(path.read_text(encoding="utf-8")):
-                violations.append(str(path.relative_to(REPO_ROOT)))
+                violations.append(relative)
     assert not violations, f"auto_approve referenced outside tests: {violations}"

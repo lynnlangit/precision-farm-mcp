@@ -64,10 +64,10 @@ def track_connections(monkeypatch):
 
 async def test_no_non_local_connections_during_full_question_cycle(track_connections, tmp_path):
     audit_log = AuditLog(tmp_path / "audit.jsonl")
-    answer = await answer_question(
+    result = await answer_question(
         "was the marginal eighty a bad field or a bad year", audit_log
     )
-    assert answer  # sanity: the call actually completed and produced something
+    assert result.ok and result.text  # sanity: the call actually completed and answered
 
     non_local = [
         addr

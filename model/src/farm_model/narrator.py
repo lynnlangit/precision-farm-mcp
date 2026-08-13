@@ -314,11 +314,17 @@ def narrate_verified(
         else capped_payload
     )
     for attempt in range(max_attempts):
-        response = ollama.chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0.2},
-        )
+        try:
+            response = ollama.chat(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                options={"temperature": 0.2},
+            )
+        except (ConnectionError, ollama.ResponseError):
+            # Ollama died between parsing and narrating -- retrying a dead
+            # connection won't help, so go straight to the deterministic
+            # fallback rather than spending the remaining attempts on it.
+            break
         narration = response.message.content or ""
         grounding = check_narration_grounded(narration, grounding_payload, question=question)
         consistent = check_verdict_not_contradicted(narration, grounding_payload)

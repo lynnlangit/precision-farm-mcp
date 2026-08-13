@@ -18,7 +18,10 @@ the arithmetic, never by guessing or predicting. For example:
 > **It answers:** "The North Eighty had one clear outlier season over the
 > past ten years — 2018 — well below its typical $62.81/acre median
 > profit. Every other season was unremarkable, so this reads as a bad
-> year, not a chronically bad field."
+> year, not a chronically bad field.
+>
+> Therefore: the loss was isolated to 2018 — every other recorded season
+> was unremarkable, not a sign of a chronic problem."
 
 Everything happens on your own laptop. Your farm data is never sent
 anywhere — not to a server, not to the internet, not anywhere outside your
@@ -37,8 +40,18 @@ of scope for now — see the README for why.
 
 Three pieces of free software, installed once:
 
-1. **The code itself** — either downloaded as a folder or checked out with
-   `git clone` if you were given a repository link.
+1. **The code itself.** If you were given a link to the GitHub repository:
+
+   - Open the repository page in a browser.
+   - Click the green **Code** button, then **Download ZIP**.
+   - Unzip it somewhere you'll remember (Desktop or Documents is fine) —
+     that unzipped folder is what every command below means by "the project
+     folder."
+
+   (If you're already comfortable with `git`, `git clone <url>` works too
+   and makes it easier to pull future updates — but it's not required, and
+   the ZIP download is the simpler default if you've never used git.)
+
 2. **`uv`** — the tool that installs and runs the Python programs in this
    project. One-time install:
 
@@ -53,11 +66,16 @@ Three pieces of free software, installed once:
      ```
 
    (Windows and Linux installers are on [astral.sh/uv](https://astral.sh/uv).
-   This tool is built to run on Windows too — the audit log's file locking,
-   for instance, has explicit Windows and Mac/Linux code paths — but all of
-   the actual day-to-day development and testing has happened on a Mac, so
-   if you're on Windows, expect the exact commands below to differ
-   slightly, mainly around how you install `uv` and open a terminal.)
+   The core data-handling code — field matching, spreadsheet ingestion, the
+   audit log's file locking — runs in continuous integration on both Linux
+   and Windows on every change (see `.github/workflows/tests.yml`), so
+   that part is genuinely Windows-tested, not just Windows-intended. The
+   parts that talk to Ollama (`farm-cli`, `farm-ingest`'s question-and-answer
+   step) are not yet exercised by that CI on Windows — day-to-day
+   development has happened on a Mac, so if something around installing or
+   running Ollama itself looks different on your machine, that's the part
+   most likely to have a rough edge; `farm-preflight`, below, is the fastest
+   way to find out where.)
 
 3. **Ollama**, running a small local AI model — this is what turns your
    question into a lookup and the answer into a sentence. Download it from
@@ -74,6 +92,18 @@ Three pieces of free software, installed once:
 
 That's the whole setup. Nothing else is downloaded, and once installed,
 none of this needs an internet connection to actually answer a question.
+
+**Once everything above is installed, check it's all actually working**
+before moving on — open a terminal in the project folder and run:
+
+```bash
+uv run --project host farm-preflight
+```
+
+It checks `uv`, Ollama, the model, and (once you've done Step 1 below) the
+example data and confirmation step, all in one go, and tells you exactly
+what to fix if something's missing — worth re-running any time something
+seems off, not just the first time.
 
 ## Step 1: Try it with example data first
 
@@ -250,9 +280,11 @@ you ever want to review it.
   outside what v1 answers (predictions, recommendations). Rephrase, or
   check the field name and season you used are exactly as they appear in
   your data.
-- **Ollama-related errors** — make sure Ollama is actually running
-  (`ollama list` should show `gemma3:4b`) and that you ran `ollama pull
-  gemma3:4b` at least once.
+- **"Couldn't reach the local model" instead of an answer** — this is a
+  different message on purpose: it means the problem isn't your question,
+  it's the setup (Ollama not running, or the model not pulled). Run
+  `uv run --project host farm-preflight` to see exactly what's wrong and
+  how to fix it, rather than guessing from the error text.
 - **Something looks structurally wrong (a whole season missing, numbers
   that don't add up)** — check your file layout and column names against
   the working example in `data/synthetic/` first; a misnamed file or

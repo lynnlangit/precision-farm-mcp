@@ -58,6 +58,7 @@ uv run --project host farm-ingest
 
 # Ask a question (requires a local Ollama with gemma3:4b pulled)
 ollama pull gemma3:4b
+uv run --project host farm-preflight  # confirms everything above is actually working
 uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 ```
 
@@ -96,7 +97,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 ## Verification
 
-150 tests across the four packages, plus the 11 evaluation questions,
+193 tests across the four packages, plus the 11 evaluation questions,
 all currently green:
 
 ```bash
@@ -116,6 +117,9 @@ Notably:
   (`test_audit_multiprocess.py`)
 - 🛡️ **Prompt injection has no effect** — `DEF-INJECTION` proves the
   narration is unaffected, not just non-crashing (`test_injection_defect.py`)
+- 🚪 **The model-free query path really is model-free** —
+  `farm-cli --intent ...` reaches an answer with zero `ollama.chat` calls,
+  verified directly (`test_structured_path_never_calls_ollama`)
 - ✅ **Narration is grounded and consistent** — every number traces to the
   payload, no verdict is contradicted, with a deterministic fallback if the
   model can't manage both after a retry

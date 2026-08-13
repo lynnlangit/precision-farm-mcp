@@ -32,7 +32,7 @@ class QueryIntent(str, Enum):
 # right (verified empirically -- gemma3:4b returned five *arbitrary* years
 # for "last five years" rather than the five most recent), and the spec is
 # explicit that choosing which seasons are included is not the model's call.
-_REQUIRED_FIELDS: dict[QueryIntent, tuple[str, ...]] = {
+REQUIRED_FIELDS: dict[QueryIntent, tuple[str, ...]] = {
     QueryIntent.WHICH_FIELDS_MADE_MONEY: (),
     QueryIntent.BAD_FIELD_OR_BAD_YEAR: ("field_name",),
     QueryIntent.EXPLAIN_SHORTFALL: ("field_name",),
@@ -62,7 +62,7 @@ class QueryObject(BaseModel):
 
     @model_validator(mode="after")
     def _check_required_fields_for_intent(self) -> QueryObject:
-        missing = [f for f in _REQUIRED_FIELDS[self.intent] if getattr(self, f) in (None, [])]
+        missing = [f for f in REQUIRED_FIELDS[self.intent] if getattr(self, f) in (None, [])]
         if missing:
             raise ValueError(
                 f"intent {self.intent.value!r} requires {missing}, but they were not provided"

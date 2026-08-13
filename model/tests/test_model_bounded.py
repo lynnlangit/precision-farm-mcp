@@ -120,6 +120,21 @@ def test_out_of_scope_question_is_refused_not_forced(known_seasons):
         "What should I plant next year on the north eighty?", known_seasons
     )
     assert isinstance(result, ParseFailure)
+    assert result.kind == "out_of_scope"
+
+
+def test_model_unreachable_is_a_distinct_kind_from_out_of_scope(known_seasons):
+    """A missing/unpulled model must be classified as an environment problem
+    (model_unreachable), not lumped in with a genuinely out-of-scope question
+    -- the two need different, correctly-targeted messages to the farmer.
+    """
+    result = parse_question(
+        "was the north eighty a bad field or a bad year",
+        known_seasons,
+        model="definitely-not-a-real-model:latest",
+    )
+    assert isinstance(result, ParseFailure)
+    assert result.kind == "model_unreachable"
 
 
 def test_underspecified_question_is_refused_not_guessed(known_seasons):
@@ -347,3 +362,18 @@ def test_narrate_verified_never_returns_a_contradicted_verdict(snapshot):
     assert check_verdict_not_contradicted(outcome.text, payload), outcome.text
     grounding = check_narration_grounded(outcome.text, payload, question=question)
     assert grounding.is_grounded, f"ungrounded numbers {grounding.ungrounded_numbers}"
+
+
+def test_narrate_verified_falls_back_when_model_unreachable(snapshot):
+    """Ollama being unreachable mid-narration must produce the deterministic
+    fallback, not an unhandled exception -- the same symmetry item 1 gives
+    query_parser.parse_question's own model_unreachable classification.
+    """
+    canonical_id = snapshot.canonical_id_for_name("Marginal Eighty")
+    payload = bad_field_or_bad_year(snapshot.profit_records, canonical_id)
+    payload["field_name"] = "Marginal Eighty"
+
+    question = "Was the Marginal Eighty a bad field or a bad year?"
+    outcome = narrate_verified(question, payload, model="definitely-not-a-real-model:latest")
+    assert outcome.used_fallback
+    assert outcome.text  # the deterministic template, not empty/crashed

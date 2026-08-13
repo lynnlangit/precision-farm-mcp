@@ -208,6 +208,37 @@ context.
 spec, Phase D was deliberately last (highest farmer-perceived value,
 lowest technical risk, no trust-contract change).
 
+## Post-phase: workshop preparation
+
+Not a new lettered phase (general-purpose changes only, no workshop- or
+org-specific content in this repo) — a targeted round preparing the tool
+for a half-day hands-on farmer workshop, where installation has to happen
+before the day, not during it:
+
+- `ParseFailure.kind` distinguishes a dead Ollama/unpulled model from a
+  genuinely out-of-scope question, with a correctly-targeted message for
+  each (`model/src/farm_model/query_parser.py`, `host/src/farm_host/cli.py`).
+- `farm-cli`/`farm-ingest` exit non-zero on any refusal, not just 0 always
+  (`AnswerResult(text, ok)`).
+- `farm-preflight`: a new console script checking `uv`, Ollama, the model,
+  the example data, and `farm-ingest` having run, then a live end-to-end
+  query — one command instead of five separately confusing failures.
+- `farm-cli --intent`: a model-free query path, structured args in, raw
+  JSON out, zero `ollama.chat` calls anywhere in it — a live-demo fallback
+  if Ollama hiccups mid-workshop.
+- `farm-ingest --auto-approve-synthetic-only`: reuses the existing
+  `confirm.auto_approve`, structurally refused outside `data/synthetic/`.
+- A deterministic "therefore" line appended after a successful answer,
+  template-built and omitted (not invented) where no verdict exists to
+  restate.
+- `.github/workflows/tests.yml`: `generator`+`core` on `ubuntu-latest` and
+  `windows-latest`; `host`+`model` (real Ollama calls) on `ubuntu-latest`
+  only — see `docs/ARCHITECTURE.md`'s CI row for why the split.
+- `docs/FARMER_GUIDE.md`: install path leads with a no-git ZIP download,
+  Windows paragraph states exactly what CI does and doesn't cover.
+- 193 tests green across 4 packages (generator 16, core 72 + 1 skipped,
+  host 81, model 24).
+
 ---
 
 ## Working agreement (unchanged, applies to B/C/D)

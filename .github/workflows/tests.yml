@@ -1,0 +1,83 @@
+name: tests
+
+# Scope is intentionally split, not "all 4 packages on every OS":
+#
+# - generator + core have no Ollama dependency at all -- pure Python/DuckDB/
+#   file I/O -- and are exactly where a real cross-platform bug would show up
+#   (core/src/farm_core/audit.py's msvcrt/fcntl file-locking split, CSV
+#   newline handling, path handling). These run on both ubuntu-latest and
+#   windows-latest, so "Windows is CI-covered" in docs/FARMER_GUIDE.md is a
+#   claim this workflow actually backs.
+# - host + model make real, unmocked calls to a local Ollama + gemma3:4b
+#   (see model/tests/test_model_bounded.py's own docstring -- this project's
+#   convention is to test the real model, not a mock of it). Installing and
+#   driving Ollama unattended on a Windows GitHub-hosted runner is untested
+#   from this repo's development environment, so that suite runs on
+#   ubuntu-latest only rather than silently claiming Windows coverage it
+#   doesn't have.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  deterministic:
+    name: generator + core (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: generator tests
+        run: uv run --project generator pytest -q
+      - name: core tests
+        run: uv run --project core pytest -q
+
+  full:
+    name: host + model (ubuntu-latest, needs Ollama)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: cache pulled model
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-gemma3-4b-${{ runner.os }}
+
+      - name: start Ollama and wait for it to be ready
+        run: |
+          ollama serve &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:11434 >/dev/null && exit 0
+            sleep 1
+          done
+          echo "Ollama did not become ready in time" >&2
+          exit 1
+
+      - name: pull gemma3:4b
+        run: ollama pull gemma3:4b
+
+      - name: generate synthetic data
+        run: uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
+
+      - name: confirm synthetic data (non-interactive)
+        run: uv run --project host farm-ingest --auto-approve-synthetic-only
+
+      - name: host tests
+        run: uv run --project host pytest -q
+
+      - name: model tests
+        run: uv run --project model pytest -q

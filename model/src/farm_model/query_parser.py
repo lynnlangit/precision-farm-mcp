@@ -15,11 +15,24 @@ table at all.
 from __future__ import annotations
 
 import dataclasses
+from typing import Literal
 
 import ollama
 from pydantic import ValidationError
 
 from .query_schema import QueryIntent, QueryObject, resolve_relative_seasons
+
+# Distinguishes "Ollama/the model itself isn't in a working state" from
+# "the model ran fine and the question just doesn't map to anything v1
+# answers" -- host/src/farm_host/cli.py uses this to give the farmer an
+# actionable, correctly-targeted message instead of one generic refusal for
+# both. "model_unreachable" covers both a dead Ollama daemon (ConnectionError)
+# and a not-pulled model (ollama.ResponseError) -- from the farmer's side
+# both are "something about the environment isn't ready", not "reword your
+# question".
+ParseFailureKind = Literal[
+    "model_unreachable", "invalid_output", "out_of_range", "out_of_scope"
+]
 
 DEFAULT_MODEL = "gemma3:4b"
 
@@ -72,6 +85,7 @@ a spelling.
 class ParseFailure:
     raw_question: str
     reason: str
+    kind: ParseFailureKind
     raw_model_output: str | None = None
 
 
@@ -93,19 +107,30 @@ def parse_question(
             format=schema,
             options={"temperature": 0},
         )
-    except Exception as e:  # noqa: BLE001 -- any transport/model failure is a parse failure
-        return ParseFailure(raw_question=question, reason=f"model call failed: {e}")
+    except (ConnectionError, ollama.ResponseError) as e:
+        # Ollama isn't running, or the model isn't pulled -- an environment
+        # problem, not a question the farmer needs to reword.
+        return ParseFailure(
+            raw_question=question, reason=f"model call failed: {e}", kind="model_unreachable"
+        )
+    except Exception as e:  # noqa: BLE001 -- any other transport/model failure is still unreachable
+        return ParseFailure(
+            raw_question=question, reason=f"model call failed: {e}", kind="model_unreachable"
+        )
 
     raw_output = response.message.content or ""
     try:
         query = QueryObject.model_validate_json(raw_output)
     except (ValidationError, ValueError) as e:
-        return ParseFailure(raw_question=question, reason=str(e), raw_model_output=raw_output)
+        return ParseFailure(
+            raw_question=question, reason=str(e), kind="invalid_output", raw_model_output=raw_output
+        )
 
     if query.intent == QueryIntent.UNRECOGNIZED:
         return ParseFailure(
             raw_question=question,
             reason="question is out of scope for v1 (retrospective lookups only)",
+            kind="out_of_scope",
             raw_model_output=raw_output,
         )
 
@@ -115,6 +140,7 @@ def parse_question(
         return ParseFailure(
             raw_question=question,
             reason=f"season(s) {out_of_range_seasons} are outside the known range {known_seasons}",
+            kind="out_of_range",
             raw_model_output=raw_output,
         )
 
