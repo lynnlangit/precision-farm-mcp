@@ -135,7 +135,7 @@ def test_no_server_or_host_code_path_uses_auto_approve():
         for path in base.rglob("*.py"):
             if "tests" in path.parts or path.name.startswith("test_"):
                 continue
-            relative = str(path.relative_to(REPO_ROOT))
+            relative = path.relative_to(REPO_ROOT).as_posix()
             if relative in _ALLOWED_AUTO_APPROVE_REFERENCES:
                 continue
             if _AUTO_APPROVE_REF.search(path.read_text(encoding="utf-8")):
