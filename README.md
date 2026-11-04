@@ -49,11 +49,11 @@ included example data, and how to eventually load your own records.
 
 ```bash
 # To start ollama --> in a terminal, leave this window open
-ollama server
+ollama serve
 # To verify models --> in a second terminal
 ollama list
-# cd into the application directory --> i.e.
-cd /Users/lynnlangit/Documents/GitHub/precision-farm-mcp
+# cd into the folder where you cloned this repo
+cd precision-farm-mcp
 ```
 
 ```bash
