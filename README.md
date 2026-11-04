@@ -48,6 +48,15 @@ included example data, and how to eventually load your own records.
 ## Quick start
 
 ```bash
+# To start ollama --> in a terminal, leave this window open
+ollama server
+# To verify models --> in a second terminal
+ollama list
+# cd into the application directory --> i.e.
+cd /Users/lynnlangit/Documents/GitHub/precision-farm-mcp
+```
+
+```bash
 # Generate ten seasons of synthetic (deliberately messy) farm data
 uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
 
