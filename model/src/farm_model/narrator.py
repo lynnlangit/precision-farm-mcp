@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 
 import ollama
 
@@ -269,30 +270,49 @@ def narrate(
     return response.message.content or ""
 
 
-def _deterministic_fallback(question: str, payload: dict) -> str:
-    """Guaranteed-correct, template-built sentence used only when the model's
-    narration fails verification twice. No LLM involved -- this is the safety
-    net under the safety net.
-    """
-    if "verdict" in payload:
-        field = payload.get("field_name", "this field")
-        evidence = payload.get("evidence", {})
-        if payload["verdict"] == "bad_field":
-            return (
-                f"{field} lost money in {evidence.get('loss_rate', 0) * 100:.0f}% of "
-                f"{evidence.get('num_seasons', '?')} recorded seasons -- a chronic "
-                "pattern, not a single bad year."
-            )
-        if payload["verdict"] == "bad_year":
-            seasons = evidence.get("outlier_seasons", [])
-            return (
-                f"{field} was profitable most seasons (median "
-                f"${evidence.get('median_profit_per_acre', 0):,.2f}/ac), except for a "
-                f"clear outlier in {', '.join(str(s) for s in seasons)} -- a bad year, "
-                "not a bad field."
-            )
-        median = f"${evidence.get('median_profit_per_acre', 0):,.2f}/ac"
-        num_seasons = evidence.get("num_seasons", "?")
+# --- Template-first answers (eval-fix P3b) -----------------------------------
+# A live 3x rerun of evals 2, 5, 8 and 11 showed the model-first narration
+# was right in only 4 of 12 runs even with the semantic checks: wrong answers
+# kept taking new shapes (swapped labels, fraction read as percent) that
+# passed every check. So every answer now LEADS with a deterministic,
+# template-built sentence computed from the payload alone; the model may add
+# at most one sentence of context, which must pass every check or is dropped.
+
+
+def _money(v: float) -> str:
+    return f"-${abs(v):,.2f}" if v < 0 else f"${v:,.2f}"
+
+
+def _season_span(seasons: list[int]) -> str:
+    seasons = sorted(set(seasons))
+    if not seasons:
+        return "the seasons examined"
+    if len(seasons) == 1:
+        return str(seasons[0])
+    if seasons == list(range(seasons[0], seasons[-1] + 1)):
+        return f"{seasons[0]}-{seasons[-1]}"
+    return ", ".join(map(str, seasons[:-1])) + f" and {seasons[-1]}"
+
+
+def _verdict_template(payload: dict) -> str:
+    field = payload.get("field_name", "This field")
+    evidence = payload.get("evidence", {})
+    verdict = payload["verdict"]
+    num_seasons = evidence.get("num_seasons", "?")
+    if verdict == "bad_field":
+        losses = len(evidence.get("seasons_with_loss", [])) or "most"
+        return (
+            f"{field} was a bad field, not a bad year: it lost money in {losses} of its "
+            f"{num_seasons} recorded seasons -- a chronic pattern."
+        )
+    median = f"${evidence.get('median_profit_per_acre', 0):,.2f}/ac"
+    if verdict == "bad_year":
+        seasons = ", ".join(str(s) for s in evidence.get("outlier_seasons", []))
+        return (
+            f"{field} had a bad year, not a bad field: {seasons} was a clear outlier, and "
+            f"its median profit across {num_seasons} recorded seasons was {median}."
+        )
+    if verdict == "consistently_profitable":
         losses = evidence.get("num_loss_seasons")
         if losses is None:
             return (
@@ -308,36 +328,182 @@ def _deterministic_fallback(question: str, payload: dict) -> str:
             f"{field} lost money in {losses} of {num_seasons} recorded seasons (median "
             f"{median}) -- neither a chronic pattern nor a single standout bad year."
         )
-    if "results" in payload and payload["results"]:
-        results = payload["results"]
-        top, bottom = results[0], results[-1]
-        total = payload.get("num_fields", len(results))
-        made_money = payload.get(
-            "num_fields_made_money", sum(1 for r in results if r.get("total_profit", 0) > 0)
-        )
-        seasons = sorted({s for r in results for s in r.get("seasons", [])})
-        if len(seasons) > 1 and seasons == list(range(seasons[0], seasons[-1] + 1)):
-            span = f"{seasons[0]}-{seasons[-1]}"
-        elif len(seasons) > 1:
-            span = ", ".join(map(str, seasons[:-1])) + f" and {seasons[-1]}"
-        else:
-            span = ", ".join(map(str, seasons)) or "the seasons examined"
+    return f"There isn't enough recorded data for {field} to classify it."
 
-        def money(v: float) -> str:
-            return f"-${abs(v):,.2f}" if v < 0 else f"${v:,.2f}"
 
+_MAX_FIELDS_LISTED = 8
+
+
+def _ranking_template(payload: dict) -> str:
+    results = payload["results"]
+    span = _season_span([s for r in results for s in r.get("seasons", [])])
+    made = [r for r in results if r.get("total_profit", 0) > 0]
+    total = payload.get("num_fields", len(results))
+    if not made:
+        return f"None of the {total} fields made money over {span}."
+    listed = ", ".join(
+        f"{r.get('display_name')} ({_money(r.get('total_profit', 0))})"
+        for r in made[:_MAX_FIELDS_LISTED]
+    )
+    more = f", and {len(made) - _MAX_FIELDS_LISTED} more" if len(made) > _MAX_FIELDS_LISTED else ""
+    return f"Fields that made money over {span}: {listed}{more}."
+
+
+def _zone_template(payload: dict) -> str:
+    field = payload.get("field_name", "This field")
+    season = payload.get("season")
+    in_season = f" in {season}" if season else ""
+    field_profit = payload.get("field_profit", 0)
+    available = [z for z in payload.get("zones", []) if z.get("available")]
+    losing = [z for z in available if (z.get("profit") or 0) < 0]
+    if not available:
+        return f"None of {field}'s zones had enough yield-monitor coverage{in_season} to measure."
+    overall = (
+        f"{field} made {_money(field_profit)} overall{in_season}"
+        if field_profit > 0
+        else f"{field} lost {_money(abs(field_profit))} overall{in_season}"
+    )
+    if not losing:
+        return f"{overall}, and none of its measurable zones lost money."
+    zone_list = ", ".join(
+        f"zone {z.get('zone_index')} ({_money(z.get('profit') or 0)})" for z in losing
+    )
+    return f"{overall}, but {len(losing)} of {len(available)} measurable zones lost money: {zone_list}."
+
+
+def _yield_reconciliation_template(payload: dict) -> str:
+    field = payload.get("field_name", "This field")
+    season = payload.get("season")
+    in_season = f" in {season}" if season else ""
+    scale = payload.get("scale_total_bu")
+    monitor = payload.get("monitor_total_bu")
+    if monitor is None:
         text = (
-            f"{made_money} of {total} fields made money over {span}. "
-            f"{top.get('display_name', 'The top field')} ranked highest "
-            f"({money(top.get('total_profit', 0))})"
+            f"There is no yield monitor total for {field}{in_season}; the scale tickets "
+            f"show {scale:,.1f} bu."
         )
-        if len(results) > 1:
-            text += (
-                f" and {bottom.get('display_name', 'the bottom field')} lowest "
-                f"({money(bottom.get('total_profit', 0))})"
-            )
-        return text + "."
-    return "The computed result is available, but a plain-language summary could not be verified."
+    else:
+        agree = (
+            "do not agree -- the monitor needs a look"
+            if payload.get("totals_discrepancy")
+            else "agree within tolerance"
+        )
+        text = (
+            f"For {field}{in_season}, the yield monitor recorded {monitor:,.1f} bu and the "
+            f"scale tickets {scale:,.1f} bu: the totals {agree}."
+        )
+    if payload.get("coverage_gap_flagged"):
+        text += (
+            " But the yield monitor's coverage has a gap -- part of the field wasn't "
+            "recorded, which a totals-only check would miss."
+        )
+    return text
+
+
+def _cost_reconciliation_template(payload: dict) -> str:
+    results = payload.get("results", [])
+    if not results:
+        return "There are no cost line items to compare for that field and season."
+    first = results[0]
+    where = f"{first.get('field_name')} in {first.get('season')}"
+    flagged = [r for r in results if r.get("outlier_flagged")]
+    if not flagged:
+        return f"Every cost line item for {where} is in line with its as-applied records."
+    parts = []
+    for r in flagged:
+        derived = r.get("as_applied_derived_cost_per_ac")
+        vs = f" vs ${derived:,.2f}/ac from the as-applied records" if derived is not None else ""
+        parts.append(f"{r.get('line_item')} (ledger ${r.get('ledger_cost_per_ac', 0):,.2f}/ac{vs})")
+    return f"For {where}, this doesn't look right: {'; '.join(parts)}."
+
+
+def _resolve_name_template(payload: dict, question: str) -> str:
+    name = payload.get("canonical_boundary_name")
+    method = payload.get("method")
+    how = {"exact": "an exact match", "alias": "a recorded alias"}.get(method, method)
+    return f"That name refers to the field {name} ({how})."
+
+
+def _unprofitable_zones_template(payload: dict) -> str:
+    examined = payload.get("acres_examined") or 0
+    unprofitable = payload.get("acres_unprofitable") or 0
+    span = _season_span(payload.get("seasons_examined", []))
+    if not examined:
+        return "No profitable field-season had enough yield-monitor coverage to examine."
+    return (
+        f"Across otherwise-profitable fields over {span}, {unprofitable:,.1f} of "
+        f"{examined:,.1f} examined acres sat in a zone that lost money."
+    )
+
+
+def template_answer(question: str, payload: dict) -> str:
+    """The deterministic lead sentence for every answer: computed from the
+    payload alone, no model involved, so it is correct by construction.
+    """
+    if "verdict" in payload:
+        return _verdict_template(payload)
+    if "zones" in payload and "field_profit" in payload:
+        return _zone_template(payload)
+    if "pct_acres_unprofitable_in_profitable_fields" in payload:
+        return _unprofitable_zones_template(payload)
+    if "totals_discrepancy" in payload and "scale_total_bu" in payload:
+        return _yield_reconciliation_template(payload)
+    if "canonical_boundary_name" in payload:
+        return _resolve_name_template(payload, question)
+    if payload.get("results") and "line_item" in payload["results"][0]:
+        return _cost_reconciliation_template(payload)
+    if payload.get("results"):
+        return _ranking_template(payload)
+    return "The computed result is available, but there is no plain-language summary for it yet."
+
+
+# Kept for callers/tests written against the old name.
+_deterministic_fallback = template_answer
+
+
+_CONTEXT_PROMPT_TEMPLATE = """The farmer asked: "{question}"
+
+This verified answer will be shown to the farmer first, word for word:
+"{lead}"
+
+Here is the computed data it came from. These numbers are correct and \
+final -- do not perform any arithmetic and do not state any number that \
+isn't shown below.
+{untrusted_note}
+{payload_json}
+
+Rules for reading the numbers:
+- A negative profit is a loss. Never call a negative value "a profit".
+- Values under "modeled" are yield expectations in bu/ac, not dollars and \
+not causes of a loss.
+- If "field_profit" is positive, the field as a whole made money.
+- If "totals_discrepancy" is false, the totals agree.
+- monitor_total_bu is the yield monitor; scale_total_bu is the scale tickets.
+
+Write ONE short sentence of extra context that helps the farmer understand \
+the verified answer. Do not repeat or contradict it, and do not give advice \
+or predictions. If there is nothing useful to add, reply with exactly: NONE"""
+
+
+def _build_context_prompt(
+    question: str, lead: str, payload: dict, untrusted_paths: frozenset[str]
+) -> str:
+    display_payload = _wrap_untrusted(payload, untrusted_paths) if untrusted_paths else payload
+    return _CONTEXT_PROMPT_TEMPLATE.format(
+        question=question,
+        lead=lead,
+        untrusted_note=_UNTRUSTED_NOTE if untrusted_paths else "",
+        payload_json=json.dumps(display_payload, indent=2, default=str),
+    )
+
+
+_FIRST_SENTENCE_RE = re.compile(r"^(.+?[.!?])(\s|$)", re.DOTALL)
+
+
+def _first_sentence(text: str) -> str:
+    text = text.strip().strip('"').strip()
+    m = _FIRST_SENTENCE_RE.match(text)
+    return (m.group(1) if m else text).strip()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -347,11 +513,19 @@ class NarrationOutcome:
     measured_or_derived_grounding: GroundingResult
     modeled_grounding: GroundingResult | None
     attempts_used: int
+    # True when no model sentence was shown -- the template answer stood
+    # alone (the model's sentence failed verification twice, it had nothing
+    # to add, or the model was unreachable).
     used_fallback: bool
     # One tuple per rejected attempt, naming the checks it failed
     # ("ungrounded", "verdict", "sign", "zone_premise", "reconciliation",
     # "attribution"). Empty when the first attempt passed.
     failed_checks: tuple[tuple[str, ...], ...] = ()
+    # The text of each rejected attempt, so a reviewer can tell a correct
+    # rejection from an over-rejection.
+    rejected_texts: tuple[str, ...] = ()
+    lead: str = ""
+    context: str | None = None
 
 
 def narrate_verified(
@@ -361,29 +535,31 @@ def narrate_verified(
     max_attempts: int = 2,
     untrusted_paths: frozenset[str] = frozenset(),
 ) -> NarrationOutcome:
-    """narrate(), then verify the result is both numerically grounded and
-    doesn't contradict the payload's own verdict. Retries once with a
-    stronger prompt; if verification still fails, falls back to a
-    deterministic template rather than showing an unverified narration.
-    Returns a NarrationOutcome bundling the accepted text with the A3
-    grounding-by-provenance split (for Phase B's metrics) and whether the
-    payload was capped before reaching the model.
+    """Template-first answer: a deterministic lead sentence (template_answer),
+    plus at most one model-written sentence of context that must pass every
+    check -- grounded, not contradicting the verdict, and every semantic
+    check -- or it is dropped. Retries the context sentence once, naming the
+    failed check.
 
     untrusted_paths (from MCPFleet.call()'s ToolResult) names which strings
     in result_payload are raw farmer-authored free text. The prompt sent to
-    the model wraps them in a delimiter; the grounding and contradiction
-    checks below run against a *redacted* copy with those same fields
-    blanked, so a number embedded in untrusted text can never itself count
-    as grounding evidence (see _redact_untrusted_for_grounding).
+    the model wraps them in a delimiter; the checks run against a *redacted*
+    copy with those fields blanked, so a number embedded in untrusted text
+    can never itself count as grounding evidence.
     """
     capped_payload, truncated = cap_payload_for_narration(result_payload, untrusted_paths)
-    prompt = _build_prompt(question, capped_payload, untrusted_paths)
     grounding_payload = (
         _redact_untrusted_for_grounding(capped_payload, untrusted_paths)
         if untrusted_paths
         else capped_payload
     )
+    lead = template_answer(question, result_payload)
+    prompt = _build_context_prompt(question, lead, capped_payload, untrusted_paths)
+
     failed_log: list[tuple[str, ...]] = []
+    rejected: list[str] = []
+    context: str | None = None
+    attempts = 0
     for attempt in range(max_attempts):
         try:
             response = ollama.chat(
@@ -392,44 +568,38 @@ def narrate_verified(
                 options={"temperature": 0.2},
             )
         except (ConnectionError, ollama.ResponseError):
-            # Ollama died between parsing and narrating -- retrying a dead
-            # connection won't help, so go straight to the deterministic
-            # fallback rather than spending the remaining attempts on it.
+            break  # a dead connection won't recover on retry -- template alone
+        attempts = attempt + 1
+        candidate = _first_sentence(response.message.content or "")
+        if not candidate or candidate.rstrip(".").upper() == "NONE":
             break
-        narration = response.message.content or ""
-        grounding = check_narration_grounded(narration, grounding_payload, question=question)
-        consistent = check_verdict_not_contradicted(narration, grounding_payload)
+        grounding = check_narration_grounded(candidate, grounding_payload, question=question)
+        consistent = check_verdict_not_contradicted(candidate, grounding_payload)
         failed = (
             ([] if grounding.is_grounded else ["ungrounded"])
             + ([] if consistent else ["verdict"])
-            + failed_semantic_checks(narration, grounding_payload)
+            + failed_semantic_checks(candidate, grounding_payload)
         )
         if not failed:
-            measured_or_derived, modeled = check_narration_grounded_by_provenance(
-                narration, grounding_payload, question=question
-            )
-            return NarrationOutcome(
-                text=narration,
-                truncated=truncated,
-                measured_or_derived_grounding=measured_or_derived,
-                modeled_grounding=modeled,
-                attempts_used=attempt + 1,
-                used_fallback=False,
-                failed_checks=tuple(failed_log),
-            )
+            context = candidate
+            break
         failed_log.append(tuple(failed))
+        rejected.append(candidate)
         prompt += _retry_suffix(failed)
 
-    fallback_text = _deterministic_fallback(question, result_payload)
+    text = f"{lead} {context}" if context else lead
     measured_or_derived, modeled = check_narration_grounded_by_provenance(
-        fallback_text, grounding_payload, question=question
+        text, grounding_payload, question=question
     )
     return NarrationOutcome(
-        text=fallback_text,
+        text=text,
         truncated=truncated,
         measured_or_derived_grounding=measured_or_derived,
         modeled_grounding=modeled,
-        attempts_used=max_attempts,
-        used_fallback=True,
+        attempts_used=attempts if attempts else max_attempts,
+        used_fallback=context is None,
         failed_checks=tuple(failed_log),
+        rejected_texts=tuple(rejected),
+        lead=lead,
+        context=context,
     )

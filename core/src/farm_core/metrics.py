@@ -109,9 +109,11 @@ def narration_faithfulness(entries: list[dict]) -> dict[str, Any]:
 
     return {
         "definition": (
-            "first_attempt_rate = narrations accepted without a retry / narrations "
-            "analyzed; fallback_rate = narrations that hit the deterministic "
-            "template / narrations analyzed"
+            "Answers are template-first: a deterministic lead sentence plus at most "
+            "one verified model sentence. first_attempt_rate = model sentences "
+            "accepted without a retry / narrations analyzed; fallback_rate = "
+            "narrations where no model sentence was shown (template alone) / "
+            "narrations analyzed"
         ),
         "first_attempt_rate": _rate(first_attempt, len(graded)),
         "fallback_rate": _rate(fallback, len(graded)),
