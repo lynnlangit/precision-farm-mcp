@@ -78,6 +78,8 @@ _RETRY_REASONS = {
     "-- the totals agree.",
     "attribution": "It presented a modeled bu/ac value (season or field effect) as the "
     "cause of the loss.",
+    "unsupported_cause": "It named a cause (such as weather, pests or soil) that the JSON "
+    "does not contain. Do not explain why something happened unless the JSON says why.",
 }
 
 
@@ -479,6 +481,8 @@ not causes of a loss.
 - If "field_profit" is positive, the field as a whole made money.
 - If "totals_discrepancy" is false, the totals agree.
 - monitor_total_bu is the yield monitor; scale_total_bu is the scale tickets.
+- Never say why something happened (weather, pests, soil, prices...) unless \
+the JSON names that cause.
 
 Write ONE short sentence of extra context that helps the farmer understand \
 the verified answer. Do not repeat or contradict it, and do not give advice \
