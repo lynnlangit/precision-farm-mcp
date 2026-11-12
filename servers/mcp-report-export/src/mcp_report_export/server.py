@@ -72,6 +72,10 @@ class WhichFieldsMadeMoneyResult(BaseModel):
     """
 
     results: list[FieldProfitResult]
+    # Additive counts so a narration or Therefore line saying "N of M fields
+    # made money" cites numbers the payload actually carries.
+    num_fields: int
+    num_fields_made_money: int
     provenance: SnapshotProvenance
     modeled: dict[str, Any] | None = None
 
@@ -212,7 +216,10 @@ def which_fields_made_money(seasons: list[int]) -> dict:
     _audit_log().log("tool_call", tool="which_fields_made_money", seasons=seasons)
     results = _which_fields_made_money(snap.profit_records, seasons)
     return WhichFieldsMadeMoneyResult(
-        results=results, provenance=SnapshotProvenance(**_provenance())
+        results=results,
+        num_fields=len(results),
+        num_fields_made_money=sum(1 for r in results if r["total_profit"] > 0),
+        provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
 
 

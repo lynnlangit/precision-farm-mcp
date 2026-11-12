@@ -377,3 +377,47 @@ def test_narrate_verified_falls_back_when_model_unreachable(snapshot):
     outcome = narrate_verified(question, payload, model="definitely-not-a-real-model:latest")
     assert outcome.used_fallback
     assert outcome.text  # the deterministic template, not empty/crashed
+
+
+def test_fallback_states_real_loss_count_and_stays_grounded():
+    """Eval 3 printed the fallback "shows no chronic loss pattern" for a field
+    that lost money in 1 of 6 seasons. The fallback must state the count, and
+    every number it cites must be grounded in the payload.
+    """
+    from farm_model.narrator import _deterministic_fallback
+
+    question = "Was South 160 South a bad field or just a bad year?"
+    payload = {
+        "field_name": "South 160 South",
+        "verdict": "consistently_profitable",
+        "evidence": {
+            "median_profit_per_acre": 175.41,
+            "loss_rate": 0.17,
+            "num_seasons": 6,
+            "num_loss_seasons": 1,
+        },
+    }
+    text = _deterministic_fallback(question, payload)
+    assert "lost money in 1 of 6 recorded seasons" in text
+    assert "$175.41/ac" in text
+    assert check_narration_grounded(text, payload, question=question).is_grounded
+
+
+def test_fallback_ranking_counts_fields_and_names_bottom_and_stays_grounded():
+    from farm_model.narrator import _deterministic_fallback
+
+    question = "Which fields made money in 2019 and 2020?"
+    payload = {
+        "results": [
+            {"display_name": "Depot Forty", "seasons": [2019, 2020], "total_profit": 17549.9},
+            {"display_name": "Home Quarter", "seasons": [2019, 2020], "total_profit": -5796.77},
+        ],
+        "num_fields": 2,
+        "num_fields_made_money": 1,
+    }
+    text = _deterministic_fallback(question, payload)
+    assert text == (
+        "1 of 2 fields made money over 2019-2020. Depot Forty ranked highest "
+        "($17,549.90) and Home Quarter lowest (-$5,796.77)."
+    )
+    assert check_narration_grounded(text, payload, question=question).is_grounded

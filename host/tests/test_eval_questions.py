@@ -34,6 +34,8 @@ async def test_q3_south_160_south_is_a_normal_unremarkable_field():
     r = result.data
     assert r["verdict"] == "consistently_profitable"
     assert r["evidence"]["loss_rate"] == 0.17
+    assert r["evidence"]["num_loss_seasons"] == 1
+    assert r["evidence"]["num_seasons"] == 6
 
 
 async def test_q4_ranking_over_relative_five_year_window():
@@ -46,6 +48,8 @@ async def test_q4_ranking_over_relative_five_year_window():
     assert r["results"][0]["total_profit"] == 135533.57
     assert r["results"][-1]["display_name"] == "Marginal Eighty"
     assert r["results"][-1]["total_profit"] == -112044.66
+    assert r["num_fields"] == len(r["results"])
+    assert r["num_fields_made_money"] == sum(1 for x in r["results"] if x["total_profit"] > 0)
 
 
 async def test_q5_ranking_over_explicit_named_years():
@@ -74,6 +78,10 @@ async def test_q7_genuine_yield_monitor_discrepancy():
     r = result.data
     assert r["totals_discrepancy"] is True
     assert round(r["pct_diff"] * 100, 1) == -3.4
+    # Display rounding at the server layer: no 15-digit floats reach the user.
+    assert r["monitor_total_bu"] == round(r["monitor_total_bu"], 1)
+    assert r["scale_total_bu"] == round(r["scale_total_bu"], 1)
+    assert r["pct_diff"] == round(r["pct_diff"], 4)
 
 
 async def test_q8_coverage_gap_totals_alone_would_miss():

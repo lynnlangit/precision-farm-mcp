@@ -165,7 +165,8 @@ def bad_field_or_bad_year(records: dict[tuple[str, int], ProfitRecord], canonica
         return {"canonical_id": canonical_id, "verdict": "no_data", "evidence": {}}
 
     profits = [r.profit_per_acre for r in field_recs]
-    loss_rate = sum(1 for p in profits if p < 0) / len(profits)
+    num_loss_seasons = sum(1 for p in profits if p < 0)
+    loss_rate = num_loss_seasons / len(profits)
 
     if loss_rate >= LOSS_RATE_BAD_FIELD_THRESHOLD:
         return {
@@ -194,6 +195,7 @@ def bad_field_or_bad_year(records: dict[tuple[str, int], ProfitRecord], canonica
                 "outlier_seasons": outlier_seasons,
                 "median_profit_per_acre": round(median_profit, 2),
                 "num_seasons": len(field_recs),
+                "num_loss_seasons": num_loss_seasons,
             },
         }
 
@@ -204,5 +206,6 @@ def bad_field_or_bad_year(records: dict[tuple[str, int], ProfitRecord], canonica
             "median_profit_per_acre": round(median_profit, 2),
             "loss_rate": round(loss_rate, 2),
             "num_seasons": len(field_recs),
+            "num_loss_seasons": num_loss_seasons,
         },
     }
