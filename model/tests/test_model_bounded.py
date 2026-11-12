@@ -403,7 +403,7 @@ def test_fallback_states_real_loss_count_and_stays_grounded():
     assert check_narration_grounded(text, payload, question=question).is_grounded
 
 
-def test_fallback_ranking_counts_fields_and_names_bottom_and_stays_grounded():
+def test_ranking_template_lists_the_fields_that_made_money_and_stays_grounded():
     from farm_model.narrator import _deterministic_fallback
 
     question = "Which fields made money in 2019 and 2020?"
@@ -416,8 +416,7 @@ def test_fallback_ranking_counts_fields_and_names_bottom_and_stays_grounded():
         "num_fields_made_money": 1,
     }
     text = _deterministic_fallback(question, payload)
-    assert text == (
-        "1 of 2 fields made money over 2019-2020. Depot Forty ranked highest "
-        "($17,549.90) and Home Quarter lowest (-$5,796.77)."
-    )
+    # The lead answers the question asked (which fields made money); the
+    # CLI's Therefore line adds the count and the top/bottom fields.
+    assert text == "Fields that made money over 2019-2020: Depot Forty ($17,549.90)."
     assert check_narration_grounded(text, payload, question=question).is_grounded

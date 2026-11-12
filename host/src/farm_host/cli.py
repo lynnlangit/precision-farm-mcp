@@ -146,6 +146,8 @@ async def answer_question(
         attempts=outcome.attempts_used,
         used_fallback=outcome.used_fallback,
         failed_checks=[list(f) for f in outcome.failed_checks],
+        rejected_texts=list(outcome.rejected_texts),
+        model_context_shown=outcome.context is not None,
     )
     therefore = build_therefore_line(result)
     text = f"{outcome.text}\n\n{therefore}" if therefore else outcome.text

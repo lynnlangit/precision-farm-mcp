@@ -51,9 +51,9 @@ EVAL5_RANKING = {
 EVAL8_MARGINAL_2024 = {
     "field_name": "Marginal Eighty",
     "season": 2024,
-    "scale_total_bu": 17513.6,
-    "monitor_total_bu": 17430.5,
-    "pct_diff": -0.0047,
+    "scale_total_bu": 17430.5,
+    "monitor_total_bu": 17513.6,
+    "pct_diff": 0.0048,
     "totals_discrepancy": False,
     "coverage_gap_bins": 1,
     "coverage_gap_flagged": True,
@@ -161,7 +161,7 @@ def test_correct_eval5_narrations_pass(text):
 @pytest.mark.parametrize(
     "text",
     [
-        "The yield monitor and scale ticket totals agree (17430.5 vs 17513.6 bu), but the "
+        "The yield monitor and scale ticket totals agree (17513.6 vs 17430.5 bu), but the "
         "monitor missed part of the field: a coverage gap that a totals check alone would "
         "not catch.",
         "There's no discrepancy in the totals, yet the coverage check flagged a gap at one "
@@ -201,7 +201,8 @@ def test_checks_ignore_payloads_they_dont_cover():
     assert failed_semantic_checks("Marginal Eighty lost money in all 10 seasons.", plain) == []
 
 
-# --- narrate_verified wiring: retry names the failure; audit gets failed_checks
+# --- narrate_verified wiring (template-first): the lead is the template; the
+# model may add one sentence that must pass every check.
 
 def _stub_narrations(monkeypatch, texts):
     import types
@@ -219,24 +220,41 @@ def _stub_narrations(monkeypatch, texts):
     return prompts
 
 
-def test_retry_names_the_failed_check_and_outcome_records_it(monkeypatch):
+EVAL5_LEAD = "Fields that made money over 2019-2020: Depot Forty ($17,549.90)."
+
+
+def test_lead_is_the_template_and_a_good_context_sentence_is_appended(monkeypatch):
     from farm_model.narrator import narrate_verified
 
-    good = (
-        "Only 1 of 3 fields made money. Depot Forty had the highest profit at $17,549.90; "
-        "Home Quarter lost $5,796.77."
-    )
+    context = "Home Quarter and East 80 both lost money over the same two seasons."
+    _stub_narrations(monkeypatch, [context])
+    outcome = narrate_verified("Which fields made money in 2019 and 2020?", EVAL5_RANKING)
+    assert outcome.lead == EVAL5_LEAD
+    assert outcome.text == f"{EVAL5_LEAD} {context}"
+    assert outcome.context == context
+    assert not outcome.used_fallback
+    assert outcome.failed_checks == ()
+
+
+def test_retry_names_the_failed_check_and_records_the_rejected_text(monkeypatch):
+    from farm_model.narrator import narrate_verified
+
+    good = "Home Quarter lost $5,796.77 over the same seasons."
     prompts = _stub_narrations(monkeypatch, [EVAL5_WRONG, good])
     outcome = narrate_verified("Which fields made money in 2019 and 2020?", EVAL5_RANKING)
-    assert outcome.text == good
-    assert not outcome.used_fallback
+    assert outcome.text == f"{EVAL5_LEAD} {good}"
     assert outcome.attempts_used == 2
     assert outcome.failed_checks == (("sign",),)
+    # Only the first sentence of a reply is ever used.
+    assert outcome.rejected_texts == (
+        "Depot Forty made the most money in 2019 and 2020, while Home Quarter also had a "
+        "profit of -$5796.77 during those years.",
+    )
     assert "Specifically:" in prompts[1]
     assert "negative (loss) figure as a profit" in prompts[1]
 
 
-def test_two_semantic_failures_fall_back_to_the_template(monkeypatch):
+def test_two_rejected_context_sentences_leave_the_template_alone(monkeypatch):
     from farm_model.narrator import narrate_verified
 
     _stub_narrations(monkeypatch, [EVAL11_WRONG, EVAL11_WRONG])
@@ -244,13 +262,72 @@ def test_two_semantic_failures_fall_back_to_the_template(monkeypatch):
         "Is any part of Section Corner losing money in 2024?", EVAL11_SECTION_CORNER
     )
     assert outcome.used_fallback
+    assert outcome.context is None
+    assert outcome.text == (
+        "Section Corner made $5,896.30 overall in 2024, but 1 of 4 measurable zones lost "
+        "money: zone 0 (-$11,943.80)."
+    )
     assert outcome.failed_checks == (("zone_premise",), ("zone_premise",))
 
 
-def test_prompt_states_the_reading_rules(monkeypatch):
+def test_none_reply_means_no_context(monkeypatch):
     from farm_model.narrator import narrate_verified
 
-    prompts = _stub_narrations(monkeypatch, ["East 80 had a bad year, not a bad field."])
+    _stub_narrations(monkeypatch, ["NONE"])
+    outcome = narrate_verified("Is there anything odd on Marginal Eighty in 2024?", EVAL8_MARGINAL_2024)
+    assert outcome.context is None
+    assert outcome.attempts_used == 1
+    assert outcome.text.startswith("For Marginal Eighty in 2024, the yield monitor recorded 17,513.6 bu")
+
+
+def test_prompt_shows_the_lead_and_the_reading_rules(monkeypatch):
+    from farm_model.narrator import narrate_verified
+
+    prompts = _stub_narrations(monkeypatch, ["NONE"])
     narrate_verified("Was East 80 a bad field or just a bad year?", EVAL2_EAST_80)
+    assert "East 80 had a bad year, not a bad field" in prompts[0]
     assert "A negative profit is a loss" in prompts[0]
-    assert 'Values under "modeled" are yield expectations in bu/ac' in prompts[0]
+    assert "monitor_total_bu is the yield monitor" in prompts[0]
+
+
+# --- Templates: correct by construction, and grounded -------------------------
+
+EVAL9_COST = {
+    "results": [
+        {"field_name": "Riverside", "season": 2022, "line_item": "seed",
+         "ledger_cost_per_ac": 95.55, "as_applied_derived_cost_per_ac": 59.61,
+         "pct_diff": 0.6, "outlier_flagged": True, "note": "n"},
+        {"field_name": "Riverside", "season": 2022, "line_item": "fertilizer",
+         "ledger_cost_per_ac": 120.1, "as_applied_derived_cost_per_ac": 119.8,
+         "pct_diff": 0.0025, "outlier_flagged": False, "note": "n"},
+    ]
+}
+
+
+@pytest.mark.parametrize(
+    "payload,question,expected",
+    [
+        (EVAL2_EAST_80, "Was East 80 a bad field or just a bad year?",
+         "East 80 had a bad year, not a bad field: 2020 was a clear outlier, and its median "
+         "profit across 10 recorded seasons was $68.18/ac."),
+        (EVAL8_MARGINAL_2024, "Anything odd about Marginal Eighty in 2024?",
+         "For Marginal Eighty in 2024, the yield monitor recorded 17,513.6 bu and the scale "
+         "tickets 17,430.5 bu: the totals agree within tolerance. But the yield monitor's "
+         "coverage has a gap -- part of the field wasn't recorded, which a totals-only check "
+         "would miss."),
+        (EVAL9_COST, "Does the seed cost on Riverside in 2022 look right?",
+         "For Riverside in 2022, this doesn't look right: seed (ledger $95.55/ac vs $59.61/ac "
+         "from the as-applied records)."),
+        ({"canonical_boundary_name": "N 80", "method": "alias"},
+         'What does "north eighty" refer to in 2017?',
+         "That name refers to the field N 80 (a recorded alias)."),
+    ],
+)
+def test_templates_are_exact_and_grounded(payload, question, expected):
+    from farm_model.narrator import template_answer
+    from farm_model.verification import check_narration_grounded
+
+    text = template_answer(question, payload)
+    assert text == expected
+    assert check_narration_grounded(text, payload, question=question).is_grounded
+    assert failed_semantic_checks(text, payload) == []
