@@ -121,3 +121,18 @@ def test_which_fields_made_money_never_blends_across_a_split(profit_records, gro
     assert "South 160" in names
     assert "South 160 North" in names
     assert "South 160 South" in names
+
+
+def test_verdict_evidence_carries_an_integer_loss_count(profit_records):
+    """num_loss_seasons is additive evidence so templates can say "1 of 6"
+    without back-deriving it from the rounded loss_rate.
+    """
+    canonical_ids = {cid for (cid, _season) in profit_records}
+    for cid in canonical_ids:
+        v = profitability.bad_field_or_bad_year(profit_records, cid)
+        if v["verdict"] in ("consistently_profitable", "bad_year"):
+            losses = sum(
+                1 for (c, _s), r in profit_records.items() if c == cid and r.profit_per_acre < 0
+            )
+            assert v["evidence"]["num_loss_seasons"] == losses
+            assert 0 <= losses <= v["evidence"]["num_seasons"]

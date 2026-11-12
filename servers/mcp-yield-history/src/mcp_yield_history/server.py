@@ -97,6 +97,21 @@ def _confirmation_guarded(fn):
     return wrapper
 
 
+def _rounded(match) -> dict[str, Any]:
+    """Display rounding at the transport layer only: bushel totals to 1
+    decimal, pct_diff to 4 decimals (0.01 of a percent). The core
+    reconciliation keeps full precision for its own threshold checks, so
+    this can't change totals_discrepancy or coverage flags.
+    """
+    d = dataclasses.asdict(match)
+    for key in ("scale_total_bu", "monitor_total_bu"):
+        if d.get(key) is not None:
+            d[key] = round(d[key], 1)
+    if d.get("pct_diff") is not None:
+        d["pct_diff"] = round(d["pct_diff"], 4)
+    return d
+
+
 def _provenance() -> dict[str, Any]:
     snap = _snapshot()
     return {
@@ -134,7 +149,7 @@ def get_yield_reconciliation(field_name: str, season: int) -> dict:
         "tool_call", tool="get_yield_reconciliation", field_name=field_name, season=season
     )
     return YieldReconciliationResult(
-        **dataclasses.asdict(match), provenance=SnapshotProvenance(**_provenance())
+        **_rounded(match), provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
 
 
@@ -157,7 +172,7 @@ def list_yield_reconciliation(season: int) -> dict:
             "code": "invalid_input",
         }
     _audit_log().log("tool_call", tool="list_yield_reconciliation", season=season)
-    results = [dataclasses.asdict(r) for r in _reconciliation() if r.season == season]
+    results = [_rounded(r) for r in _reconciliation() if r.season == season]
     return ListYieldReconciliationResult(
         results=results, provenance=SnapshotProvenance(**_provenance())
     ).model_dump()

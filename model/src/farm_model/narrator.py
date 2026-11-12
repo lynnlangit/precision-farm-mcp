@@ -260,17 +260,52 @@ def _deterministic_fallback(question: str, payload: dict) -> str:
                 f"clear outlier in {', '.join(str(s) for s in seasons)} -- a bad year, "
                 "not a bad field."
             )
+        median = f"${evidence.get('median_profit_per_acre', 0):,.2f}/ac"
+        num_seasons = evidence.get("num_seasons", "?")
+        losses = evidence.get("num_loss_seasons")
+        if losses is None:
+            return (
+                f"{field} shows neither a chronic loss pattern nor a single standout bad "
+                f"year (median {median}) across {num_seasons} recorded seasons."
+            )
+        if losses == 0:
+            return (
+                f"{field} lost money in none of its {num_seasons} recorded seasons "
+                f"(median {median})."
+            )
         return (
-            f"{field} shows no chronic loss pattern (median "
-            f"${evidence.get('median_profit_per_acre', 0):,.2f}/ac) across "
-            f"{evidence.get('num_seasons', '?')} recorded seasons."
+            f"{field} lost money in {losses} of {num_seasons} recorded seasons (median "
+            f"{median}) -- neither a chronic pattern nor a single standout bad year."
         )
     if "results" in payload and payload["results"]:
-        top = payload["results"][0]
-        return (
-            f"{top.get('display_name', 'The top field')} had the highest profit: "
-            f"${top.get('total_profit', 0):,.2f} over {top.get('seasons', [])}."
+        results = payload["results"]
+        top, bottom = results[0], results[-1]
+        total = payload.get("num_fields", len(results))
+        made_money = payload.get(
+            "num_fields_made_money", sum(1 for r in results if r.get("total_profit", 0) > 0)
         )
+        seasons = sorted({s for r in results for s in r.get("seasons", [])})
+        if len(seasons) > 1 and seasons == list(range(seasons[0], seasons[-1] + 1)):
+            span = f"{seasons[0]}-{seasons[-1]}"
+        elif len(seasons) > 1:
+            span = ", ".join(map(str, seasons[:-1])) + f" and {seasons[-1]}"
+        else:
+            span = ", ".join(map(str, seasons)) or "the seasons examined"
+
+        def money(v: float) -> str:
+            return f"-${abs(v):,.2f}" if v < 0 else f"${v:,.2f}"
+
+        text = (
+            f"{made_money} of {total} fields made money over {span}. "
+            f"{top.get('display_name', 'The top field')} ranked highest "
+            f"({money(top.get('total_profit', 0))})"
+        )
+        if len(results) > 1:
+            text += (
+                f" and {bottom.get('display_name', 'the bottom field')} lowest "
+                f"({money(bottom.get('total_profit', 0))})"
+            )
+        return text + "."
     return "The computed result is available, but a plain-language summary could not be verified."
 
 

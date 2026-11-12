@@ -29,7 +29,41 @@ def test_bad_year_verdict_names_the_outlier_seasons():
 
 def test_consistently_profitable_verdict_has_a_line():
     payload = {"verdict": "consistently_profitable", "evidence": {}}
-    assert build_therefore_line(payload) is not None
+    line = build_therefore_line(payload)
+    assert line is not None
+    assert "no season" not in line  # without a count, never claim zero losses
+
+
+def test_consistently_profitable_states_the_real_loss_count():
+    """Eval 3: South 160 South lost money in 1 of 6 seasons -- the line must
+    say so, not "no season shows a loss pattern".
+    """
+    payload = {
+        "verdict": "consistently_profitable",
+        "evidence": {
+            "median_profit_per_acre": 175.41,
+            "loss_rate": 0.17,
+            "num_seasons": 6,
+            "num_loss_seasons": 1,
+        },
+    }
+    line = build_therefore_line(payload)
+    assert line == (
+        "Therefore: this field lost money in 1 of 6 recorded seasons (median $175.41/ac) "
+        "-- neither a chronic pattern nor a single standout bad year."
+    )
+
+
+def test_consistently_profitable_with_zero_losses():
+    payload = {
+        "verdict": "consistently_profitable",
+        "evidence": {"median_profit_per_acre": 1234.5, "num_seasons": 10, "num_loss_seasons": 0},
+    }
+    line = build_therefore_line(payload)
+    assert line == (
+        "Therefore: this field lost money in none of its 10 recorded seasons "
+        "(median $1,234.50/ac)."
+    )
 
 
 def test_no_data_verdict_is_omitted_not_invented():
@@ -119,6 +153,40 @@ def test_which_fields_made_money_names_the_top_field():
     line = build_therefore_line(payload)
     assert line is not None
     assert "North Eighty" in line
+
+
+def test_which_fields_made_money_counts_and_names_top_and_bottom():
+    """Evals 4-5: the line must say how many fields made money and name the
+    lowest field, with a negative total shown as a loss.
+    """
+    payload = {
+        "results": [
+            {"display_name": "East 80", "seasons": [2021, 2022, 2023, 2024, 2025],
+             "total_profit": 135533.57},
+            {"display_name": "Home Quarter", "seasons": [2021, 2022, 2023, 2024, 2025],
+             "total_profit": 1000.0},
+            {"display_name": "Marginal Eighty", "seasons": [2021, 2022, 2023, 2024, 2025],
+             "total_profit": -112044.66},
+        ],
+        "num_fields": 3,
+        "num_fields_made_money": 2,
+    }
+    assert build_therefore_line(payload) == (
+        "Therefore: 2 of 3 fields made money over 2021-2025; East 80 ranked highest "
+        "($135,533.57), Marginal Eighty lowest (-$112,044.66)."
+    )
+
+
+def test_which_fields_made_money_non_consecutive_seasons_and_old_payload():
+    payload = {
+        "results": [
+            {"display_name": "A", "seasons": [2019, 2021], "total_profit": 10.0},
+            {"display_name": "B", "seasons": [2019], "total_profit": -5.0},
+        ]
+    }
+    line = build_therefore_line(payload)
+    assert "1 of 2 fields made money over 2019 and 2021" in line
+    assert "B lowest (-$5.00)" in line
 
 
 def test_empty_ranking_results_is_omitted():

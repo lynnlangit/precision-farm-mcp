@@ -28,7 +28,26 @@ def _for_verdict(payload: dict) -> str | None:
             "every other recorded season was unremarkable, not a sign of a chronic problem."
         )
     if verdict == "consistently_profitable":
-        return "Therefore: no season in this field's record shows a loss pattern."
+        num_seasons = evidence.get("num_seasons")
+        losses = evidence.get("num_loss_seasons")
+        median = evidence.get("median_profit_per_acre")
+        median_txt = f" (median ${median:,.2f}/ac)" if median is not None else ""
+        if losses is None or num_seasons is None:
+            # Older payload without the integer count -- don't derive it from
+            # the rounded loss_rate, and don't claim zero losses either.
+            return (
+                f"Therefore: this field's record{median_txt} shows neither a chronic loss "
+                "pattern nor a single standout bad year."
+            )
+        if losses == 0:
+            return (
+                f"Therefore: this field lost money in none of its {num_seasons} recorded "
+                f"seasons{median_txt}."
+            )
+        return (
+            f"Therefore: this field lost money in {losses} of {num_seasons} recorded "
+            f"seasons{median_txt} -- neither a chronic pattern nor a single standout bad year."
+        )
     return None  # "no_data" -- nothing was computed, so nothing to restate
 
 
@@ -59,12 +78,41 @@ def _for_unprofitable_zones_summary(payload: dict) -> str | None:
     )
 
 
+def _money(value: float) -> str:
+    return f"-${abs(value):,.2f}" if value < 0 else f"${value:,.2f}"
+
+
+def _season_span(results: list[dict]) -> str:
+    seasons = sorted({s for r in results for s in r.get("seasons", [])})
+    if not seasons:
+        return "the seasons examined"
+    if len(seasons) == 1:
+        return str(seasons[0])
+    if seasons == list(range(seasons[0], seasons[-1] + 1)):
+        return f"{seasons[0]}-{seasons[-1]}"
+    return ", ".join(str(s) for s in seasons[:-1]) + f" and {seasons[-1]}"
+
+
 def _for_ranking(payload: dict) -> str | None:
     results = payload.get("results", [])
     if not results:
         return None
-    top = results[0]
-    return f"Therefore: {top.get('display_name', 'the top field')} ranked highest by total profit."
+    top, bottom = results[0], results[-1]
+    total = payload.get("num_fields", len(results))
+    made_money = payload.get(
+        "num_fields_made_money", sum(1 for r in results if r.get("total_profit", 0) > 0)
+    )
+    line = (
+        f"Therefore: {made_money} of {total} fields made money over {_season_span(results)}; "
+        f"{top.get('display_name', 'the top field')} ranked highest "
+        f"({_money(top.get('total_profit', 0))})"
+    )
+    if len(results) > 1:
+        line += (
+            f", {bottom.get('display_name', 'the bottom field')} lowest "
+            f"({_money(bottom.get('total_profit', 0))})"
+        )
+    return line + "."
 
 
 def build_therefore_line(payload: dict) -> str | None:

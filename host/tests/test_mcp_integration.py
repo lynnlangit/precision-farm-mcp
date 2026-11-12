@@ -126,7 +126,10 @@ async def test_yield_reconciliation_matches_direct():
             "yield-history", "get_yield_reconciliation", field_name="Coulee Field", season=2021
         )).data
     assert mcp_result["totals_discrepancy"] == match.totals_discrepancy
-    assert abs(mcp_result["pct_diff"] - match.pct_diff) < 1e-9
+    # The server rounds pct_diff to 4 decimals for display; core keeps full
+    # precision for its own threshold checks.
+    assert mcp_result["pct_diff"] == round(match.pct_diff, 4)
+    assert mcp_result["monitor_total_bu"] == round(match.monitor_total_bu, 1)
 
 
 async def test_unknown_field_in_cost_ledger_server_refused():
