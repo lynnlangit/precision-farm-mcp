@@ -16,6 +16,7 @@ from .verification import (
     check_narration_grounded,
     check_narration_grounded_by_provenance,
     check_verdict_not_contradicted,
+    failed_semantic_checks,
 )
 
 DEFAULT_MODEL = "gemma3:4b"
@@ -26,7 +27,18 @@ Here is the exact computed answer, already produced by deterministic code. \
 These numbers are correct and final -- do not perform any arithmetic, do \
 not recompute anything, and do not state any number that isn't shown below. \
 If a "verdict" field is present, your answer must agree with it exactly -- \
-never conclude the opposite of what "verdict" says.
+never conclude the opposite of what "verdict" says. The verdict is the \
+primary answer; lead with it.
+Rules for reading the numbers:
+- A negative profit is a loss. Never call a negative value "a profit" or say \
+that field "made money".
+- Values under "modeled" are yield expectations in bu/ac from a weather \
+model, not dollars and not profit. Never present a modeled value as the \
+reason or cause of a loss; if you mention one, say what it measures.
+- If "field_profit" is positive, the field as a whole made money -- only the \
+zones with a negative profit lost money.
+- If "totals_discrepancy" is false, the yield monitor and scale ticket totals \
+agree; do not describe their small difference as a discrepancy.
 {untrusted_note}
 {payload_json}
 
@@ -52,6 +64,25 @@ Your previous attempt either stated a number not shown above or drew a \
 conclusion that contradicts the "verdict" field. Try again, more literally: \
 state the verdict's plain meaning directly and only cite numbers copied \
 from the JSON above."""
+
+# Appended to _RETRY_SUFFIX for each check the previous attempt failed, so
+# the retry names the specific mistake instead of one generic message.
+_RETRY_REASONS = {
+    "ungrounded": "It cited a number that is not in the JSON.",
+    "verdict": 'It contradicted the "verdict" field.',
+    "sign": "It described a negative (loss) figure as a profit or as making money.",
+    "zone_premise": "It said the field as a whole is losing money, but field_profit is "
+    "positive -- only some zones lost money.",
+    "reconciliation": "It called the totals a discrepancy, but totals_discrepancy is false "
+    "-- the totals agree.",
+    "attribution": "It presented a modeled bu/ac value (season or field effect) as the "
+    "cause of the loss.",
+}
+
+
+def _retry_suffix(failed: list[str]) -> str:
+    reasons = " ".join(_RETRY_REASONS[f] for f in failed if f in _RETRY_REASONS)
+    return _RETRY_SUFFIX + (f"\nSpecifically: {reasons}" if reasons else "")
 
 _UNTRUSTED_OPEN = "⟦UNTRUSTED DATA: "
 _UNTRUSTED_CLOSE = "⟧"
@@ -317,6 +348,10 @@ class NarrationOutcome:
     modeled_grounding: GroundingResult | None
     attempts_used: int
     used_fallback: bool
+    # One tuple per rejected attempt, naming the checks it failed
+    # ("ungrounded", "verdict", "sign", "zone_premise", "reconciliation",
+    # "attribution"). Empty when the first attempt passed.
+    failed_checks: tuple[tuple[str, ...], ...] = ()
 
 
 def narrate_verified(
@@ -348,6 +383,7 @@ def narrate_verified(
         if untrusted_paths
         else capped_payload
     )
+    failed_log: list[tuple[str, ...]] = []
     for attempt in range(max_attempts):
         try:
             response = ollama.chat(
@@ -363,7 +399,12 @@ def narrate_verified(
         narration = response.message.content or ""
         grounding = check_narration_grounded(narration, grounding_payload, question=question)
         consistent = check_verdict_not_contradicted(narration, grounding_payload)
-        if grounding.is_grounded and consistent:
+        failed = (
+            ([] if grounding.is_grounded else ["ungrounded"])
+            + ([] if consistent else ["verdict"])
+            + failed_semantic_checks(narration, grounding_payload)
+        )
+        if not failed:
             measured_or_derived, modeled = check_narration_grounded_by_provenance(
                 narration, grounding_payload, question=question
             )
@@ -374,8 +415,10 @@ def narrate_verified(
                 modeled_grounding=modeled,
                 attempts_used=attempt + 1,
                 used_fallback=False,
+                failed_checks=tuple(failed_log),
             )
-        prompt += _RETRY_SUFFIX
+        failed_log.append(tuple(failed))
+        prompt += _retry_suffix(failed)
 
     fallback_text = _deterministic_fallback(question, result_payload)
     measured_or_derived, modeled = check_narration_grounded_by_provenance(
@@ -388,4 +431,5 @@ def narrate_verified(
         modeled_grounding=modeled,
         attempts_used=max_attempts,
         used_fallback=True,
+        failed_checks=tuple(failed_log),
     )

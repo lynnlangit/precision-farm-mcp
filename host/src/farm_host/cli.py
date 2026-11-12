@@ -145,6 +145,7 @@ async def answer_question(
         ),
         attempts=outcome.attempts_used,
         used_fallback=outcome.used_fallback,
+        failed_checks=[list(f) for f in outcome.failed_checks],
     )
     therefore = build_therefore_line(result)
     text = f"{outcome.text}\n\n{therefore}" if therefore else outcome.text

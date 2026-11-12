@@ -235,3 +235,159 @@ def check_narration_grounded(
         ungrounded.append(n)
 
     return GroundingResult(ungrounded_numbers=ungrounded)
+
+
+# --- Semantic checks (eval-fix P3) -------------------------------------------
+# Grounding proves every number came from the payload; it can't tell whether
+# the sentence around a number is true. These checks catch the four ways a
+# fully-grounded narration was still wrong in the eval run (docs/
+# EVAL_QUESTIONS.md evals 2, 5, 8, 11). Each is a small pure function over
+# (narration, payload) returning True when the narration passes, and each is
+# deliberately narrow -- a false rejection costs a retry or the deterministic
+# fallback, never a wrong answer, but a check that rejects correct narrations
+# routinely would push every answer onto the fallback.
+
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?;])\s+")
+
+
+def _sentences(text: str) -> list[str]:
+    return [s for s in _SENTENCE_SPLIT_RE.split(text.lower()) if s.strip()]
+
+
+def _negative_payload_magnitudes(payload: object) -> set[float]:
+    out: set[float] = set()
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+        elif isinstance(node, (int, float)) and not isinstance(node, bool) and node < 0:
+            out.add(abs(float(node)))
+
+    walk(_without_provenance(payload))
+    return out
+
+
+_GAIN_CUES = ("profit of", "a profit", "made money", "made a profit", "gained", "earned", "was profitable", "were profitable")
+_LOSS_CUES = ("loss", "lost", "losing", "negative", "in the red", "unprofitable", "deficit")
+_SIGNED_NEGATIVE_RE = re.compile(r"(?<![\w$])-\s?\$?\d")
+
+
+def check_sign_consistency(narration: str, payload: object) -> bool:
+    """Fails a sentence that pairs gain language ("a profit of", "made
+    money", ...) with a negative figure -- written with a minus sign, or a
+    magnitude that is negative in the payload -- unless that same sentence
+    also names it as a loss. Eval 5's "Home Quarter also had a profit of
+    -$5796.77" is the motivating case.
+    """
+    negatives = _negative_payload_magnitudes(payload)
+    for sentence in _sentences(narration):
+        if not any(cue in sentence for cue in _GAIN_CUES):
+            continue
+        if any(cue in sentence for cue in _LOSS_CUES):
+            continue
+        if _SIGNED_NEGATIVE_RE.search(sentence):
+            return False
+        for n in extract_numbers(sentence):
+            if n > 0 and any(_close(n, m) for m in negatives):
+                return False
+    return True
+
+
+_FIELD_LOSING_RE = (
+    r"(is|was) (losing money|unprofitable|not profitable|operating at a loss)"
+    r"|lost money"
+)
+
+
+def check_zone_premise(narration: str, payload: object) -> bool:
+    """For a zone_profitability payload whose field_profit is positive:
+    fails a narration that says the field itself is losing money, or that
+    a zone's losses outweigh the field's gains. "Zone 0 of Section Corner
+    is losing money" (a part of the field) still passes.
+    """
+    if not isinstance(payload, dict) or "zones" not in payload:
+        return True
+    field_profit = payload.get("field_profit")
+    if not isinstance(field_profit, (int, float)) or field_profit <= 0:
+        return True
+    field_name = str(payload.get("field_name") or "").lower()
+    lowered = narration.lower()
+    if _mentioned_unnegated(lowered, ("losses outweigh", "loss outweighs", "losses exceed")):
+        return False
+    subjects = [r"the field( as a whole| overall| itself)?", r"the whole field"]
+    if field_name:
+        subjects.append(re.escape(field_name) + r"( as a whole| overall| itself)?")
+    for subject in subjects:
+        for m in re.finditer(rf"(?<!of )\b{subject} ({_FIELD_LOSING_RE})", lowered):
+            window = lowered[max(0, m.start() - 40) : m.end()]
+            if not any(cue in window for cue in _NEGATION_CUES):
+                return False
+    return True
+
+
+_TOTALS_DISAGREE_PHRASES = (
+    "discrepancy",
+    "difference in total",
+    "totals differ",
+    "totals disagree",
+    "totals don't match",
+    "totals do not match",
+    "totals don't agree",
+    "totals do not agree",
+)
+
+
+def check_reconciliation_claim(narration: str, payload: object) -> bool:
+    """For a yield reconciliation payload with totals_discrepancy == false:
+    fails a narration that presents the totals as disagreeing. Eval 8's
+    whole point is that totals reconcile and only the coverage check finds
+    the gap. "No discrepancy in the totals" (negated) still passes.
+    """
+    if not isinstance(payload, dict) or payload.get("totals_discrepancy") is not False:
+        return True
+    lowered = narration.lower()
+    for phrase in _TOTALS_DISAGREE_PHRASES:
+        for m in re.finditer(re.escape(phrase), lowered):
+            window = lowered[max(0, m.start() - 40) : m.start()]
+            if not any(cue in window for cue in _NEGATION_CUES + ("no ", "without ")):
+                return False
+    return True
+
+
+_CAUSE_CUES = ("primary reason", "main reason", "primary cause", "main cause", "because of", "due to", "caused by", "the reason")
+_EFFECT_TERMS = ("season effect", "seasonal effect", "season_effect", "field effect", "field_effect", "effect of the field", "effect of the season")
+
+
+def check_attribution_not_causal(narration: str, payload: object) -> bool:
+    """When a payload carries modeled.attribution: fails a sentence that
+    presents season_effect / field_effect (bu/ac yield expectations) as the
+    cause of the loss. Eval 2's "the primary reason for the poor results was
+    a particularly bad year with a seasonal effect of -5.16" is the
+    motivating case -- hail lands in `residual`, not season_effect.
+    """
+    if not isinstance(payload, dict):
+        return True
+    modeled = payload.get("modeled") or {}
+    if not isinstance(modeled, dict) or not modeled.get("attribution"):
+        return True
+    for sentence in _sentences(narration):
+        if any(c in sentence for c in _CAUSE_CUES) and any(t in sentence for t in _EFFECT_TERMS):
+            return False
+    return True
+
+
+SEMANTIC_CHECKS = {
+    "sign": check_sign_consistency,
+    "zone_premise": check_zone_premise,
+    "reconciliation": check_reconciliation_claim,
+    "attribution": check_attribution_not_causal,
+}
+
+
+def failed_semantic_checks(narration: str, payload: object) -> list[str]:
+    """Names of every semantic check the narration fails, in a fixed order."""
+    return [name for name, check in SEMANTIC_CHECKS.items() if not check(narration, payload)]
