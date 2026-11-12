@@ -14,7 +14,11 @@ revenue.
 
 from farm_core import profitability
 
-REVENUE_TOLERANCE_PCT = 0.005  # 0.5% -- generous margin above observed ~0.2% rounding noise
+# The answer key is computed from the same cent-rounded prices, 0.1-bu
+# bushel totals and cent-rounded $/ac the raw files carry, so a correct
+# pipeline reproduces it to the cent; the only slack left is float rounding
+# at a half-cent boundary (observed max 2 cents, on a total-$ basis season).
+PROFIT_TOLERANCE_DOLLARS = 0.02
 
 
 def _gt_lookup(ground_truth):
@@ -51,8 +55,7 @@ def test_profit_matches_ground_truth_within_realistic_rounding(profit_records, g
             continue
         gt_rec = gt.get((season, rec.display_name))
         assert gt_rec is not None, f"no ground truth for {rec.display_name} {season}"
-        tolerance = max(50.0, abs(gt_rec["revenue"]) * REVENUE_TOLERANCE_PCT)
-        assert abs(rec.profit - gt_rec["profit"]) < tolerance, (
+        assert abs(rec.profit - gt_rec["profit"]) <= PROFIT_TOLERANCE_DOLLARS + 1e-9, (
             f"{rec.display_name} {season}: {rec.profit} vs {gt_rec['profit']}"
         )
         checked += 1

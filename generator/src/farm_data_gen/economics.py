@@ -242,9 +242,25 @@ def compute_farm_economics(
                 yield_bu_ac *= CATASTROPHIC_YIELD_FACTOR
                 catastrophic_cause = "hail"
 
-            revenue = yield_bu_ac * acres * price_per_bu
-            total_cost = (input_cost_per_ac + cash_rent_per_ac) * acres
-            profit = revenue - total_cost
+            # Round to what the raw files can actually record BEFORE computing
+            # the answer key: scale tickets carry price to the cent and net
+            # bushels to 0.1 bu (reconciling to round(yield_bu_ac * acres, 1)),
+            # and the ledger carries $/ac to the cent. Computing revenue/cost
+            # from unrounded values left every field-season up to ~$150 off what
+            # any correct pipeline can reproduce from those files -- an answer
+            # key nobody could check by hand.
+            yield_bu_ac = round(yield_bu_ac, 2)
+            price_per_bu = round(price_per_bu, 2)
+            input_cost_per_ac = round(input_cost_per_ac, 2)
+            cash_rent_per_ac = round(cash_rent_per_ac, 2)
+            total_bu = round(yield_bu_ac * acres, 1)
+
+            # Settle revenue and cost to the cent first, then take profit from
+            # those -- the same order a ledger (and the pipeline) uses, so the
+            # key never differs from a correct reproduction by a rounding cent.
+            revenue = round(total_bu * price_per_bu, 2)
+            total_cost = round((input_cost_per_ac + cash_rent_per_ac) * acres, 2)
+            profit = round(revenue - total_cost, 2)
 
             records[(field_id, season)] = FieldSeasonEconomics(
                 field_id=field_id,
