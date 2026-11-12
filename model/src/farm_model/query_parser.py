@@ -15,6 +15,7 @@ table at all.
 from __future__ import annotations
 
 import dataclasses
+import re
 from typing import Literal
 
 import ollama
@@ -62,7 +63,17 @@ Requires "raw_name" and "season".
 - yield_reconciliation: compares yield monitor vs scale ticket totals for \
 one field/season. Requires "field_name" and "season".
 - cost_reconciliation: compares ledger costs vs as-applied-derived costs for \
-one field/season. Requires "field_name" and "season".
+one field/season. Requires "field_name" and "season". A question asking \
+whether a cost line item (seed, fertilizer, chemical, fuel, cash rent) \
+"looks right", "is correct", "seems off" or "seems high/low" for a field and \
+season is ALWAYS this intent, never bad_field_or_bad_year, even though it \
+names a field.
+  Example: "Does the seed cost on Riverside in 2022 look right?" -> \
+field_name="Riverside", season=2022.
+  Example: "Is the fertilizer cost for East 80 in 2019 correct?" -> \
+field_name="East 80", season=2019.
+  Example: "The chemical cost on Home Quarter in 2021 seems off" -> \
+field_name="Home Quarter", season=2021.
 - explain_shortfall: only for a question starting with "why" or "what \
 caused", e.g. "why was X a bad year". Requires "field_name" exactly as the \
 farmer said it.
@@ -79,6 +90,23 @@ not a lookup against past records. Use this rather than forcing a fit.
 Only use "field_name" you'll see the farmer mention -- never invent or correct
 a spelling.
 """
+
+
+# A field name is never just a number. "-5.16" or "2020" in field_name /
+# raw_name means the model mistook a number from the question (often a value
+# from a previous answer) for a field -- refuse in code rather than trusting a
+# prompt instruction. Names that merely contain digits ("East 80",
+# "Township Rd 12") are unaffected.
+_NUMERIC_NAME = re.compile(r"^\s*[+-]?(\d+(\.\d*)?|\.\d+)\s*$")
+
+NUMERIC_NAME_REASON = (
+    "that looks like a number, not a field name -- I can look up records, "
+    "but I can't explain terms or numbers yet"
+)
+
+
+def _is_numeric_name(name: str | None) -> bool:
+    return name is not None and bool(_NUMERIC_NAME.match(name))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -130,6 +158,14 @@ def parse_question(
         return ParseFailure(
             raw_question=question,
             reason="question is out of scope for v1 (retrospective lookups only)",
+            kind="out_of_scope",
+            raw_model_output=raw_output,
+        )
+
+    if _is_numeric_name(query.field_name) or _is_numeric_name(query.raw_name):
+        return ParseFailure(
+            raw_question=question,
+            reason=NUMERIC_NAME_REASON,
             kind="out_of_scope",
             raw_model_output=raw_output,
         )
