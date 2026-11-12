@@ -112,7 +112,10 @@ async def answer_question(
             text=(
                 "I couldn't map that to a supported lookup -- Precision Farm MCP "
                 "only answers retrospective questions about your own recorded "
-                f"seasons ({SEASONS[0]}-{SEASONS[-1]}). Reason: {query.reason}"
+                f"seasons ({SEASONS[0]}-{SEASONS[-1]}). I can look up records, but I "
+                "can't explain terms or numbers yet. Try asking about a field and "
+                "season, e.g. \"Was East 80 a bad field or a bad year?\" "
+                f"(Reason: {query.reason})"
             ),
             ok=False,
         )

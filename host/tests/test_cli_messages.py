@@ -47,6 +47,27 @@ async def test_out_of_scope_message_does_not_mention_preflight(tmp_path, monkeyp
     assert "farm-preflight" not in result.text
 
 
+async def test_numeric_name_refusal_gives_a_grower_friendly_hint(tmp_path, monkeypatch):
+    """The "-5.16" follow-up: a refusal (not an answer) that tells the grower
+    what to ask instead, never a raw "no field named '-5.16'" error.
+    """
+    from farm_model.query_parser import NUMERIC_NAME_REASON
+
+    monkeypatch.setattr(
+        cli,
+        "parse_question",
+        lambda question, seasons: ParseFailure(
+            raw_question=question, reason=NUMERIC_NAME_REASON, kind="out_of_scope"
+        ),
+    )
+    audit_log = AuditLog(tmp_path / "audit.jsonl")
+    result = await cli.answer_question("What is the seasonal effect of -5.16?", audit_log)
+    assert not result.ok
+    assert "can't explain terms or numbers yet" in result.text
+    assert "Try asking about a field and season" in result.text
+    assert "not_found" not in result.text
+
+
 async def test_successful_query_reports_ok(tmp_path):
     audit_log = AuditLog(tmp_path / "audit.jsonl")
     result = await cli.answer_question("was the north eighty a bad field or a bad year", audit_log)
