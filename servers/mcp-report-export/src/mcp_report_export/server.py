@@ -35,6 +35,21 @@ from farm_core.zone_profitability import (
 
 mcp = FastMCP("report-export")
 
+# Additive, self-describing labels for modeled.attribution (eval-fix P3): in
+# the eval run the narrator read season_effect/field_effect as profit causes
+# and reversed their comparison. These say what each value actually is, in
+# the payload itself, so the model doesn't have to guess.
+_ATTRIBUTION_LABELS = {
+    "units": "bu/ac of yield vs this field's own average yield (not dollars, not profit)",
+    "meaning": {
+        "season_effect": "yield change this season's recorded weather explains",
+        "field_effect": "how this field's average yield compares to the farm's average, "
+        "every year (not specific to this season)",
+        "residual": "yield shortfall the weather data does not explain "
+        "(e.g. hail, pests, management)",
+    },
+}
+
 
 # Tool functions build one of these, then return its .model_dump() -- not the
 # model instance itself, and not `Model | dict` as the declared return type.
@@ -261,7 +276,9 @@ def bad_field_or_bad_year(field_name: str) -> dict:
                 attribution = _compute_attribution(snap, canonical_id, outlier_season)
             except AttributionUnavailable:
                 continue
-            attributions.append({"season": outlier_season, **attribution.to_json()})
+            attributions.append(
+                {"season": outlier_season, **attribution.to_json(), **_ATTRIBUTION_LABELS}
+            )
         if attributions:
             modeled = {"attribution": attributions}
 

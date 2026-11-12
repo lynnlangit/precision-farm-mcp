@@ -53,6 +53,11 @@ async def test_q2_east_80_is_a_genuine_one_season_outlier():
     assert r["verdict"] == "bad_year"
     assert r["evidence"]["outlier_seasons"] == [2020]
     assert r["evidence"]["median_profit_per_acre"] == 68.19  # doc: $68.19
+    # Modeled attribution is self-describing: bu/ac yield, not profit (P3).
+    attribution = r["modeled"]["attribution"][0]
+    assert attribution["season"] == 2020
+    assert "not dollars" in attribution["units"]
+    assert set(attribution["meaning"]) == {"season_effect", "field_effect", "residual"}
 
 
 async def test_q3_south_160_south_is_a_normal_unremarkable_field():
