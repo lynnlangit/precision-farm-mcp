@@ -261,15 +261,18 @@ def render_eval_questions(ground_truth: dict) -> str:
         f"`${digit['correct_value']:,.2f}/ac` (a single transposed digit). Ground truth: "
         f"`{digit['defect_id']}`.",
         "",
+        # effective_season is the FIRST season the field is absent, so the
+        # lease ended after effective_season - 1. Asking about effective_season
+        # itself tests the boundary exactly (one year earlier still resolves).
         "### 10. A field that no longer exists",
-        f'**Q:** What does "{rental_lost_name}" refer to in {rental_lost_event["effective_season"] + 1}?',
+        f'**Q:** What does "{rental_lost_name}" refer to in {rental_lost_event["effective_season"]}?',
         f'**Tool:** `field-registry.resolve_field_name(raw_name="{rental_lost_name}", '
-        f"season={rental_lost_event['effective_season'] + 1})`",
+        f"season={rental_lost_event['effective_season']})`",
         "**Verifiable answer:** A structured refusal -- "
         '`{"code": "not_found"}` -- never a guess. Ground truth: '
         f"`{rental_lost_event['event_id']}`, lease ended after season "
-        f"{rental_lost_event['effective_season']}; no boundary exists for this field from "
-        f"{rental_lost_event['effective_season'] + 1} onward.",
+        f"{rental_lost_event['effective_season'] - 1}; no boundary exists for this field from "
+        f"{rental_lost_event['effective_season']} onward.",
         "",
     ]
 
@@ -291,8 +294,8 @@ def render_eval_questions(ground_truth: dict) -> str:
             f"season={bad_zone['season']})`",
             f"**Verifiable answer:** Zone {bad_zone['zone_index']} shows a negative "
             f"`profit`, while {bz_name}'s field-level profit for {bad_zone['season']} "
-            "(`profitability.<field>.*.profit`) stays positive and exactly matches the "
-            "no-defect figure -- the shortfall is confined to one zone, not visible in "
+            "(`profitability.<field>.*.profit`) stays positive and matches the "
+            "no-defect figure to within a cent -- the shortfall is confined to one zone, not visible in "
             f"the field total. Ground truth: `DEF-BADZONE-{bad_zone['season']}-"
             f"{bad_zone['field_id']}`.",
             "",

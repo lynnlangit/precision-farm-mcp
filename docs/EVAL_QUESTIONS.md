@@ -18,22 +18,22 @@ uv run --project host farm-cli "<question>"
 ### 2. A genuine one-season outlier
 **Q:** Was East 80 a bad field or just a bad year?
 **Tool:** `report-export.bad_field_or_bad_year(field_name="East 80")`
-**Verifiable answer:** `verdict = 'bad_year'`, outlier season is exactly `[2020]`, median profit/acre `$68.22`. Ground truth: `catastrophic_year` = `{'field_id': 'root_02', 'season': 2020, 'cause': 'hail'}`.
+**Verifiable answer:** `verdict = 'bad_year'`, outlier season is exactly `[2020]`, median profit/acre `$68.19`. Ground truth: `catastrophic_year` = `{'field_id': 'root_02', 'season': 2020, 'cause': 'hail'}`.
 
 ### 3. A normal, unremarkable field
 **Q:** Was South 160 South a bad field or just a bad year?
 **Tool:** `report-export.bad_field_or_bad_year(field_name="South 160 South")`
-**Verifiable answer:** `verdict = 'consistently_profitable'`, loss in only `1/6` seasons, median profit/acre `$175.28`. Included as the negative control: most fields in the record are neither pattern.
+**Verifiable answer:** `verdict = 'consistently_profitable'`, loss in only `1/6` seasons, median profit/acre `$175.41`. Included as the negative control: most fields in the record are neither pattern.
 
 ### 4. Ranking over a relative window
 **Q:** Which fields made money in the last five years?
 **Tool:** `report-export.which_fields_made_money(seasons=[2021..2025])`
-**Verifiable answer:** Top result is **East 80**, total profit `$135,538.11`; Marginal Eighty is last, total profit `$-112,208.19`. The five-year window must resolve to `[2021, 2022, 2023, 2024, 2025]` -- the five most recent known seasons, not any other five.
+**Verifiable answer:** Top result is **East 80**, total profit `$135,533.57`; Marginal Eighty is last, total profit `$-112,044.66`. The five-year window must resolve to `[2021, 2022, 2023, 2024, 2025]` -- the five most recent known seasons, not any other five.
 
 ### 5. Ranking over explicit named years
 **Q:** Which fields made money in 2019 and 2020?
 **Tool:** `report-export.which_fields_made_money(seasons=[2019, 2020])`
-**Verifiable answer:** Top result is **Depot Forty**, total profit `$17,647.22`. Named years must resolve to exactly `[2019, 2020]`, not a relative-count guess.
+**Verifiable answer:** Top result is **Depot Forty**, total profit `$17,551.40`. Named years must resolve to exactly `[2019, 2020]`, not a relative-count guess.
 
 ### 6. Naming-drift resolution
 **Q:** What does "north eighty" refer to in 2017?
@@ -56,14 +56,14 @@ uv run --project host farm-cli "<question>"
 **Verifiable answer:** The `"seed"` line item is `outlier_flagged = true` -- the ledger records `$95.55/ac` where the correct figure is `$59.55/ac` (a single transposed digit). Ground truth: `DEF-DIGIT-2022-root_06`.
 
 ### 10. A field that no longer exists
-**Q:** What does "Township Rd 12" refer to in 2021?
-**Tool:** `field-registry.resolve_field_name(raw_name="Township Rd 12", season=2021)`
-**Verifiable answer:** A structured refusal -- `{"code": "not_found"}` -- never a guess. Ground truth: `evt_rental_lost_root_09`, lease ended after season 2020; no boundary exists for this field from 2021 onward.
+**Q:** What does "Township Rd 12" refer to in 2020?
+**Tool:** `field-registry.resolve_field_name(raw_name="Township Rd 12", season=2020)`
+**Verifiable answer:** A structured refusal -- `{"code": "not_found"}` -- never a guess. Ground truth: `evt_rental_lost_root_09`, lease ended after season 2019; no boundary exists for this field from 2020 onward.
 
 ### 11. A hidden bad patch inside a fine field
 **Q:** Is any part of Section Corner losing money in 2024, even though the field overall is profitable?
 **Tool:** `report-export.zone_profitability(field_name="Section Corner", season=2024)`
-**Verifiable answer:** Zone 0 shows a negative `profit`, while Section Corner's field-level profit for 2024 (`profitability.<field>.*.profit`) stays positive and exactly matches the no-defect figure -- the shortfall is confined to one zone, not visible in the field total. Ground truth: `DEF-BADZONE-2024-root_12`.
+**Verifiable answer:** Zone 0 shows a negative `profit`, while Section Corner's field-level profit for 2024 (`profitability.<field>.*.profit`) stays positive and matches the no-defect figure to within a cent -- the shortfall is confined to one zone, not visible in the field total. Ground truth: `DEF-BADZONE-2024-root_12`.
 
 ---
 

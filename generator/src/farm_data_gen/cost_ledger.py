@@ -139,6 +139,12 @@ def _build_cost_rows(farm: FarmModel, season: int) -> list[CostRow]:
         else:
             seed, fert, chem, fuel = _split_input_cost(split_r, record.input_cost_per_ac)
 
+        # Round the line items so they sum to exactly the cents-rounded input
+        # cost the answer key uses (economics.py): fuel absorbs the rounding
+        # remainder, the same way scale tickets' last load does.
+        seed, fert, chem = round(seed, 2), round(fert, 2), round(chem, 2)
+        fuel = round(record.input_cost_per_ac - seed - fert - chem, 2)
+
         note_r = rng_mod.derive_rng(config.random_seed, field_id, "note", season)
         note = _NOTE_POOL[int(note_r.integers(0, len(_NOTE_POOL)))]
         rows.append(
