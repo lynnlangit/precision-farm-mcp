@@ -1,6 +1,6 @@
 # Precision Farm MCP — Project History
 
-Phases A–D are complete, and the v0.1.0 work below (eval fixes and the
+Phases A–D are complete, and the v0.1.x work below (eval fixes and the
 grower web app) is merged. This file is a historical record, not a live
 plan: it keeps the status history and the original B/C/D spec (collapsed
 below) so a future session can see why things are built the way they are.
@@ -238,7 +238,7 @@ before the day, not during it:
 - 193 tests green across 4 packages (generator 16, core 72 + 1 skipped,
   host 81, model 24).
 
-## v0.1.0 (November 2026): eval fixes and the grower web app
+## v0.1.0–v0.1.1 (November 2026): eval fixes and the grower web app
 
 One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 
@@ -256,6 +256,7 @@ One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 | #11 | Grower web app (`farm-web`, Gradio), local only unless `--lan` |
 | #12 | Unsupported-cause check matches word forms (planted, flooded) |
 | #13 | README leads with the web app; `docs/VERIFICATION.md` added |
+| #14 (v0.1.1) | Docs reviewed against the code; all packages, generator included, on one version |
 
 About 300 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
 

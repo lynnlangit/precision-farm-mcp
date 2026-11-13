@@ -1,6 +1,6 @@
 [project]
 name = "farm-core"
-version = "0.1.0"
+version = "0.1.1"
 description = "Shared data plane and domain logic for Precision Farm MCP"
 requires-python = ">=3.11"
 dependencies = [

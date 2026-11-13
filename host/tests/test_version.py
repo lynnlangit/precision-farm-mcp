@@ -28,8 +28,8 @@ APP_PYPROJECTS = [
 ]
 
 
-def test_app_version_is_0_1_0():
-    assert farm_host.__version__ == "0.1.0"
+def test_app_version_is_0_1_1():
+    assert farm_host.__version__ == "0.1.1"
 
 
 @pytest.mark.parametrize("pyproject", APP_PYPROJECTS, ids=lambda p: p.parent.name)
