@@ -386,13 +386,44 @@ def check_attribution_not_causal(narration: str, payload: object) -> bool:
 # explains only -5.16 bu/ac of an -88.4 bu/ac residual, so the cause is
 # invented. A sentence fails when it makes a causal claim (a cause cue) about
 # one of these nouns and the payload's *facts* never name it.
-_CAUSE_NOUNS = (
-    "weather", "rain", "rainfall", "drought", "dry", "wet", "hail", "frost", "freeze",
-    "flood", "flooding", "storm", "wind", "heat", "cold", "temperature", "climate",
-    "pest", "pests", "insect", "insects", "disease", "weed", "weeds", "fungus",
-    "soil", "drainage", "fertility", "nutrient", "nutrients", "management",
-    "planting", "equipment", "prices", "market",
+#
+# Each entry is one cause as a word family (a regex), so the verb and plural
+# forms a model actually writes are caught too: the grower web app's first
+# test let "East 80 lost money in 2020 because the farmer planted too late"
+# through, because only the noun "planting" was listed. A family counts as
+# supported when any of its forms appears in the payload's facts.
+_CAUSE_FAMILIES = (
+    r"weather",
+    r"rain(?:s|ed|y|fall|falls)?",
+    r"droughts?",
+    r"dry|dried|dryness",
+    r"wet|wetness",
+    r"hail(?:s|ed|storms?)?",
+    r"frosts?|frosted",
+    r"freez(?:e|es|ing)|froze|frozen",
+    r"flood(?:s|ed|ing)?",
+    r"storms?|stormy",
+    r"winds?|windy",
+    r"heat|hot",
+    r"cold",
+    r"temperatures?",
+    r"climate",
+    r"pests?",
+    r"insects?",
+    r"diseases?|diseased",
+    r"weeds?|weedy",
+    r"fung(?:us|i|al)",
+    r"soils?",
+    r"drainage|drain(?:s|ed)?",
+    r"fertility",
+    r"nutrients?",
+    r"management|managed|mismanag\w*",
+    r"planting|planted|replant(?:ed|ing)?|seeding|seeded",
+    r"equipment|machinery|breakdowns?",
+    r"prices?|priced",
+    r"markets?",
 )
+_CAUSE_FAMILY_RES = tuple(re.compile(rf"\b(?:{f})\b") for f in _CAUSE_FAMILIES)
 _CAUSAL_CLAIM_CUES = _CAUSE_CUES + (
     "because", "result of", "resulted from", "driven by", "attributed to",
     "attributable to", "blame", "thanks to", "owing to", "led to", "hurt by",
@@ -433,10 +464,8 @@ def check_no_unsupported_cause(narration: str, payload: object) -> bool:
     for sentence in _sentences(narration):
         if not any(cue in sentence for cue in _CAUSAL_CLAIM_CUES):
             continue
-        for noun in _CAUSE_NOUNS:
-            if re.search(rf"\b{re.escape(noun)}\b", sentence) and not re.search(
-                rf"\b{re.escape(noun)}\b", facts
-            ):
+        for family in _CAUSE_FAMILY_RES:
+            if family.search(sentence) and not family.search(facts):
                 return False
     return True
 

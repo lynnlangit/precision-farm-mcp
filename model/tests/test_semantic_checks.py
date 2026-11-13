@@ -393,6 +393,37 @@ def test_unsupported_cause_allows_cause_named_in_payload():
     assert not check_no_unsupported_cause("The 2020 loss was due to drought.", payload)
 
 
+# Found in the grower web app: the cause list held "planting" but not
+# "planted", so this sentence passed every check.
+PLANTED_TOO_LATE = "East 80 lost money in 2020 because the farmer planted too late."
+
+
+def test_unsupported_cause_catches_verb_and_plural_forms():
+    from farm_model.verification import check_no_unsupported_cause
+
+    for sentence in (
+        PLANTED_TOO_LATE,
+        "The 2020 loss happened because the field flooded in June.",
+        "Profit fell in 2020 because it rained too much at harvest.",
+        "The shortfall was driven by storms in July.",
+        "Yield dropped because the crop froze in May.",
+        "The loss was due to the field being mismanaged.",
+    ):
+        assert not check_no_unsupported_cause(sentence, EVAL2_EAST_80_LABELLED), sentence
+    assert "unsupported_cause" in failed_semantic_checks(PLANTED_TOO_LATE, EVAL2_EAST_80)
+
+
+def test_unsupported_cause_word_forms_supported_by_payload():
+    from farm_model.verification import check_no_unsupported_cause
+
+    payload = {**EVAL2_EAST_80, "notes": "Replanted 2020-06-02 after the first stand failed."}
+    assert check_no_unsupported_cause(PLANTED_TOO_LATE, payload)
+    # A cause word that's only a non-causal mention still passes.
+    assert check_no_unsupported_cause(
+        "East 80 was planted in every recorded season.", EVAL2_EAST_80_LABELLED
+    )
+
+
 def test_unsupported_cause_retry_reason_exists():
     from farm_model import narrator
 
