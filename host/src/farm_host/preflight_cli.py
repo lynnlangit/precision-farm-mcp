@@ -19,6 +19,7 @@ import ollama
 
 from farm_core.audit import AuditLog
 
+from . import __version__
 from .cli import answer_question
 from .mcp_client import SERVERS, MCPFleet, ServerStartTimeout
 
@@ -226,6 +227,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    print(f"Precision Farm MCP {__version__} -- preflight")
     results = run_all(args.data_dir, args.confirm_store, args.audit_log, args.question)
     _print_results(results)
     all_ok = all(r.ok for r in results)

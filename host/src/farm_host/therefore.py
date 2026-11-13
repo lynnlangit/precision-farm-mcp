@@ -139,6 +139,12 @@ def build_therefore_line(payload: dict) -> str | None:
         return _for_zone_profitability(payload)
     if "pct_acres_unprofitable_in_profitable_fields" in payload:
         return _for_unprofitable_zones_summary(payload)
-    if "results" in payload:
+    results = payload.get("results")
+    # Only which_fields_made_money rows carry total_profit. cost_reconciliation
+    # also returns {"results": [...]} (line items) and must get no line --
+    # before this check it printed "0 of 2 fields made money ... ($0.00)".
+    if isinstance(results, list) and results and all(
+        isinstance(r, dict) and "total_profit" in r for r in results
+    ):
         return _for_ranking(payload)
     return None

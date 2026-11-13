@@ -199,3 +199,17 @@ def test_reconciliation_and_resolve_field_name_shapes_are_omitted():
     """
     assert build_therefore_line({"canonical_id": "root_01", "matches": True}) is None
     assert build_therefore_line({"raw_name": "north 8", "resolved_to": "North Eighty"}) is None
+
+
+def test_cost_reconciliation_results_get_no_ranking_line():
+    """Eval 9 printed "0 of 2 fields made money ... ($0.00)" because its line
+    items also live under "results". Cost reconciliation has no verdict to restate."""
+    payload = {
+        "results": [
+            {"field_name": "Riverside", "season": 2022, "line_item": "seed",
+             "ledger_cost_per_ac": 95.55, "outlier_flagged": True},
+            {"field_name": "Riverside", "season": 2022, "line_item": "fertilizer",
+             "ledger_cost_per_ac": 134.31, "outlier_flagged": False},
+        ]
+    }
+    assert build_therefore_line(payload) is None

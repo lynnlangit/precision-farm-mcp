@@ -1,4 +1,5 @@
-"""Automated version of docs/EVAL_QUESTIONS.md's evaluation questions.
+"""Automated version of docs/EVAL_QUESTIONS.md's 11 evaluation questions
+(tool level -- test_eval_nl.py runs the same questions through the parser).
 Each is independent, read-only, and checked against a single verifiable
 figure from data/synthetic/ground_truth.json (seed 42) -- see that doc for
 the full rationale behind each question's inclusion.
@@ -159,6 +160,10 @@ async def test_q9_ledger_entry_does_not_match_its_own_inputs():
     seed = next(item for item in r["results"] if item["line_item"] == "seed")
     assert seed["outlier_flagged"] is True
     assert seed["ledger_cost_per_ac"] == 95.55
+    # Display rounding at the server layer (P5): cents and 0.01% only.
+    for item in r["results"]:
+        assert item["as_applied_derived_cost_per_ac"] == round(item["as_applied_derived_cost_per_ac"], 2)
+        assert item["pct_diff"] == round(item["pct_diff"], 4)
 
 
 async def test_q10_field_that_no_longer_exists_is_refused_not_guessed():
@@ -173,3 +178,22 @@ async def test_q10_field_that_no_longer_exists_is_refused_not_guessed():
     assert r["code"] == "not_found"
     # The boundary is exact: the lease ended after 2019, so 2019 still resolves.
     assert "code" not in last_season.data
+
+
+async def test_q11_hidden_bad_zone_inside_a_profitable_field():
+    """DEF-BADZONE-2024-root_12: zone 0 loses money, the field total doesn't show it."""
+    async with MCPFleet(["report-export"]) as fleet:
+        result = await fleet.call(
+            "report-export", "zone_profitability", field_name="Section Corner", season=2024
+        )
+    r = result.data
+    zone0 = next(z for z in r["zones"] if z["zone_index"] == 0)
+    assert zone0["available"] is True
+    assert zone0["profit"] < 0
+    assert zone0["profit"] == -11943.49  # pipeline golden
+    assert r["field_profit"] > 0
+    assert r["field_profit"] == 5897.56  # pipeline golden
+    _assert_matches_ground_truth("Section Corner", [2024], r["field_profit"])
+    # The shortfall is confined to zone 0: every other measurable zone made money.
+    others = [z for z in r["zones"] if z["zone_index"] != 0 and z["available"]]
+    assert others and all(z["profit"] > 0 for z in others)

@@ -69,7 +69,7 @@ def test_server_that_never_starts_times_out_with_preflight_hint(monkeypatch):
 
 
 def test_cli_prints_start_timeout_instead_of_a_traceback(tmp_path, monkeypatch, capsys):
-    async def fake_answer(question, audit_log):
+    async def fake_answer(question, audit_log, env_overrides=None):
         raise ServerStartTimeout("field-registry", 120)
 
     monkeypatch.setattr(cli, "answer_question", fake_answer)

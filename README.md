@@ -1,5 +1,7 @@
 # Precision Farm MCP
 
+**Version 0.1.0** (`uv run --project host farm-cli --version`)
+
 A local-first, offline decision-support tool for one farmer's laptop. Ask a
 plain-English question about your own farm's ten-season record — costs,
 yields, profit — and get back an answer grounded entirely in your own
@@ -8,8 +10,9 @@ files, never a prediction or a guess.
 ![farm-cli answering a question from a real run](docs/images/farm-cli-example.svg)
 
 Under the hood, a small local model (Gemma 3B via Ollama) only ever turns
-the question into a structured lookup and turns the computed answer into
-plain language — it never touches the data or the arithmetic. Everything
+the question into a structured lookup and may add one checked sentence of
+context to an answer that deterministic code has already written — it never
+touches the data or the arithmetic. Everything
 else (field identity across years of renames/splits/merges, cost-ledger
 ingestion, yield reconciliation, profitability) is deterministic Python,
 checked against a synthetic ground-truth dataset, using an MCP (Model
@@ -89,7 +92,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 1. **Field identity across ten years.** A field's name isn't a stable key —
    it drifts in the farmer's own spreadsheet, gets formally renamed, and
-   stops meaning anything across a split or merge. `core/field_identity.py`
+   stops meaning anything across a split or merge. `core/src/farm_core/field_identity.py`
    resolves the real ten-year timeline from raw files alone, using acreage
    continuity (not string matching) as the signal — proven first, since
    it's the riskiest piece.
@@ -106,11 +109,21 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 ## Verification
 
-193 tests across the four packages, plus the 11 evaluation questions,
-all currently green:
+273 tests across the four packages, including all 11 evaluation questions
+from `docs/EVAL_QUESTIONS.md` at the tool level, all green in CI. The host
+and model suites need Ollama running with `gemma3:4b`; without it, only the
+tests that call the model fail.
 
 ```bash
 for pkg in generator core host model; do (cd $pkg && uv run pytest -q); done
+```
+
+The same 11 questions also run end to end in plain English — Gemma parses
+each one, the host routes it, and the answer's figures, summary line, or
+refusal are checked. This suite is slow and opt-in:
+
+```bash
+uv run --project host pytest -m eval_nl host/tests
 ```
 
 Notably:
@@ -129,9 +142,12 @@ Notably:
 - 🚪 **The model-free query path really is model-free** —
   `farm-cli --intent ...` reaches an answer with zero `ollama.chat` calls,
   verified directly (`test_structured_path_never_calls_ollama`)
-- ✅ **Narration is grounded and consistent** — every number traces to the
-  payload, no verdict is contradicted, with a deterministic fallback if the
-  model can't manage both after a retry
+- ✅ **Answers lead with verified text** — every answer opens with a
+  deterministic template sentence built from the tool result. The model may
+  add one sentence of context, shown only if every number traces to the
+  payload, no verdict is contradicted, and it passes five meaning checks
+  (sign, zone premise, reconciliation, attribution, unsupported cause);
+  otherwise it is dropped after one retry
 - 📊 **Governance is measurable, not just asserted** — `farm-metrics`
   reports HITL catch rate, tool grounding, narration faithfulness, and
   sovereignty integrity straight from the audit log

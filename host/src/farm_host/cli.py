@@ -29,6 +29,7 @@ from farm_model.query_schema import (
     resolve_relative_seasons,
 )
 
+from . import __version__
 from .mcp_client import MCPFleet, ServerStartTimeout
 from .therefore import build_therefore_line
 
@@ -119,6 +120,18 @@ async def answer_question(
             ),
             ok=False,
         )
+
+    # What the parser decided, before routing -- lets the eval runner (and a
+    # reader of the audit log) check the intent and parameters directly.
+    audit_log.log(
+        "parsed",
+        intent=query.intent.value,
+        field_name=query.field_name,
+        raw_name=query.raw_name,
+        season=query.season,
+        seasons=query.seasons,
+        season_count_from_latest=query.season_count_from_latest,
+    )
 
     server = _INTENT_TO_SERVER[query.intent]
     tool = _INTENT_TO_TOOL[query.intent]
@@ -223,9 +236,12 @@ def _list_intents() -> str:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="farm-cli",
-        description="Precision Farm MCP v1 -- ask a question about your own field records. "
+        description=f"Precision Farm MCP {__version__} -- ask a question about your own field records. "
         "Either a free-text question, or --intent for the model-free path (no Ollama "
         "call, raw JSON result) -- see --list-intents.",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"Precision Farm MCP {__version__}"
     )
     parser.add_argument(
         "question",
@@ -256,6 +272,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     audit_log = AuditLog(args.audit_log)
+    # Servers write their tool_executed events to FARM_AUDIT_LOG; point them at
+    # the same file so --audit-log captures the whole question in one chain.
+    server_env = {"FARM_AUDIT_LOG": str(Path(args.audit_log).resolve())}
 
     if args.list_intents:
         print(_list_intents())
@@ -268,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Invalid arguments for --intent {args.intent}: {e}")
             return 1
         try:
-            result = asyncio.run(answer_question_structured(query, audit_log))
+            result = asyncio.run(answer_question_structured(query, audit_log, env_overrides=server_env))
         except ServerStartTimeout as e:
             print(e)
             return 1
@@ -283,7 +302,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        result = asyncio.run(answer_question(question, audit_log))
+        result = asyncio.run(answer_question(question, audit_log, env_overrides=server_env))
     except ServerStartTimeout as e:
         print(e)
         return 1

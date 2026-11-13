@@ -165,6 +165,21 @@ def get_cost_ledger_row(field_name: str, season: int) -> dict:
     ).model_dump()
 
 
+def _rounded_line_item(item) -> dict[str, Any]:
+    """Display rounding at the transport layer only: $/ac to cents, pct_diff
+    to 4 decimals (0.01 of a percent). The core reconciliation keeps full
+    precision for its own outlier threshold, so this can't change
+    outlier_flagged. (Same treatment as yield-history's _rounded, eval-fix P5.)
+    """
+    d = dataclasses.asdict(item)
+    for key in ("ledger_cost_per_ac", "as_applied_derived_cost_per_ac"):
+        if d.get(key) is not None:
+            d[key] = round(d[key], 2)
+    if d.get("pct_diff") is not None:
+        d["pct_diff"] = round(d["pct_diff"], 4)
+    return d
+
+
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
 @_confirmation_guarded
 def get_cost_reconciliation(field_name: str, season: int) -> dict:
@@ -191,7 +206,7 @@ def get_cost_reconciliation(field_name: str, season: int) -> dict:
         "tool_executed", tool="get_cost_reconciliation", field_name=field_name, season=season
     )
     results = [
-        dataclasses.asdict(r)
+        _rounded_line_item(r)
         for r in _cost_reconciliation()
         if r.field_name == field_name and r.season == season
     ]
