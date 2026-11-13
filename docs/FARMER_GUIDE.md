@@ -157,11 +157,20 @@ Now open the app in your browser:
 uv run --project web farm-web
 ```
 
-A browser tab opens at `http://127.0.0.1:7860`. The "Ready check" row at
-the top should show four green dots; if one is red, it tells you the
-command that fixes it. Type a question, or tap one of the example
-questions, and you should get back a real, grounded answer in a few
-seconds.
+A browser tab opens at `http://127.0.0.1:7860`. When everything is set
+up, a small "Prerequisites loaded: 4 of 4" line sits at the bottom of the
+page (click it to see the four checks). If one fails, it moves to the top,
+open, and tells you the command that fixes it. Type a question, or open
+one of the example question groups and tap a question, and you should get
+back a real, grounded answer in a few seconds. The app starts its lookup
+servers in the background when it opens, so later questions skip that step;
+if you regenerate the data or re-run `farm-ingest`, restart the app.
+
+After an answer you can ask a follow-up such as "What about East 80?" or
+"And in 2023?". The line **Showing:** above each answer says which field,
+season and question it actually answered, and **Ask next** offers a few
+full questions to tap. Each follow-up is looked up and checked from
+scratch.
 
 ![The web app answering "Was East 80 a bad field or just a bad year?"](images/farm-web-answer.png)
 

@@ -153,6 +153,13 @@ footer { opacity: 0.6; }
 
 /* ---------- example question chips ---------- */
 .pf-examples-group { gap: 6px !important; }
+.pf-example-group {
+  background: var(--pf-card) !important; border: 1px solid var(--pf-card-edge) !important;
+  border-radius: 12px !important; margin-top: 8px !important;
+}
+.pf-example-group > button, .pf-example-group .label-wrap {
+  font-weight: 600 !important; color: var(--pf-ink) !important;
+}
 .pf-example button, button.pf-example {
   justify-content: flex-start !important; text-align: left !important;
   white-space: normal !important; font-weight: 400 !important;

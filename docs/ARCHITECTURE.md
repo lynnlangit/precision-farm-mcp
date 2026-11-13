@@ -63,7 +63,7 @@ proven against an injected-prompt defect.
 |---|---|---|
 | Ingest/query confirmation split, `ConfirmationGate` | Built | |
 | 6 MCP servers, `farm-cli`, `farm-ingest` | Built | |
-| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals; shows the template sentence, the checked AI sentence (or the blocked one), figures and source. Local only unless `--lan` |
+| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals; shows the template sentence, the checked AI sentence (or the blocked one), figures and source. Follow-ups carry only the last verified answer's field, season and question type (`farm_host.followups`); a "Showing:" line names what was answered. Keeps the MCP servers running for the session (`farm_host.server_pool`) so a question skips the ~4 s server start and snapshot build. Local only unless `--lan` |
 | Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if grounded and it passes all checks, with one retry naming the failed check |
 | Hash-chained, concurrency-safe audit log | Built | Host and every server write to it (fixed in Phase A) |
 | Provenance (`modeled` subtree), grounding split | Built | `modeled` is filled by weather attribution on `bad_year` verdicts, `null` elsewhere by design |

@@ -111,11 +111,16 @@ async def answer_question(
     audit_log: AuditLog,
     env_overrides: dict[str, str] | None = None,
     context: FollowUpContext | None = None,
+    fleet: MCPFleet | None = None,
 ) -> AnswerResult:
     """`context` is set only for a follow-up (the grower web app): the last
     verified answer's field, season and question type. It only helps parse
     the question -- the lookup, verification and narration below are exactly
     the same as for a first question, and the narrator never sees it.
+
+    `fleet` is an already-running set of servers (the web app keeps one open
+    so each question skips the server start and snapshot build). Without it,
+    the needed server is started for this one question, as the CLI does.
     """
     if context is not None and context.is_empty():
         context = None
@@ -184,8 +189,11 @@ async def answer_question(
     tool = _INTENT_TO_TOOL[query.intent]
     args = _tool_args(query)
 
-    async with MCPFleet([server], env_overrides=env_overrides) as fleet:
+    if fleet is not None:
         tool_result = await fleet.call(server, tool, **args)
+    else:
+        async with MCPFleet([server], env_overrides=env_overrides) as one_off:
+            tool_result = await one_off.call(server, tool, **args)
     audit_log.log("tool_call", server=server, tool=tool, args=args)
 
     result = tool_result.data
