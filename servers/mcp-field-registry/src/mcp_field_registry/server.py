@@ -107,7 +107,7 @@ def resolve_field_identity() -> dict:
         {"canonical_fields": {...}, "identity_events": [...], "provenance": {...}}
     """
     snap = _snapshot()
-    _audit_log().log("tool_call", tool="resolve_field_identity")
+    _audit_log().log("tool_executed", tool="resolve_field_identity")
     payload = snap.identity.to_json()
     return ResolveFieldIdentityResult(**payload, provenance=SnapshotProvenance(**_provenance())).model_dump()
 
@@ -149,7 +149,7 @@ def resolve_field_name(raw_name: str, season: int) -> dict:
             "code": "not_found",
         }
 
-    _audit_log().log("tool_call", tool="resolve_field_name", raw_name=raw_name, season=season)
+    _audit_log().log("tool_executed", tool="resolve_field_name", raw_name=raw_name, season=season)
     return ResolveFieldNameResult(
         canonical_boundary_name=resolved, method=method, provenance=SnapshotProvenance(**_provenance())
     ).model_dump()

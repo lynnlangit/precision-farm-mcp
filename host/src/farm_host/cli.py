@@ -29,7 +29,7 @@ from farm_model.query_schema import (
     resolve_relative_seasons,
 )
 
-from .mcp_client import MCPFleet
+from .mcp_client import MCPFleet, ServerStartTimeout
 from .therefore import build_therefore_line
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -267,16 +267,26 @@ def main(argv: list[str] | None = None) -> int:
         except ValidationError as e:
             print(f"Invalid arguments for --intent {args.intent}: {e}")
             return 1
-        result = asyncio.run(answer_question_structured(query, audit_log))
+        try:
+            result = asyncio.run(answer_question_structured(query, audit_log))
+        except ServerStartTimeout as e:
+            print(e)
+            return 1
         print(result.text)
         return 0 if result.ok else 1
 
-    if not args.question:
+    # argv [""] (e.g. `farm-cli ""`) is a non-empty list, so check the joined
+    # text: a blank or whitespace-only question never reaches the model.
+    question = " ".join(args.question).strip()
+    if not question:
         print("Provide a question, or use --intent for the model-free path (see --list-intents).")
         return 1
 
-    question = " ".join(args.question)
-    result = asyncio.run(answer_question(question, audit_log))
+    try:
+        result = asyncio.run(answer_question(question, audit_log))
+    except ServerStartTimeout as e:
+        print(e)
+        return 1
     print(result.text)
     return 0 if result.ok else 1
 

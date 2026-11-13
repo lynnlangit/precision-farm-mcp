@@ -151,7 +151,7 @@ def get_cost_ledger_row(field_name: str, season: int) -> dict:
             "code": "not_found",
         }
 
-    _audit_log().log("tool_call", tool="get_cost_ledger_row", field_name=field_name, season=season)
+    _audit_log().log("tool_executed", tool="get_cost_ledger_row", field_name=field_name, season=season)
     return GetCostLedgerRowResult(
         field_name=field_name,
         seed_cost_per_ac=match[1],
@@ -188,7 +188,7 @@ def get_cost_reconciliation(field_name: str, season: int) -> dict:
             "code": "invalid_input",
         }
     _audit_log().log(
-        "tool_call", tool="get_cost_reconciliation", field_name=field_name, season=season
+        "tool_executed", tool="get_cost_reconciliation", field_name=field_name, season=season
     )
     results = [
         dataclasses.asdict(r)

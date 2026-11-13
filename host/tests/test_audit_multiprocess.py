@@ -37,6 +37,9 @@ async def test_audit_chain_survives_host_plus_two_real_server_subprocesses(tmp_p
 
     assert events.count("query") == 1
     assert events.count("narration") == 1
-    assert "tool_call" in events  # logged by the server subprocesses themselves
-    assert len(entries) >= 4  # host's 2 + at least one tool_call per server
+    # Servers log their side as "tool_executed"; "tool_call" is the host's own
+    # event (cli.py), so the two perspectives never share a name.
+    assert "tool_executed" in events  # logged by the server subprocesses themselves
+    assert "tool_call" not in events  # this test logs no host-side tool_call
+    assert len(entries) >= 4  # host's 2 + at least one tool_executed per server
     assert final.verify() is True

@@ -228,7 +228,7 @@ def which_fields_made_money(seasons: list[int]) -> dict:
             "code": "invalid_input",
         }
 
-    _audit_log().log("tool_call", tool="which_fields_made_money", seasons=seasons)
+    _audit_log().log("tool_executed", tool="which_fields_made_money", seasons=seasons)
     results = _which_fields_made_money(snap.profit_records, seasons)
     return WhichFieldsMadeMoneyResult(
         results=results,
@@ -261,7 +261,7 @@ def bad_field_or_bad_year(field_name: str) -> dict:
             "code": "not_found",
         }
 
-    _audit_log().log("tool_call", tool="bad_field_or_bad_year", field_name=field_name)
+    _audit_log().log("tool_executed", tool="bad_field_or_bad_year", field_name=field_name)
     result = _bad_field_or_bad_year(snap.profit_records, canonical_id)
     current_name = snap.identity.lineages[canonical_id].display_name_by_season[
         max(snap.identity.lineages[canonical_id].active_seasons)
@@ -326,7 +326,7 @@ def zone_profitability(field_name: str, season: int) -> dict:
         return {"error": e.reason, "code": "invalid_input"}
 
     _audit_log().log(
-        "tool_call", tool="zone_profitability", field_name=field_name, season=season
+        "tool_executed", tool="zone_profitability", field_name=field_name, season=season
     )
     current_name = snap.identity.lineages[canonical_id].display_name_by_season[
         max(snap.identity.lineages[canonical_id].active_seasons)
@@ -357,7 +357,7 @@ def unprofitable_zones_in_profitable_fields() -> dict:
     """
     snap = _snapshot()
     summary = _unprofitable_zones_in_profitable_fields(snap)
-    _audit_log().log("tool_call", tool="unprofitable_zones_in_profitable_fields")
+    _audit_log().log("tool_executed", tool="unprofitable_zones_in_profitable_fields")
     return UnprofitableZonesSummaryResult(
         **summary, provenance=SnapshotProvenance(**_provenance())
     ).model_dump()

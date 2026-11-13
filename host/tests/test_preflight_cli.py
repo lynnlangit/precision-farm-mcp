@@ -74,6 +74,7 @@ def test_run_all_reports_ready_against_real_setup():
     names = [r.name for r in results]
     assert names == [
         "uv installed",
+        "MCP servers start",
         "Ollama running",
         "gemma3:4b pulled",
         "farm data generated",
@@ -86,3 +87,14 @@ def test_run_all_reports_ready_against_real_setup():
 def test_run_all_skips_live_query_when_an_earlier_check_fails(tmp_path):
     results = run_all(tmp_path, CONFIRM_STORE_PATH, AUDIT_LOG_PATH, DEFAULT_TEST_QUESTION)
     assert [r.name for r in results][-1] != "end-to-end query"
+
+
+def test_check_servers_start_reports_every_server():
+    from farm_host.mcp_client import SERVERS
+    from farm_host.preflight_cli import check_servers_start
+
+    result = check_servers_start()
+    assert result.ok, result.detail
+    assert f"all {len(SERVERS)} started" in result.detail
+    for name in SERVERS:
+        assert name in result.detail
