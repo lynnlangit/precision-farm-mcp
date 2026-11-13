@@ -36,6 +36,10 @@ TOPIC_LABELS: dict[QueryIntent, str] = {
     QueryIntent.RESOLVE_FIELD_NAME: "what a field name refers to",
     QueryIntent.YIELD_RECONCILIATION: "yield monitor vs scale tickets",
     QueryIntent.COST_RECONCILIATION: "ledger costs vs as-applied costs",
+    QueryIntent.SEASON_WEATHER: "season rain and heat",
+    QueryIntent.FIELD_SOIL: "soil water capacity",
+    QueryIntent.APPLIED_INPUTS: "what was applied",
+    QueryIntent.NITROGEN_HISTORY: "nitrogen across seasons",
 }
 
 
@@ -96,6 +100,8 @@ def resolved_label(result: AnswerResult) -> str | None:
         parts.append("every season on record")
     elif query.intent == QueryIntent.UNPROFITABLE_ZONES_IN_PROFITABLE_FIELDS:
         parts.append("the whole farm")
+    elif query.intent == QueryIntent.NITROGEN_HISTORY:
+        parts.append("every logged season")
     parts.append(TOPIC_LABELS.get(query.intent, query.intent.value.replace("_", " ")))
     return " · ".join(parts)
 
@@ -114,6 +120,22 @@ def _seed_cost(f: str, s: int) -> str:
 
 def _zones(f: str, s: int) -> str:
     return f"Is any part of {f} losing money in {s}?"
+
+
+def _weather(s: int) -> str:
+    return f"How dry was {s}?"
+
+
+def _soil(f: str) -> str:
+    return f"How much water does {f}'s soil hold?"
+
+
+def _applied(f: str, s: int) -> str:
+    return f"What did I put on {f} in {s}?"
+
+
+def _nitrogen(f: str) -> str:
+    return f"Did I put the same nitrogen on {f} every year?"
 
 
 _LAST_FIVE = "Which fields made money in the last five years?"
@@ -138,6 +160,8 @@ def suggest_followups(result: AnswerResult) -> list[str]:
             out.append(f"Why was {field} a bad year?")
         if intent == QueryIntent.EXPLAIN_SHORTFALL:
             out.append(_bad_field(field))
+            if outliers:
+                out.append(_weather(outliers[0]))
         if outliers:
             out.append(_yield_check(field, outliers[0]))
         out.append(_zones(field, latest))
@@ -173,6 +197,24 @@ def suggest_followups(result: AnswerResult) -> list[str]:
         out.append(_yield_check(field, season))
     elif intent == QueryIntent.UNPROFITABLE_ZONES_IN_PROFITABLE_FIELDS:
         out.append(_LAST_FIVE)
+    elif intent == QueryIntent.SEASON_WEATHER and season:
+        if season - 1 in SEASONS:
+            out.append(_weather(season - 1))
+        out.append(f"Which fields made money in {season}?")
+    elif intent == QueryIntent.FIELD_SOIL and field:
+        out.append(_nitrogen(field))
+        out.append(_bad_field(field))
+    elif intent == QueryIntent.APPLIED_INPUTS and field and season:
+        if payload.get("logged"):
+            out.append(_seed_cost(field, season))
+        out.append(_nitrogen(field))
+        out.append(_weather(season))
+    elif intent == QueryIntent.NITROGEN_HISTORY and field:
+        rows = [r for r in payload.get("nitrogen_by_season") or [] if isinstance(r, dict)]
+        if rows:
+            out.append(_applied(field, rows[-1].get("season", latest)))
+        out.append(_soil(field))
+        out.append(_bad_field(field))
 
     seen: set[str] = set()
     unique = [q for q in out if not (q in seen or seen.add(q))]

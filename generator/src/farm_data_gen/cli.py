@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         # generated-data tree -- only written by the CLI entry point, never
         # by generate() itself (which tests call directly against a tmp_path
         # out_dir and must have no side effect outside it).
-        write_text(_REPO_ROOT / "docs" / "EVAL_QUESTIONS.md", render_eval_questions(ground_truth))
+        write_text(_REPO_ROOT / "docs" / "EVAL_QUESTIONS.md", render_eval_questions(ground_truth, args.out))
     except (ValueError, AssertionError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

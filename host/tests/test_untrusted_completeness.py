@@ -31,6 +31,7 @@ _SERVER_MODULES = {
     "mcp-yield-history": "mcp_yield_history.server",
     "mcp-as-applied": "mcp_as_applied.server",
     "mcp-cost-ledger": "mcp_cost_ledger.server",
+    "mcp-weather-history": "mcp_weather_history.server",
 }
 
 _INTROSPECT_SNIPPET = """

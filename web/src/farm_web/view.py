@@ -27,6 +27,7 @@ CHECKS: tuple[tuple[str, str], ...] = (
     ("reconciliation", "It says correctly whether two records agree"),
     ("attribution", "It doesn't treat a modeled estimate as a proven cause"),
     ("unsupported_cause", "It doesn't name a cause your records don't show"),
+    ("units", "Every number keeps its own unit (mm, inches, lb, gallons)"),
 )
 _CHECK_LABELS = dict(CHECKS)
 
@@ -73,6 +74,45 @@ _LABELS = {
     "season_effect": "Weather effect",
     "field_effect": "Field effect",
     "residual": "Unexplained",
+    "asked_name": "Name you asked about",
+    "total_precip_mm": "Rain (mm)",
+    "farm_average_precip_mm": "Farm average rain (mm)",
+    "pct_vs_farm_average": "Versus farm average",
+    "num_seasons_compared": "Seasons compared",
+    "precip_rank_driest": "Rank, driest first",
+    "crop_water_need_mm": "Crop water need (mm)",
+    "precip_short_of_need_mm": "Short of need (mm)",
+    "heat_stress_days": "Days above heat threshold",
+    "farm_average_heat_stress_days": "Farm average hot days",
+    "heat_stress_threshold_c": "Heat threshold (°C)",
+    "awc_in": "Soil water capacity (in)",
+    "farm_min_awc_in": "Farm lowest (in)",
+    "min_field_name": "Lowest field",
+    "farm_max_awc_in": "Farm highest (in)",
+    "max_field_name": "Highest field",
+    "num_current_fields": "Current fields",
+    "crop": "Crop",
+    "logged": "As-applied log exists",
+    "logged_seasons": "Seasons with logs",
+    "applied_inputs": "Applied inputs",
+    "input": "Input",
+    "product": "Product",
+    "rate": "Rate",
+    "unit": "Unit",
+    "as_logged_rate": "As logged",
+    "as_logged_unit": "Logged unit",
+    "converted": "Converted",
+    "nitrogen_lb_n_ac": "Nitrogen (lb N/ac)",
+    "uan32_lb_n_per_gal": "UAN 32% (lb N per gallon)",
+    "nitrogen_by_season": "Nitrogen by season",
+    "nitrogen_by_crop": "Nitrogen range by crop",
+    "n_lb_n_ac": "Nitrogen (lb N/ac)",
+    "min_lb_n_ac": "Lowest (lb N/ac)",
+    "min_season": "Lowest in",
+    "max_lb_n_ac": "Highest (lb N/ac)",
+    "max_season": "Highest in",
+    "spread_lb_n_ac": "Spread (lb N/ac)",
+    "logs_start_season": "Logs start",
 }
 
 _VERDICTS = {
@@ -86,6 +126,9 @@ _REPEATED_CONTEXT_KEYS = {"field_name", "season", "available", "calibrated"}
 
 _MONEY_HINTS = ("profit", "revenue", "cost")
 _PERCENT_KEYS = {"pct_diff", "loss_rate"}
+# Whole-number percentages computed by the tool itself (not 0-1 fractions).
+_WHOLE_PERCENT_KEYS = {"pct_vs_farm_average"}
+_YEAR_KEYS = {"season", "zone_index", "min_season", "max_season", "logs_start_season"}
 
 
 def _label(key: str) -> str:
@@ -101,6 +144,8 @@ def format_value(key: str, value: object) -> str:
     if key == "verdict" and isinstance(value, str):
         return escape(_VERDICTS.get(value, value))
     if isinstance(value, (int, float)):
+        if key in _WHOLE_PERCENT_KEYS:
+            return f"{value:+d}%"
         if key in _PERCENT_KEYS:
             return f"{value * 100:+.1f}%" if key == "pct_diff" else f"{value * 100:.0f}%"
         if key.endswith("_per_ac") or key.endswith("_per_acre") or (
@@ -109,8 +154,8 @@ def format_value(key: str, value: object) -> str:
             sign = "-" if value < 0 else ""
             return f"{sign}${abs(value):,.2f}"
         if isinstance(value, float):
-            return f"{value:,.2f}"
-        if key in ("season", "zone_index"):
+            return f"{value:,.2f}" if not key.endswith("_per_gal") else f"{value:g}"
+        if key in _YEAR_KEYS:
             return str(value)
         return f"{value:,}"
     if isinstance(value, list) and all(not isinstance(v, (dict, list)) for v in value):
@@ -144,6 +189,8 @@ def _scalar_rows(payload: dict) -> list[tuple[str, object]]:
     for key, value in payload.items():
         if key in _HIDDEN_KEYS or key == "note":
             continue
+        if isinstance(value, dict) and value and all(isinstance(v, dict) for v in value.values()):
+            continue  # a group of records (e.g. nitrogen by crop): its own table
         if isinstance(value, dict):
             rows.extend(
                 (k, v) for k, v in value.items() if k not in _HIDDEN_KEYS and _is_scalarish(v)
@@ -378,6 +425,14 @@ def _figures_html(result: AnswerResult) -> str:
             continue
         if isinstance(value, list) and value and isinstance(value[0], dict):
             out.append(_table(value, caption=_label(key) if key != "results" else None))
+        elif (
+            isinstance(value, dict)
+            and value
+            and key not in ("modeled",)
+            and all(isinstance(v, dict) for v in value.values())
+        ):
+            # {"corn": {...}, "soybean": {...}} -> one row per group.
+            out.append(_table([{"crop": k, **v} for k, v in value.items()], caption=_label(key)))
 
     modeled = payload.get("modeled") or {}
     attribution = modeled.get("attribution") if isinstance(modeled, dict) else None

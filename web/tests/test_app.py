@@ -17,7 +17,13 @@ def test_localhost_only_by_default():
 
 
 def test_examples_are_the_eval_questions():
-    assert sum(len(qs) for _, qs in EXAMPLES) == 10  # eval 10 is a refusal, left out
+    assert sum(len(qs) for _, qs in EXAMPLES) == 14  # eval 10 is a refusal, left out
+    from pathlib import Path
+
+    doc = (Path(__file__).resolve().parents[2] / "docs" / "EVAL_QUESTIONS.md").read_text()
+    for _, qs in EXAMPLES:
+        for q in qs:
+            assert f"**Q:** {q}" in doc, q
 
 
 def _fake_answer(seen: list):

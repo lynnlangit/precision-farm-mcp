@@ -20,6 +20,10 @@ class QueryIntent(str, Enum):
     RESOLVE_FIELD_NAME = "resolve_field_name"
     YIELD_RECONCILIATION = "yield_reconciliation"
     COST_RECONCILIATION = "cost_reconciliation"
+    SEASON_WEATHER = "season_weather"
+    FIELD_SOIL = "field_soil"
+    APPLIED_INPUTS = "applied_inputs"
+    NITROGEN_HISTORY = "nitrogen_history"
     UNRECOGNIZED = "unrecognized"
 
 
@@ -41,6 +45,10 @@ REQUIRED_FIELDS: dict[QueryIntent, tuple[str, ...]] = {
     QueryIntent.RESOLVE_FIELD_NAME: ("raw_name", "season"),
     QueryIntent.YIELD_RECONCILIATION: ("field_name", "season"),
     QueryIntent.COST_RECONCILIATION: ("field_name", "season"),
+    QueryIntent.SEASON_WEATHER: ("season",),
+    QueryIntent.FIELD_SOIL: ("field_name",),
+    QueryIntent.APPLIED_INPUTS: ("field_name", "season"),
+    QueryIntent.NITROGEN_HISTORY: ("field_name",),
     QueryIntent.UNRECOGNIZED: (),
 }
 

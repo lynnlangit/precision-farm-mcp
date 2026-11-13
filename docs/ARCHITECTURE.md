@@ -36,7 +36,7 @@ flowchart TD
 
     Router --> Template["Template answer<br/>deterministic lead sentence + 'therefore' line"]
     Router --> Narrator["Gemma 3:4b<br/>may add one sentence of context. Farmer free text<br/>is delimited as untrusted data first"]
-    Narrator --> Checks["Verifier<br/>grounded numbers, verdict, 5 meaning checks —<br/>fails twice ⇒ sentence dropped"]
+    Narrator --> Checks["Verifier<br/>grounded numbers, verdict, 6 meaning checks —<br/>fails twice ⇒ sentence dropped"]
     Template --> Answer(["Answer<br/>the web app also shows the checks, figures and source"])
     Checks -->|"only if every check passes"| Answer
 ```
@@ -62,7 +62,8 @@ proven against an injected-prompt defect.
 | Component | Status | Note |
 |---|---|---|
 | Ingest/query confirmation split, `ConfirmationGate` | Built | |
-| 6 MCP servers, `farm-cli`, `farm-ingest` | Built | |
+| 6 MCP servers, `farm-cli`, `farm-ingest` | Built | Every server has at least one question type routed to it, so the web app warms all six |
+| Weather, soil and as-applied questions | Built | `SEASON_WEATHER`, `FIELD_SOIL` (`weather-history`) and `APPLIED_INPUTS`, `NITROGEN_HISTORY` (`as-applied`), computed in `core/field_conditions.py`. Nitrogen is always reported in lb N/ac, converting gal/ac of UAN 32%; corn and soybean N are never compared. A `units` check rejects a sentence that puts the wrong unit on a number. These are records, not causes: none of them says why a season went badly |
 | Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals; shows the template sentence, the checked AI sentence (or the blocked one), figures and source. Follow-ups carry only the last verified answer's field, season and question type (`farm_host.followups`); a "Showing:" line names what was answered. Keeps the MCP servers running for the session (`farm_host.server_pool`) so a question skips the ~4 s server start and snapshot build. Local only unless `--lan` |
 | Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if grounded and it passes all checks, with one retry naming the failed check |
 | Hash-chained, concurrency-safe audit log | Built | Host and every server write to it (fixed in Phase A) |
@@ -116,5 +117,5 @@ change that touches it should update this section first.
 - [README](../README.md) — the simple picture, quick start, and repository layout
 - [FARMER_GUIDE.md](FARMER_GUIDE.md) — plain-language setup and usage guide
 - [VERIFICATION.md](VERIFICATION.md) — how to run the tests and what they prove
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — eleven independent evaluation questions
+- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — fifteen independent evaluation questions
 - [PROJECT_HISTORY.md](PROJECT_HISTORY.md) — the phase history and roadmap

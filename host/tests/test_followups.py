@@ -148,3 +148,50 @@ def test_every_suggestion_names_its_field_and_season():
 
 def test_no_suggestions_after_a_refusal():
     assert suggest_followups(AnswerResult(text="no", ok=False)) == []
+
+
+# -- weather, soil and as-applied question types -----------------------------
+
+WEATHER_2018 = {"season": 2018, "total_precip_mm": 172.6}
+APPLIED_COULEE = {"field_name": "Coulee Field", "season": 2023, "logged": True, "applied_inputs": []}
+N_SECTION = {
+    "field_name": "Section Corner",
+    "nitrogen_by_season": [{"season": 2022}, {"season": 2025}],
+}
+
+
+def test_labels_for_the_new_question_types():
+    assert resolved_label(
+        _ok(QueryIntent.SEASON_WEATHER, WEATHER_2018, season=2018)
+    ) == "2018 · season rain and heat"
+    assert resolved_label(
+        _ok(QueryIntent.NITROGEN_HISTORY, N_SECTION, field_name="Section Corner")
+    ) == "Section Corner · every logged season · nitrogen across seasons"
+
+
+def test_suggestions_after_weather_soil_and_inputs():
+    assert suggest_followups(_ok(QueryIntent.SEASON_WEATHER, WEATHER_2018, season=2018)) == [
+        "How dry was 2017?",
+        "Which fields made money in 2018?",
+    ]
+    s = suggest_followups(
+        _ok(QueryIntent.APPLIED_INPUTS, APPLIED_COULEE, field_name="Coulee Field", season=2023)
+    )
+    assert s == [
+        "Does the seed cost on Coulee Field in 2023 look right?",
+        "Did I put the same nitrogen on Coulee Field every year?",
+        "How dry was 2023?",
+    ]
+    # No log that season: don't offer a cost check that would find nothing.
+    unlogged = {**APPLIED_COULEE, "season": 2019, "logged": False}
+    s = suggest_followups(
+        _ok(QueryIntent.APPLIED_INPUTS, unlogged, field_name="Coulee Field", season=2019)
+    )
+    assert not any("seed cost" in q for q in s)
+    assert suggest_followups(
+        _ok(QueryIntent.NITROGEN_HISTORY, N_SECTION, field_name="Section Corner")
+    )[0] == "What did I put on Section Corner in 2025?"
+    assert suggest_followups(
+        _ok(QueryIntent.FIELD_SOIL, {"field_name": "Coulee Field", "awc_in": 6.93},
+            field_name="Coulee Field")
+    )[0] == "Did I put the same nitrogen on Coulee Field every year?"

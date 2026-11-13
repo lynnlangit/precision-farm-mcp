@@ -16,7 +16,12 @@ from farm_host.server_pool import POOL_SERVERS, ServerPool
 
 
 def test_pool_covers_every_question_route():
-    assert set(POOL_SERVERS) == {"report-export", "field-registry", "yield-history", "cost-ledger"}
+    # Every one of the six servers has a question type routed to it, so the
+    # web app warms all six.
+    assert set(POOL_SERVERS) == {
+        "report-export", "field-registry", "yield-history", "cost-ledger",
+        "weather-history", "as-applied",
+    }
 
 
 async def _one_off():

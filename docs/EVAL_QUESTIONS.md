@@ -65,6 +65,26 @@ uv run --project host farm-cli "<question>"
 **Tool:** `report-export.zone_profitability(field_name="Section Corner", season=2024)`
 **Verifiable answer:** Zone 0 shows a negative `profit`, while Section Corner's field-level profit for 2024 (`profitability.<field>.*.profit`) stays positive and matches the no-defect figure to within a cent -- the shortfall is confined to one zone, not visible in the field total. Ground truth: `DEF-BADZONE-2024-root_12`.
 
+### 12. How a season's rain compares
+**Q:** How dry was 2018?
+**Tool:** `weather-history.get_season_weather(season=2018)`
+**Verifiable answer:** `total_precip_mm = 172.6` against a 10-season farm average of `434.4` mm, `precip_rank_driest = 1`, `precip_short_of_need_mm = 277.4` (crop need 450 mm). Ground truth: `DEF-WEATHERSHORTFALL-2018-root_01`, the forced drought. The answer reports rain; it never says the drought caused a loss.
+
+### 13. Soil water capacity for one field
+**Q:** How much water does Coulee Field's soil hold?
+**Tool:** `weather-history.get_field_soil(field_name="Coulee Field")`
+**Verifiable answer:** `awc_in = 6.93`, from `weather/soil_awc.csv`. Soil doesn't change by season, so no season is asked for or used.
+
+### 14. What was applied, with a unit conversion
+**Q:** What did I put on Coulee Field in 2023?
+**Tool:** `as-applied.get_applied_inputs(field_name="Coulee Field", season=2023)`
+**Verifiable answer:** `nitrogen_lb_n_ac = 145.9`: the log records `41.22 gal/ac` of UAN 32%, converted at 3.5392 lb N per gallon. Ground truth: `DEF-UNIT-2023`. Reading the gal/ac figure as lb N/ac would understate nitrogen by more than 3x.
+
+### 15. Nitrogen across seasons, by crop
+**Q:** Did I put the same nitrogen on Section Corner every year?
+**Tool:** `as-applied.get_nitrogen_history(field_name="Section Corner")`
+**Verifiable answer:** one lb N/ac figure per logged season (2022: `5.2`, 2023: `160.6`, 2024: `6.2`, 2025: `141.3`). Corn years range from `141.3` (2025) to `160.6` (2023); soybean years are reported separately, never compared with corn. No log exists before 2022.
+
 ---
 
 ## What these are testing collectively
@@ -74,4 +94,5 @@ uv run --project host farm-cli "<question>"
 - **6, 10** exercise field-identity resolution at its two extremes: a name that resolves through drift, and a name that correctly resolves to nothing at all.
 - **7-9** exercise all three reconciliation defects, including the one (#8) specifically designed so a naive totals-only check would pass it silently.
 - **11** exercises Phase D's zone-level profitability -- a shortfall that's genuinely invisible at the field level, only visible once yield_monitor_points are gridded into zones.
+- **12-15** exercise the weather-history and as-applied servers: a season's rain against the farm's own record, a field's soil, and as-applied rates where nitrogen logged in gal/ac of UAN 32% must be converted to lb N/ac before any comparison.
 

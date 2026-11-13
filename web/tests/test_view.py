@@ -204,3 +204,33 @@ def test_context_hint_names_what_follow_ups_carry():
     )
     assert "&lt;b&gt;Riverside&lt;/b&gt; \u00b7 2022 \u00b7 ledger costs vs as-applied" in html
     assert "Clear" in html
+
+
+NITROGEN = {
+    "field_name": "Section Corner",
+    "asked_name": "Section Corner",
+    "nitrogen_by_season": [
+        {"season": 2023, "field_name": "Section Corner", "crop": "corn",
+         "product": "UAN 32% (32-0-0)", "n_lb_n_ac": 160.6, "as_logged_rate": 45.38,
+         "as_logged_unit": "gal/ac", "converted": True},
+    ],
+    "nitrogen_by_crop": {
+        "corn": {"num_seasons": 2, "min_lb_n_ac": 141.3, "min_season": 2025,
+                 "max_lb_n_ac": 160.6, "max_season": 2023, "spread_lb_n_ac": 19.3},
+    },
+    "logs_start_season": 2022,
+    "uan32_lb_n_per_gal": 3.5392,
+    "provenance": {"source_file_count": 137},
+}
+
+
+def test_nitrogen_figures_show_seasons_crops_and_conversion():
+    html = build_view(_result(payload=NITROGEN)).figures_html
+    assert "Nitrogen range by crop" in html and "corn" in html
+    assert ">2022<" in html and ">2025<" in html  # years, not "2,022"
+    assert "45.38" in html and "gal/ac" in html
+    assert "3.5392" in html
+
+
+def test_whole_percent_is_signed():
+    assert format_value("pct_vs_farm_average", -60) == "-60%"

@@ -1,4 +1,4 @@
-"""The 11 evaluation questions from docs/EVAL_QUESTIONS.md, asked in plain
+"""The 15 evaluation questions from docs/EVAL_QUESTIONS.md, asked in plain
 English through the real path: Gemma parses the question, the host routes it
 to an MCP tool, and the narrator answers. test_eval_questions.py calls the
 tools directly, so it can't catch a parser misroute (eval 9 once went
@@ -108,6 +108,24 @@ EVALS = [
          {"field_name": "Section Corner", "season": 2024},
          contains=("$5,897.56", "zone 0 (-$11,943.49)"),
          therefore="1 of 4 measurable zones lost money"),
+    Eval(12, "How dry was 2018?",
+         "season_weather", "weather-history", "get_season_weather",
+         {"season": 2018},
+         contains=("172.6 mm", "60% below the 10-season farm average of 434.4 mm",
+                   "driest of the 10 seasons", "277.4 mm short of the 450 mm")),
+    Eval(13, "How much water does Coulee Field's soil hold?",
+         "field_soil", "weather-history", "get_field_soil",
+         {"field_name": "Coulee Field"},
+         contains=("6.93 inches", "4.08 in (West 120)")),
+    Eval(14, "What did I put on Coulee Field in 2023?",
+         "applied_inputs", "as-applied", "get_applied_inputs",
+         {"field_name": "Coulee Field", "season": 2023},
+         contains=("nitrogen at 145.9 lb N/ac", "logged as 41.22 gal/ac of UAN 32%")),
+    Eval(15, "Did I put the same nitrogen on Section Corner every year?",
+         "nitrogen_history", "as-applied", "get_nitrogen_history",
+         {"field_name": "Section Corner"},
+         contains=("2023 corn 160.6", "from 141.3 (2025) to 160.6 (2023)",
+                   "no as-applied log before 2022")),
 ]
 
 
@@ -190,6 +208,15 @@ FOLLOW_UP_EVALS = [
                  "What about East 80?",
                  "yield_reconciliation", {"field_name": "East 80", "season": 2019},
                  contains=("23,593.3 bu", "23,532.2 bu", "agree within tolerance")),
+    # Swap the year on a weather question.
+    FollowUpEval("weather_swap_year", "How dry was 2018?", "And 2019?",
+                 "season_weather", {"season": 2019},
+                 contains=("2019 had 308.6 mm of rain",)),
+    # Keep the field, change the question type to a new server.
+    FollowUpEval("applied_then_nitrogen", "What did I put on Coulee Field in 2023?",
+                 "Was the nitrogen the same every year?",
+                 "nitrogen_history", {"field_name": "Coulee Field"},
+                 contains=("from 145.9 (2023) to 179.1 (2022)",)),
     # Context never turns an out-of-scope question into a lookup.
     FollowUpEval("still_out_of_scope", "Was East 80 a bad field or just a bad year?",
                  "What should I plant there next year?",

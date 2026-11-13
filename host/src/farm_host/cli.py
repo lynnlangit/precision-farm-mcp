@@ -3,7 +3,7 @@
     uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 
 Question in -> Gemma parses it into a QueryObject -> the host dispatches to
-exactly one MCP server over stdio -> Gemma narrates the result Gemma never
+exactly one of the six MCP servers over stdio -> Gemma narrates the result Gemma never
 computed. Every step is logged to an append-only audit trail. Read-only:
 there is no write path reachable from this CLI at all.
 """
@@ -46,6 +46,10 @@ _INTENT_TO_SERVER: dict[QueryIntent, str] = {
     QueryIntent.RESOLVE_FIELD_NAME: "field-registry",
     QueryIntent.YIELD_RECONCILIATION: "yield-history",
     QueryIntent.COST_RECONCILIATION: "cost-ledger",
+    QueryIntent.SEASON_WEATHER: "weather-history",
+    QueryIntent.FIELD_SOIL: "weather-history",
+    QueryIntent.APPLIED_INPUTS: "as-applied",
+    QueryIntent.NITROGEN_HISTORY: "as-applied",
 }
 
 _INTENT_TO_TOOL: dict[QueryIntent, str] = {
@@ -61,6 +65,10 @@ _INTENT_TO_TOOL: dict[QueryIntent, str] = {
     QueryIntent.RESOLVE_FIELD_NAME: "resolve_field_name",
     QueryIntent.YIELD_RECONCILIATION: "get_yield_reconciliation",
     QueryIntent.COST_RECONCILIATION: "get_cost_reconciliation",
+    QueryIntent.SEASON_WEATHER: "get_season_weather",
+    QueryIntent.FIELD_SOIL: "get_field_soil",
+    QueryIntent.APPLIED_INPUTS: "get_applied_inputs",
+    QueryIntent.NITROGEN_HISTORY: "get_nitrogen_history",
 }
 
 
@@ -73,7 +81,12 @@ def _tool_args(query: QueryObject) -> dict:
         return {}
     if query.intent == QueryIntent.RESOLVE_FIELD_NAME:
         return {"raw_name": query.raw_name, "season": query.season}
+    if query.intent == QueryIntent.SEASON_WEATHER:
+        return {"season": query.season}
+    if query.intent in (QueryIntent.FIELD_SOIL, QueryIntent.NITROGEN_HISTORY):
+        return {"field_name": query.field_name}
     if query.intent in (
+        QueryIntent.APPLIED_INPUTS,
         QueryIntent.YIELD_RECONCILIATION,
         QueryIntent.COST_RECONCILIATION,
         QueryIntent.ZONE_PROFITABILITY,

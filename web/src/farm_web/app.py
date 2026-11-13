@@ -70,6 +70,20 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
             'What does "north eighty" refer to in 2017?',
         ),
     ),
+    (
+        "Weather and soil",
+        (
+            "How dry was 2018?",
+            "How much water does Coulee Field's soil hold?",
+        ),
+    ),
+    (
+        "What did I apply?",
+        (
+            "What did I put on Coulee Field in 2023?",
+            "Did I put the same nitrogen on Section Corner every year?",
+        ),
+    ),
 )
 
 

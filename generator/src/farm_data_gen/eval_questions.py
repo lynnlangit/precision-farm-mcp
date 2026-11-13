@@ -17,7 +17,14 @@ legitimately belongs only in farm_core.
 
 from __future__ import annotations
 
+import csv
 import statistics
+from pathlib import Path
+
+from .as_applied import UAN32_LB_N_PER_GAL
+from .config import SimConfig
+
+CROP_WATER_NEED_MM = SimConfig.crop_water_need_mm
 
 LOSS_RATE_BAD_FIELD_THRESHOLD = 0.5
 OUTLIER_MAD_MULTIPLIER = 2.0
@@ -94,7 +101,117 @@ def _find_negative_control(ground_truth: dict, exclude: set[str]) -> tuple[str, 
     return field_id, evidence
 
 
-def render_eval_questions(ground_truth: dict) -> str:
+def _read_csv(path: Path) -> list[dict]:
+    with path.open(newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def _season_precip(data_dir: Path) -> dict[int, float]:
+    totals: dict[int, float] = {}
+    for path in sorted((data_dir / "weather").glob("weather_*.csv")):
+        rows = _read_csv(path)
+        if rows:
+            totals[int(rows[0]["season"])] = round(sum(float(r["precip_mm"]) for r in rows), 1)
+    return totals
+
+
+def _nitrogen_by_season(data_dir: Path, field_name: str) -> dict[int, tuple[float, float, str]]:
+    """season -> (lb N/ac, as-logged rate, as-logged unit), from the raw logs."""
+    out: dict[int, tuple[float, float, str]] = {}
+    for path in sorted((data_dir / "as_applied").glob("as_applied_*.csv")):
+        for r in _read_csv(path):
+            if r["field_name"] != field_name or not r["product"].startswith(("Anhydrous", "UAN")):
+                continue
+            season = int(r["timestamp"][:4])
+            rate = float(r["rate"])
+            lb = rate * UAN32_LB_N_PER_GAL if r["rate_unit"] == "gal/ac" else rate
+            out[season] = (round(lb, 1), rate, r["rate_unit"])
+    return out
+
+
+def _weather_and_inputs_section(ground_truth: dict, data_dir: Path) -> list[str]:
+    """Questions 12-15: the weather-history and as-applied servers. Phrased
+    off the raw weather / soil / as-applied files this run just wrote -- the
+    generator can't import farm_core, so these figures are recomputed here
+    with plain arithmetic, the same way 1-5 reimplement the classifier.
+    """
+    ws = ground_truth["weathershortfall"]
+    precip = _season_precip(data_dir)
+    if ws["season"] not in precip:
+        return []
+    dry = precip[ws["season"]]
+    avg = round(sum(precip.values()) / len(precip), 1)
+    rank = 1 + sum(1 for v in precip.values() if v < dry)
+
+    ms = ground_truth["mgmtshortfall"]
+    soil_field = _current_name(ground_truth, ms["field_id"])
+    awc = {r["field_name"]: float(r["awc_in"]) for r in _read_csv(data_dir / "weather" / "soil_awc.csv")}
+
+    n_field = soil_field
+    n_rows = _nitrogen_by_season(data_dir, n_field)
+    uan_seasons = [s for s, (_, _, unit) in sorted(n_rows.items()) if unit == "gal/ac"]
+
+    bad_zone = ground_truth.get("bad_zone")
+    hist_id = bad_zone["field_id"] if bad_zone else ground_truth["marginal_field_id"]
+    hist_field = _current_name(ground_truth, hist_id)
+    hist = _nitrogen_by_season(data_dir, hist_field)
+    crops = ground_truth["canonical_fields"][hist_id]["crop_by_season"]
+    corn = {s: v for s, v in hist.items() if crops.get(str(s)) == "corn"}
+
+    lines = [
+        "### 12. How a season's rain compares",
+        f"**Q:** How dry was {ws['season']}?",
+        f"**Tool:** `weather-history.get_season_weather(season={ws['season']})`",
+        f"**Verifiable answer:** `total_precip_mm = {dry}` against a "
+        f"{len(precip)}-season farm average of `{avg}` mm, `precip_rank_driest = {rank}`, "
+        f"`precip_short_of_need_mm = {round(max(0.0, CROP_WATER_NEED_MM - dry), 1)}` (crop "
+        f"need {CROP_WATER_NEED_MM:g} mm). Ground truth: "
+        f"`DEF-WEATHERSHORTFALL-{ws['season']}-{ws['field_id']}`, the forced drought. The "
+        "answer reports rain; it never says the drought caused a loss.",
+        "",
+    ]
+    if soil_field in awc:
+        lines += [
+            "### 13. Soil water capacity for one field",
+            f"**Q:** How much water does {soil_field}'s soil hold?",
+            f'**Tool:** `weather-history.get_field_soil(field_name="{soil_field}")`',
+            f"**Verifiable answer:** `awc_in = {awc[soil_field]:g}`, from "
+            "`weather/soil_awc.csv`. Soil doesn't change by season, so no season is asked "
+            "for or used.",
+            "",
+        ]
+    if uan_seasons:
+        season = uan_seasons[0]
+        lb, rate, _ = n_rows[season]
+        lines += [
+            "### 14. What was applied, with a unit conversion",
+            f"**Q:** What did I put on {n_field} in {season}?",
+            f'**Tool:** `as-applied.get_applied_inputs(field_name="{n_field}", '
+            f"season={season})`",
+            f"**Verifiable answer:** `nitrogen_lb_n_ac = {lb}`: the log records "
+            f"`{rate:g} gal/ac` of UAN 32%, converted at {UAN32_LB_N_PER_GAL} lb N per gallon. "
+            f"Ground truth: `DEF-UNIT-{season}`. Reading the gal/ac figure as lb N/ac would "
+            "understate nitrogen by more than 3x.",
+            "",
+        ]
+    if len(corn) >= 2:
+        lo = min(corn, key=lambda s: corn[s][0])
+        hi = max(corn, key=lambda s: corn[s][0])
+        lines += [
+            "### 15. Nitrogen across seasons, by crop",
+            f"**Q:** Did I put the same nitrogen on {hist_field} every year?",
+            f'**Tool:** `as-applied.get_nitrogen_history(field_name="{hist_field}")`',
+            "**Verifiable answer:** one lb N/ac figure per logged season ("
+            + ", ".join(f"{s}: `{v[0]}`" for s, v in sorted(hist.items()))
+            + f"). Corn years range from `{corn[lo][0]}` ({lo}) to `{corn[hi][0]}` ({hi}); "
+            "soybean years are reported separately, never compared with corn. "
+            f"No log exists before {min(hist)}.",
+            "",
+        ]
+    return lines
+
+
+def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> str:
     seasons = ground_truth["generator"]["seasons"]
     marginal_id = ground_truth["marginal_field_id"]
     cat = ground_truth["catastrophic_year"]
@@ -302,6 +419,9 @@ def render_eval_questions(ground_truth: dict) -> str:
             "",
         ]
 
+    if data_dir is not None:
+        lines += _weather_and_inputs_section(ground_truth, Path(data_dir))
+
     lines += [
         "---",
         "",
@@ -323,6 +443,13 @@ def render_eval_questions(ground_truth: dict) -> str:
             "- **11** exercises Phase D's zone-level profitability -- a shortfall that's "
             "genuinely invisible at the field level, only visible once yield_monitor_points "
             "are gridded into zones."
+        )
+    if data_dir is not None:
+        lines.append(
+            "- **12-15** exercise the weather-history and as-applied servers: a season's rain "
+            "against the farm's own record, a field's soil, and as-applied rates where "
+            "nitrogen logged in gal/ac of UAN 32% must be converted to lb N/ac before any "
+            "comparison."
         )
     lines.append("")
 

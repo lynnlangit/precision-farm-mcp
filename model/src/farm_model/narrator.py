@@ -80,6 +80,8 @@ _RETRY_REASONS = {
     "cause of the loss.",
     "unsupported_cause": "It named a cause (such as weather, pests or soil) that the JSON "
     "does not contain. Do not explain why something happened unless the JSON says why.",
+    "units": "It put the wrong unit on a number (rain is mm, soil water is inches, "
+    "nitrogen rate is lb N/ac, and gal/ac is only for the as-logged UAN reading).",
 }
 
 
@@ -438,12 +440,150 @@ def _unprofitable_zones_template(payload: dict) -> str:
     )
 
 
+def _season_weather_template(payload: dict) -> str:
+    season = payload.get("season")
+    precip = payload["total_precip_mm"]
+    avg = payload.get("farm_average_precip_mm")
+    pct = payload.get("pct_vs_farm_average", 0)
+    n = payload.get("num_seasons_compared")
+    rank = payload.get("precip_rank_driest")
+    need = payload.get("crop_water_need_mm")
+    short = payload.get("precip_short_of_need_mm", 0)
+    if pct == 0:
+        vs = f"about the same as the {n}-season farm average of {avg:,.1f} mm"
+    else:
+        vs = f"{abs(pct)}% {'below' if pct < 0 else 'above'} the {n}-season farm average of {avg:,.1f} mm"
+    if rank == 1:
+        place = f" and the driest of the {n} seasons on record"
+    elif rank == n:
+        place = f" and the wettest of the {n} seasons on record"
+    else:
+        place = ""
+    if short > 0:
+        need_txt = f"That is {short:,.1f} mm short of the {need:,.0f} mm a crop needs"
+    else:
+        need_txt = f"That covers the {need:,.0f} mm a crop needs"
+    heat = payload.get("heat_stress_days")
+    heat_avg = payload.get("farm_average_heat_stress_days")
+    thr = payload.get("heat_stress_threshold_c")
+    return (
+        f"{season} had {precip:,.1f} mm of rain, {vs}{place}. {need_txt}, and {heat} days "
+        f"topped {thr:g} °C (farm average {heat_avg:g})."
+    )
+
+
+def _renamed_prefix(payload: dict) -> str:
+    asked = payload.get("asked_name")
+    name = payload.get("field_name")
+    if asked and name and asked.casefold() != name.casefold():
+        return f"“{asked}” is recorded as {name}. "
+    return ""
+
+
+def _field_soil_template(payload: dict) -> str:
+    name = payload.get("field_name", "This field")
+    awc = payload["awc_in"]
+    lo, hi = payload.get("farm_min_awc_in"), payload.get("farm_max_awc_in")
+    lo_name, hi_name = payload.get("min_field_name"), payload.get("max_field_name")
+    if name == hi_name:
+        where = ", the most of any current field"
+    elif name == lo_name:
+        where = ", the least of any current field"
+    else:
+        where = ""
+    return (
+        f"{_renamed_prefix(payload)}{name}'s soil holds {awc:g} inches of plant-available "
+        f"water{where}. Across the farm's current fields it ranges from {lo:g} in "
+        f"({lo_name}) to {hi:g} in ({hi_name})."
+    )
+
+
+_INPUT_NAMES = {
+    "seed": "seed",
+    "nitrogen": "nitrogen",
+    "phosphorus": "phosphorus",
+    "potassium": "potassium",
+    "herbicide": "herbicide",
+}
+
+
+def _and_join(parts: list[str]) -> str:
+    if len(parts) <= 1:
+        return "".join(parts)
+    return ", ".join(parts[:-1]) + f" and {parts[-1]}"
+
+
+def _uan_note(rate: float, per_gal: float) -> str:
+    return f"logged as {rate:g} gal/ac of UAN 32%, converted at {per_gal:g} lb N per gallon"
+
+
+def _applied_inputs_template(payload: dict) -> str:
+    name = payload.get("field_name", "This field")
+    season = payload.get("season")
+    crop = payload.get("crop")
+    prefix = _renamed_prefix(payload)
+    if not payload.get("logged"):
+        logged = payload.get("logged_seasons") or []
+        span = _season_span(logged)
+        return (
+            f"{prefix}There is no as-applied log for {name} in {season}; the logs cover "
+            f"{span} only, so I can't say what was applied."
+        )
+    entries = payload.get("applied_inputs") or []
+    if not entries:
+        return f"{prefix}The as-applied log has no entries for {name} in {season}."
+    parts = [
+        f"{_INPUT_NAMES.get(e['input'], e['input'])} at {e['rate']:g} {e['unit']}"
+        for e in entries
+    ]
+    crop_txt = f" ({crop})" if crop else ""
+    text = f"{prefix}On {name} in {season}{crop_txt}, the as-applied log shows {_and_join(parts)}."
+    n = next((e for e in entries if e["input"] == "nitrogen" and e.get("converted")), None)
+    if n:
+        text += (
+            f" Nitrogen was {_uan_note(n['as_logged_rate'], payload.get('uan32_lb_n_per_gal'))}, "
+            "so it compares with years logged in lb N/ac."
+        )
+    return text
+
+
+def _nitrogen_history_template(payload: dict) -> str:
+    name = payload.get("field_name", "This field")
+    rows = payload.get("nitrogen_by_season") or []
+    per_gal = payload.get("uan32_lb_n_per_gal")
+    parts = []
+    for r in rows:
+        crop = f" {r['crop']}" if r.get("crop") else ""
+        note = f" ({_uan_note(r['as_logged_rate'], per_gal)})" if r.get("converted") else ""
+        parts.append(f"{r['season']}{crop} {r['n_lb_n_ac']:g}{note}")
+    text = f"{_renamed_prefix(payload)}{name}'s nitrogen in lb N/ac: {'; '.join(parts)}."
+    for crop, c in (payload.get("nitrogen_by_crop") or {}).items():
+        if c.get("num_seasons", 0) < 2:
+            continue
+        text += (
+            f" In {crop} years it ranged from {c['min_lb_n_ac']:g} ({c['min_season']}) to "
+            f"{c['max_lb_n_ac']:g} ({c['max_season']}), a spread of {c['spread_lb_n_ac']:g} lb N/ac."
+        )
+    start = payload.get("logs_start_season")
+    if start:
+        text += f" There is no as-applied log before {start}."
+    return text
+
+
 def template_answer(question: str, payload: dict) -> str:
     """The deterministic lead sentence for every answer: computed from the
     payload alone, no model involved, so it is correct by construction.
     """
     if "verdict" in payload:
         return _verdict_template(payload)
+    if "total_precip_mm" in payload:
+        return _season_weather_template(payload)
+    if "awc_in" in payload:
+        return _field_soil_template(payload)
+    if "applied_inputs" in payload:
+        return _applied_inputs_template(payload)
+    if "nitrogen_by_season" in payload:
+        return _nitrogen_history_template(payload)
     if "zones" in payload and "field_profit" in payload:
         return _zone_template(payload)
     if "pct_acres_unprofitable_in_profitable_fields" in payload:
@@ -481,6 +621,9 @@ not causes of a loss.
 - If "field_profit" is positive, the field as a whole made money.
 - If "totals_discrepancy" is false, the totals agree.
 - monitor_total_bu is the yield monitor; scale_total_bu is the scale tickets.
+- Rain is in mm and soil water in inches; nitrogen "rate" is lb N/ac, and \
+"as_logged_rate" is the number as written in the log (gal/ac means gallons of \
+UAN 32% product). Keep every number with its own unit.
 - Never say why something happened (weather, pests, soil, prices...) unless \
 the JSON names that cause.
 
