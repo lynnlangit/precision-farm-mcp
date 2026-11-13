@@ -331,3 +331,69 @@ def test_templates_are_exact_and_grounded(payload, question, expected):
     assert text == expected
     assert check_narration_grounded(text, payload, question=question).is_grounded
     assert failed_semantic_checks(text, payload) == []
+
+
+# --- Unsupported cause (P3c) ---------------------------------------------------
+# Verbatim model sentence from the live P3b rerun (runs 1 and 3 of eval 2):
+# no payload field mentions weather, so the cause is invented.
+EVAL2_INVENTED_CAUSE = (
+    "The data shows East 80's profit was significantly lower than its historical "
+    "average due to unusual weather conditions in 2020."
+)
+# The real payload carries the report-export glossary labels, which mention
+# weather and "e.g. hail, pests, management" -- vocabulary, not evidence.
+EVAL2_EAST_80_LABELLED = {
+    **EVAL2_EAST_80,
+    "modeled": {
+        "attribution": [
+            {
+                **EVAL2_EAST_80["modeled"]["attribution"][0],
+                "meaning": {
+                    "season_effect": "yield change this season's recorded weather explains",
+                    "residual": "yield shortfall the weather data does not explain "
+                    "(e.g. hail, pests, management)",
+                },
+            }
+        ]
+    },
+}
+EVAL2_PLAIN_CONTEXT = (
+    "The data shows East 80's profit was significantly lower than its typical "
+    "performance over ten seasons."
+)
+
+
+def test_unsupported_cause_rejects_invented_weather():
+    from farm_model.verification import check_no_unsupported_cause
+
+    assert not check_no_unsupported_cause(EVAL2_INVENTED_CAUSE, EVAL2_EAST_80)
+    assert not check_no_unsupported_cause(EVAL2_INVENTED_CAUSE, EVAL2_EAST_80_LABELLED)
+    assert not check_no_unsupported_cause(
+        "The 2020 loss was caused by hail.", EVAL2_EAST_80_LABELLED
+    )
+    assert "unsupported_cause" in failed_semantic_checks(EVAL2_INVENTED_CAUSE, EVAL2_EAST_80)
+
+
+def test_unsupported_cause_passes_plain_context():
+    from farm_model.verification import check_no_unsupported_cause
+
+    assert check_no_unsupported_cause(EVAL2_PLAIN_CONTEXT, EVAL2_EAST_80_LABELLED)
+    # Describing what the weather data does or doesn't explain is not a causal claim.
+    assert check_no_unsupported_cause(
+        "Most of the 2020 shortfall is not explained by the weather data.",
+        EVAL2_EAST_80_LABELLED,
+    )
+
+
+def test_unsupported_cause_allows_cause_named_in_payload():
+    from farm_model.verification import check_no_unsupported_cause
+
+    payload = {**EVAL2_EAST_80, "notes": "Hail on 2020-07-14 across the north half."}
+    assert check_no_unsupported_cause("The 2020 loss was caused by hail in July.", payload)
+    assert not check_no_unsupported_cause("The 2020 loss was due to drought.", payload)
+
+
+def test_unsupported_cause_retry_reason_exists():
+    from farm_model import narrator
+
+    assert "unsupported_cause" in narrator._RETRY_REASONS

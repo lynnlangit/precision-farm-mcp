@@ -380,11 +380,72 @@ def check_attribution_not_causal(narration: str, payload: object) -> bool:
     return True
 
 
+# Real-world causes the data never records unless a payload says so. The
+# live P3b rerun produced "East 80's profit was significantly lower ... due
+# to unusual weather conditions in 2020": the attribution says weather
+# explains only -5.16 bu/ac of an -88.4 bu/ac residual, so the cause is
+# invented. A sentence fails when it makes a causal claim (a cause cue) about
+# one of these nouns and the payload's *facts* never name it.
+_CAUSE_NOUNS = (
+    "weather", "rain", "rainfall", "drought", "dry", "wet", "hail", "frost", "freeze",
+    "flood", "flooding", "storm", "wind", "heat", "cold", "temperature", "climate",
+    "pest", "pests", "insect", "insects", "disease", "weed", "weeds", "fungus",
+    "soil", "drainage", "fertility", "nutrient", "nutrients", "management",
+    "planting", "equipment", "prices", "market",
+)
+_CAUSAL_CLAIM_CUES = _CAUSE_CUES + (
+    "because", "result of", "resulted from", "driven by", "attributed to",
+    "attributable to", "blame", "thanks to", "owing to", "led to", "hurt by",
+)
+# Label keys added for the model's reading (units / meaning glossaries) name
+# example causes ("e.g. hail, pests, management"); they are vocabulary, not
+# evidence that the cause happened, so they never support a causal claim.
+_GLOSSARY_KEYS = frozenset({"units", "meaning"})
+
+
+def _factual_text(payload: object) -> str:
+    parts: list[str] = []
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key in _GLOSSARY_KEYS:
+                    continue
+                parts.append(str(key))
+                walk(item)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                walk(item)
+        else:
+            parts.append(str(value))
+
+    walk(payload)
+    return " ".join(parts).lower()
+
+
+def check_no_unsupported_cause(narration: str, payload: object) -> bool:
+    """Fails a sentence that claims a real-world cause (weather, pests,
+    soil...) when the payload's facts never name that cause. The pipeline
+    measures what happened, not why; a cause is supported only when the data
+    itself records it.
+    """
+    facts = _factual_text(payload)
+    for sentence in _sentences(narration):
+        if not any(cue in sentence for cue in _CAUSAL_CLAIM_CUES):
+            continue
+        for noun in _CAUSE_NOUNS:
+            if re.search(rf"\b{re.escape(noun)}\b", sentence) and not re.search(
+                rf"\b{re.escape(noun)}\b", facts
+            ):
+                return False
+    return True
+
 SEMANTIC_CHECKS = {
     "sign": check_sign_consistency,
     "zone_premise": check_zone_premise,
     "reconciliation": check_reconciliation_claim,
     "attribution": check_attribution_not_causal,
+    "unsupported_cause": check_no_unsupported_cause,
 }
 
 
