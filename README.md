@@ -74,6 +74,25 @@ uv run --project host farm-preflight  # confirms everything above is actually wo
 uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 ```
 
+## Grower web app
+
+For testing with growers there is a local web app on top of the same host
+code. It answers through exactly the same path as `farm-cli`, and next to
+every answer it shows the lesson behind it: which sentence was calculated
+from the records, which sentence the AI added, every check that sentence had
+to pass (or the attempt it blocked), the figures it came from, and which MCP
+server answered.
+
+```bash
+# After the Quick start steps above (data generated, farm-ingest run, Ollama up):
+uv run --project web farm-web          # opens http://127.0.0.1:7860
+uv run --project web farm-web --lan    # also reachable by other laptops on the same Wi-Fi
+```
+
+It only listens on this computer unless you pass `--lan`, never creates a
+public share link, sends no usage analytics, and writes every question to
+`data/audit.jsonl` like the CLI. Developers keep using `farm-cli`.
+
 ## Repository layout
 
 | Path | What it is |
@@ -82,6 +101,7 @@ uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 | `core/` (`farm_core`) | Shared library: DuckDB ingestion, field-identity resolution, reconciliation, the profitability engine, audit log, governance |
 | `servers/mcp-*` | Six FastMCP servers exposing `farm_core` as MCP tools (Pydantic I/O, `readOnlyHint`, structured refusals, a `modeled` field reserved for model output) |
 | `host/` (`farm_host`) | The host application: MCP client/router (stdio, untrusted-text sanitization), `farm-ingest` (human-present confirmation) and `farm-cli` (query, fails closed) |
+| `web/` (`farm_web`) | `farm-web`, the local Gradio app for grower testing: a thin layer over `farm_host` with a North Dakota prairie theme |
 | `model/` (`farm_model`) | The bounded Gemma layer: question → query, result → narration, plus the verification that keeps it bounded |
 | `docs/FARMER_GUIDE.md` | Plain-language setup and usage guide, no programming background assumed |
 | `docs/ARCHITECTURE.md` | The full technical architecture and diagram |

@@ -1,0 +1,241 @@
+/* Precision Farm grower app: a North Dakota prairie palette.
+   Big-sky blue, hard red spring wheat gold, canola yellow, flax blue,
+   shelterbelt green and Red River Valley black soil. No web fonts, so the
+   app stays fully offline. */
+
+:root {
+  --pf-paper: #fbf7ee;
+  --pf-card: #ffffff;
+  --pf-card-edge: #e8dcc2;
+  --pf-ink: #2e2219;
+  --pf-ink-soft: #6a5a48;
+  --pf-sky-top: #1f4e7a;
+  --pf-sky-mid: #5f93bf;
+  --pf-sky-low: #f1d9a6;
+  --pf-sun: #ffd27a;
+  --pf-wheat: #d9a441;
+  --pf-wheat-deep: #9a6a1c;
+  --pf-canola: #e9c84a;
+  --pf-flax: #7f9bcf;
+  --pf-prairie: #5e7d3a;
+  --pf-prairie-far: #8aa064;
+  --pf-shelterbelt: #3f5a2a;
+  --pf-elevator: #6b5a4a;
+  --pf-stem: #3f5a2a;
+  --pf-petal: #f2b632;
+  --pf-soil: #2e2219;
+  --pf-verified: #2f6b3a;
+  --pf-verified-bg: #e9f2e2;
+  --pf-model: #2f5d8a;
+  --pf-model-bg: #e6eef7;
+  --pf-warn: #8a5a12;
+  --pf-warn-bg: #fbefd6;
+  --pf-loss: #9c3b2b;
+  --pf-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+
+.dark {
+  --pf-paper: #17130e;
+  --pf-card: #221c15;
+  --pf-card-edge: #3a3024;
+  --pf-ink: #f3ecdd;
+  --pf-ink-soft: #bfae95;
+  --pf-sky-top: #0e2238;
+  --pf-sky-mid: #2c5170;
+  --pf-sky-low: #a97b3d;
+  --pf-sun: #f0b85a;
+  --pf-verified: #9fd18a;
+  --pf-verified-bg: #1f2c1a;
+  --pf-model: #9cc2ea;
+  --pf-model-bg: #18263a;
+  --pf-warn: #f0c472;
+  --pf-warn-bg: #33270f;
+  --pf-loss: #f08a76;
+}
+
+body, gradio-app, .gradio-container {
+  background: var(--pf-paper) !important;
+  color: var(--pf-ink);
+}
+.gradio-container { max-width: 1180px !important; margin: 0 auto !important; }
+footer { opacity: 0.6; }
+
+/* ---------- banner ---------- */
+.pf-banner {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 250px;
+  box-shadow: 0 10px 30px -18px rgba(46, 34, 25, 0.6);
+}
+.pf-banner-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pf-banner-text {
+  position: relative;
+  padding: 30px 34px 96px;
+  max-width: 640px;
+  color: #fffaf0;
+  text-shadow: 0 1px 12px rgba(10, 28, 48, 0.45);
+}
+.pf-kicker {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.92;
+}
+.pf-banner h1 {
+  margin: 0 0 10px;
+  font-family: var(--pf-serif);
+  font-size: clamp(1.8rem, 3.6vw, 2.7rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: #fffaf0;
+}
+.pf-sub { margin: 0; font-size: 1.02rem; line-height: 1.5; max-width: 34em; }
+
+/* ---------- status chips ---------- */
+.pf-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 2px 0; }
+.pf-status-label { font-size: 0.82rem; color: var(--pf-ink-soft); margin-right: 4px; }
+.pf-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px; border-radius: 999px; font-size: 0.82rem;
+  border: 1px solid var(--pf-card-edge); background: var(--pf-card);
+}
+.pf-chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+.pf-chip.ok::before { background: var(--pf-verified); }
+.pf-chip.bad { border-color: var(--pf-loss); color: var(--pf-loss); }
+.pf-chip.bad::before { background: var(--pf-loss); }
+.pf-fixes { margin: 8px 0 0; padding-left: 18px; font-size: 0.86rem; color: var(--pf-ink-soft); }
+
+/* ---------- how it works ---------- */
+.pf-steps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+}
+.pf-steps li {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--pf-card); border: 1px solid var(--pf-card-edge);
+  border-radius: 12px; padding: 10px 12px; font-size: 0.86rem; line-height: 1.35;
+}
+.pf-steps strong { display: block; font-size: 0.92rem; }
+.pf-steps span:not(.pf-step-n) { color: var(--pf-ink-soft); }
+.pf-step-n {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 700; font-size: 0.85rem;
+  background: var(--pf-verified-bg); color: var(--pf-verified);
+}
+.pf-step-n.pf-step-ai { background: var(--pf-model-bg); color: var(--pf-model); }
+@media (max-width: 760px) {
+  .pf-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-banner-text { padding: 22px 20px 90px; }
+}
+
+/* ---------- section headings ---------- */
+.pf-h {
+  font-family: var(--pf-serif);
+  font-size: 1.25rem; font-weight: 600; margin: 4px 0 2px; color: var(--pf-ink);
+}
+.pf-h-sub { margin: 0 0 8px; font-size: 0.86rem; color: var(--pf-ink-soft); }
+.pf-eyebrow {
+  margin: 0 0 8px; font-size: 0.74rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--pf-wheat-deep);
+}
+.dark .pf-eyebrow { color: var(--pf-wheat); }
+.pf-muted { color: var(--pf-ink-soft); font-size: 0.92rem; margin: 0; }
+
+/* ---------- example question chips ---------- */
+.pf-examples-group { gap: 6px !important; }
+.pf-example button, button.pf-example {
+  justify-content: flex-start !important; text-align: left !important;
+  white-space: normal !important; font-weight: 400 !important;
+  background: var(--pf-card) !important; border: 1px solid var(--pf-card-edge) !important;
+  color: var(--pf-ink) !important; border-radius: 10px !important;
+}
+button.pf-example:hover { border-color: var(--pf-wheat) !important; background: var(--pf-warn-bg) !important; }
+
+/* ---------- answer card ---------- */
+.pf-answer {
+  background: var(--pf-card); border: 1px solid var(--pf-card-edge);
+  border-top: 5px solid var(--pf-wheat);
+  border-radius: 14px; padding: 18px 20px; min-height: 180px;
+}
+.pf-answer-empty p:last-child { font-family: var(--pf-serif); font-size: 1.15rem; color: var(--pf-ink-soft); }
+.pf-answer-refused { border-top-color: var(--pf-loss); }
+.pf-answer-refused .pf-eyebrow { color: var(--pf-loss); }
+.pf-line { padding: 10px 0 10px 14px; border-left: 3px solid var(--pf-verified); margin: 8px 0; }
+.pf-line p { margin: 6px 0 0; line-height: 1.5; }
+.pf-line-model { border-left-color: var(--pf-model); }
+.pf-line-therefore { border-left-color: var(--pf-wheat); }
+.pf-lead { font-family: var(--pf-serif); font-size: 1.3rem; line-height: 1.4 !important; }
+.pf-tag {
+  display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 9px; border-radius: 999px;
+}
+.pf-tag-verified { background: var(--pf-verified-bg); color: var(--pf-verified); }
+.pf-tag-model { background: var(--pf-model-bg); color: var(--pf-model); }
+
+/* ---------- panels ---------- */
+.pf-panel {
+  background: var(--pf-card) !important; border: 1px solid var(--pf-card-edge) !important;
+  border-radius: 14px !important; padding: 14px 16px !important;
+}
+.pf-verdict { margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; font-weight: 600; }
+.pf-ok { background: var(--pf-verified-bg); color: var(--pf-verified); }
+.pf-warn { background: var(--pf-warn-bg); color: var(--pf-warn); }
+.pf-checks { list-style: none; margin: 0; padding: 0; }
+.pf-checks li { display: flex; gap: 10px; padding: 5px 0; font-size: 0.92rem; border-bottom: 1px dashed var(--pf-card-edge); }
+.pf-checks li:last-child { border-bottom: 0; }
+.pf-mark { width: 1.2em; font-weight: 700; flex: none; text-align: center; }
+.pf-checks .pass .pf-mark { color: var(--pf-verified); }
+.pf-checks .fail .pf-mark, .pf-checks .fail { color: var(--pf-loss); }
+.pf-rejected { margin-top: 10px; font-size: 0.9rem; }
+.pf-rejected summary { cursor: pointer; color: var(--pf-warn); font-weight: 600; }
+.pf-rejected blockquote {
+  margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--pf-loss);
+  background: var(--pf-warn-bg); text-decoration: line-through; text-decoration-color: var(--pf-loss);
+}
+
+.pf-figures { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin: 0 0 10px; }
+.pf-figures > div { background: var(--pf-paper); border-radius: 10px; padding: 8px 10px; }
+.pf-figures dt { font-size: 0.75rem; color: var(--pf-ink-soft); margin: 0; }
+.pf-figures dd { margin: 2px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pf-source { grid-template-columns: 1fr; }
+.pf-source > div { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pf-note { font-size: 0.9rem; padding: 8px 12px; border-radius: 10px; background: var(--pf-warn-bg); color: var(--pf-warn); }
+.neg { color: var(--pf-loss) !important; }
+.flag { color: var(--pf-warn) !important; font-weight: 700; }
+.pf-table-wrap { overflow-x: auto; margin: 6px 0 10px; }
+.pf-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.pf-table caption { text-align: left; font-weight: 600; padding: 4px 0; }
+.pf-table th {
+  text-align: left; font-weight: 600; font-size: 0.78rem; color: var(--pf-ink-soft);
+  border-bottom: 2px solid var(--pf-wheat); padding: 6px 8px; white-space: nowrap;
+}
+.pf-table th, .pf-table td { border-left: 0 !important; border-right: 0 !important; border-top: 0 !important; }
+.pf-table td { padding: 6px 8px; border-bottom: 1px solid var(--pf-card-edge); }
+.pf-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pf-table tbody tr:nth-child(odd) td { background: color-mix(in srgb, var(--pf-paper) 70%, transparent); }
+.pf-modeled {
+  margin-top: 12px; padding: 12px; border-radius: 12px;
+  border: 1px dashed var(--pf-model); background: var(--pf-model-bg);
+}
+.pf-modeled .pf-eyebrow { color: var(--pf-model); }
+.pf-modeled p { font-size: 0.88rem; margin: 0 0 6px; }
+.pf-modeled .pf-table td, .pf-modeled .pf-table tbody tr td { background: transparent; }
+code { font-size: 0.85em; }
+
+/* Keep wide tables scrolling inside their card instead of widening the page. */
+.pf-panel > *, .pf-table-wrap { min-width: 0 !important; max-width: 100%; }
+.pf-note-ok { background: var(--pf-verified-bg); color: var(--pf-verified); }
+@media (max-width: 760px) {
+  .gradio-container { padding: 0 12px !important; }
+  .pf-banner { min-height: 220px; }
+}
+.pf-banner-text, .pf-banner-text p, .pf-banner-text h1 { color: #fffaf0 !important; }
+@media (max-width: 760px) {
+  .pf-banner-text {
+    max-width: none;
+    background: linear-gradient(to bottom, rgba(14, 38, 62, 0.62) 55%, rgba(14, 38, 62, 0));
+  }
+}
