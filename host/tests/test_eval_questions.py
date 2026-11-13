@@ -154,7 +154,7 @@ async def test_q8_coverage_gap_totals_alone_would_miss():
 async def test_q9_ledger_entry_does_not_match_its_own_inputs():
     async with MCPFleet(["cost-ledger"]) as fleet:
         result = await fleet.call(
-            "cost-ledger", "get_cost_reconciliation", field_name="Riverside", season=2022
+            "cost-ledger", "get_cost_reconciliation", field_name="Sheyenne Bottom", season=2022
         )
     r = result.data
     seed = next(item for item in r["results"] if item["line_item"] == "seed")

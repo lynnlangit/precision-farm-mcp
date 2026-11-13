@@ -21,8 +21,8 @@ EAST_80 = {
 YIELD_HQ = {"field_name": "Home Quarter", "season": 2019, "totals_discrepancy": True}
 COST_RIVERSIDE = {
     "results": [
-        {"field_name": "Riverside", "season": 2022, "line_item": "seed"},
-        {"field_name": "Riverside", "season": 2022, "line_item": "fertilizer"},
+        {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "seed"},
+        {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "fertilizer"},
     ]
 }
 
@@ -68,7 +68,7 @@ def test_a_refusal_never_moves_the_context():
 
 
 def test_context_keeps_the_season_when_the_new_question_has_none():
-    before = FollowUpContext(field_name="Riverside", season=2022)
+    before = FollowUpContext(field_name="Sheyenne Bottom", season=2022)
     r = _ok(QueryIntent.BAD_FIELD_OR_BAD_YEAR, EAST_80, field_name="East 80")
     ctx = next_context(r, before)
     assert (ctx.field_name, ctx.season, ctx.intent) == (
@@ -106,16 +106,16 @@ def test_suggestions_after_a_bad_year():
 
 def test_suggestions_after_a_cost_check_compare_years():
     s = suggest_followups(
-        _ok(QueryIntent.COST_RECONCILIATION, COST_RIVERSIDE, field_name="Riverside", season=2023)
+        _ok(QueryIntent.COST_RECONCILIATION, COST_RIVERSIDE, field_name="Sheyenne Bottom", season=2023)
     )
-    assert s[0] == "Does the seed cost on Riverside in 2022 look right?"
-    assert "Is any part of Riverside losing money in 2023?" in s
+    assert s[0] == "Does the seed cost on Sheyenne Bottom in 2022 look right?"
+    assert "Is any part of Sheyenne Bottom losing money in 2023?" in s
 
 
 def test_suggestions_never_offer_a_season_without_as_applied_logs():
     # 2022 is the oldest as-applied season, so no "2021" cost suggestion.
     s = suggest_followups(
-        _ok(QueryIntent.COST_RECONCILIATION, COST_RIVERSIDE, field_name="Riverside", season=2022)
+        _ok(QueryIntent.COST_RECONCILIATION, COST_RIVERSIDE, field_name="Sheyenne Bottom", season=2022)
     )
     assert not any("2021" in q for q in s)
 
@@ -136,14 +136,14 @@ def test_every_suggestion_names_its_field_and_season():
     # Fully spelled out, so a suggestion never depends on the carried context.
     for r in (
         _ok(QueryIntent.YIELD_RECONCILIATION, YIELD_HQ, field_name="Home Quarter", season=2019),
-        _ok(QueryIntent.COST_RECONCILIATION, COST_RIVERSIDE, field_name="Riverside", season=2023),
+        _ok(QueryIntent.COST_RECONCILIATION, COST_RIVERSIDE, field_name="Sheyenne Bottom", season=2023),
         _ok(QueryIntent.ZONE_PROFITABILITY, {"field_name": "Section Corner"},
             field_name="Section Corner", season=2024),
     ):
         s = suggest_followups(r)
         assert 2 <= len(s) <= MAX_SUGGESTIONS
         for q in s:
-            assert any(name in q for name in ("Home Quarter", "Riverside", "Section Corner")), q
+            assert any(name in q for name in ("Home Quarter", "Sheyenne Bottom", "Section Corner")), q
 
 
 def test_no_suggestions_after_a_refusal():

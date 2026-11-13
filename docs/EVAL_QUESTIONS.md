@@ -51,8 +51,8 @@ uv run --project host farm-cli "<question>"
 **Verifiable answer:** `coverage_gap_flagged = true` **and** `totals_discrepancy = false` -- the defining property of this defect (`DEF-SWATH-2024-root_10`) is that a totals-only check would miss it entirely; only the spatial coverage check catches it.
 
 ### 9. A ledger entry that doesn't match its own inputs
-**Q:** Does the seed cost on Riverside in 2022 look right?
-**Tool:** `cost-ledger.get_cost_reconciliation(field_name="Riverside", season=2022)`
+**Q:** Does the seed cost on Sheyenne Bottom in 2022 look right?
+**Tool:** `cost-ledger.get_cost_reconciliation(field_name="Sheyenne Bottom", season=2022)`
 **Verifiable answer:** The `"seed"` line item is `outlier_flagged = true` -- the ledger records `$95.55/ac` where the correct figure is `$59.55/ac` (a single transposed digit). Ground truth: `DEF-DIGIT-2022-root_06`.
 
 ### 10. A field that no longer exists

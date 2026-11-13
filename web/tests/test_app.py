@@ -3,7 +3,8 @@
 import farm_web.app as web_app
 from farm_host.cli import AnswerResult
 from farm_model.query_schema import QueryIntent, QueryObject
-from farm_web.app import EXAMPLES, build_app, make_ask, parse_args
+from farm_host.farms import FARMS
+from farm_web.app import EXAMPLES, FarmPools, build_app, make_ask, parse_args
 
 
 def test_app_builds(tmp_path):
@@ -45,16 +46,28 @@ def _fake_answer(seen: list):
 class _FakePool:
     """Stands in for ServerPool: no servers, the coroutine just runs."""
 
+    def __init__(self, farm=None):
+        self.farm = farm
+
     def run(self, fn):
         import asyncio
 
         return asyncio.run(fn(None))
 
 
+def _fake_pools(tmp_path, made=None):
+    def factory(farm):
+        if made is not None:
+            made.append(farm.key)
+        return _FakePool(farm)
+
+    return FarmPools(tmp_path / "audit.jsonl", factory=factory)
+
+
 def test_ask_carries_context_and_offers_follow_ups(monkeypatch, tmp_path):
     seen: list = []
     monkeypatch.setattr(web_app, "answer_question", _fake_answer(seen))
-    ask = make_ask(tmp_path / "audit.jsonl", _FakePool())
+    ask = make_ask(tmp_path / "audit.jsonl", _fake_pools(tmp_path))
 
     out = ask("Was east 80 a bad field or just a bad year?", None)
     answer_html, _, _, _, state, hint, heading, *buttons = out
@@ -85,19 +98,55 @@ def test_ready_check_collapses_when_all_pass_and_opens_on_a_problem(monkeypatch)
     monkeypatch.setattr(web_app, "check_confirmed_mappings", lambda d: _check("ingest", True))
     html = web_app.status_html()
     assert html.startswith('<details class="pf-status-wrap">')  # collapsed
-    assert "Prerequisites loaded" in html and "4 of 4" in html
+    assert "Prerequisites loaded" in html and "6 of 6" in html
     assert web_app.status_panels() == ("", html)  # at the bottom
 
     monkeypatch.setattr(web_app, "check_model_pulled", lambda pulled: _check("gemma", False))
     html = web_app.status_html()
     assert html.startswith('<details class="pf-status-wrap" open>')
-    assert "1 of 4 need attention" in html and "do the thing" in html
+    assert "1 of 6 need attention" in html and "do the thing" in html
     assert web_app.status_panels() == (html, "")  # at the top
 
 
 def test_example_groups_start_collapsed(tmp_path):
-    app = build_app(tmp_path / "audit.jsonl", _FakePool())
+    app = build_app(tmp_path / "audit.jsonl", _fake_pools(tmp_path))
     accordions = [b for b in app.blocks.values() if type(b).__name__ == "Accordion"]
     assert len(accordions) == len(EXAMPLES)
     assert all(a.open is False for a in accordions)
     assert accordions[0].label == "Bad field or bad year? (3)"
+
+
+def test_each_farm_has_its_own_servers_started_only_when_picked(monkeypatch, tmp_path):
+    monkeypatch.setattr(web_app, "answer_question", _fake_answer([]))
+    made: list = []
+    ask = make_ask(tmp_path / "audit.jsonl", _fake_pools(tmp_path, made))
+
+    out = ask("Was east 80 a bad field or just a bad year?", None)  # default farm
+    assert made == ["farm1"]
+    assert "Farm 1" in out[0] and "clean records" in out[0]
+
+    out = ask("Was east 80 a bad field or just a bad year?", None, "farm2")
+    assert made == ["farm1", "farm2"]  # Farm 2 only once someone picks it
+    assert "Farm 2" in out[0] and "messy records" in out[0] and "Farm 1" not in out[0]
+
+    ask("nonsense", None, "farm2")  # every answer, refusals too, names its farm
+    assert made == ["farm1", "farm2"]
+    assert "Farm 2" in ask("nonsense", None, "farm2")[0]
+
+
+def test_farms_point_the_servers_at_their_own_records():
+    farm1, farm2 = FARMS["farm1"], FARMS["farm2"]
+    assert farm1.data_dir != farm2.data_dir
+    assert farm1.confirm_store != farm2.confirm_store
+    assert farm2.data_dir.name == "synthetic"  # the existing data, and its evals, are Farm 2
+    assert set(farm1.server_env()) == {"FARM_DATA_DIR", "FARM_CONFIRM_STORE"}
+
+
+def test_status_checks_both_farms(monkeypatch):
+    monkeypatch.setattr(web_app, "check_ollama_running", lambda: (_check("Ollama", True), []))
+    monkeypatch.setattr(web_app, "check_model_pulled", lambda pulled: _check("gemma", True))
+    monkeypatch.setattr(web_app, "check_synthetic_data", lambda d: _check("data", "clean" not in str(d)))
+    monkeypatch.setattr(web_app, "check_confirmed_mappings", lambda d: _check("ingest", True))
+    html = web_app.status_html()
+    assert "Farm 1 data generated" in html and "Farm 2 data generated" in html
+    assert "--clean --out data/synthetic-clean" in html  # the fix names Farm 1's command

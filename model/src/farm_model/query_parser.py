@@ -72,8 +72,8 @@ whether a cost line item (seed, fertilizer, chemical, fuel, cash rent) \
 "looks right", "is correct", "seems off" or "seems high/low" for a field and \
 season is ALWAYS this intent, never bad_field_or_bad_year, even though it \
 names a field.
-  Example: "Does the seed cost on Riverside in 2022 look right?" -> \
-field_name="Riverside", season=2022.
+  Example: "Does the seed cost on Sheyenne Bottom in 2022 look right?" -> \
+field_name="Sheyenne Bottom", season=2022.
   Example: "Is the fertilizer cost for East 80 in 2019 correct?" -> \
 field_name="East 80", season=2019.
   Example: "The chemical cost on Home Quarter in 2021 seems off" -> \

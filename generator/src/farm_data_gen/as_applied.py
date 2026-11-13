@@ -145,6 +145,8 @@ def build_as_applied_files(
             )
 
         files[season] = (f"as_applied_{season}.csv", buf.getvalue())
+        if config.clean_records:
+            continue  # one consistent unit every season: nothing to record
 
         defect_records.append(
             {

@@ -1,6 +1,7 @@
 """Single CLI entry point for the synthetic farm data generator.
 
 uv run python -m farm_data_gen.cli --seed 42 --fields 12 --seasons 10 --out data/synthetic
+uv run python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean   # Farm 1
 """
 
 from __future__ import annotations
@@ -46,6 +47,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--out", type=Path, default=Path("data/synthetic"), help="Output directory")
     parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Same farm with clean record keeping: no record-keeping defects "
+        "(Farm 1 in the web app; write it to data/synthetic-clean)",
+    )
+    parser.add_argument(
         "--config",
         type=Path,
         default=None,
@@ -55,7 +62,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def build_config(args: argparse.Namespace) -> SimConfig:
-    config = SimConfig(random_seed=args.seed, num_fields=args.fields, num_seasons=args.seasons)
+    config = SimConfig(
+        random_seed=args.seed,
+        num_fields=args.fields,
+        num_seasons=args.seasons,
+        clean_records=args.clean,
+    )
     if args.config is not None:
         overrides = json.loads(args.config.read_text(encoding="utf-8"))
         valid_fields = {f.name for f in dataclasses.fields(SimConfig)}
@@ -111,7 +123,12 @@ def main(argv: list[str] | None = None) -> int:
         # generated-data tree -- only written by the CLI entry point, never
         # by generate() itself (which tests call directly against a tmp_path
         # out_dir and must have no side effect outside it).
-        write_text(_REPO_ROOT / "docs" / "EVAL_QUESTIONS.md", render_eval_questions(ground_truth, args.out))
+        # The doc's answer key is the messy farm's (Farm 2): its questions
+        # are about the defects the clean farm doesn't have.
+        if not config.clean_records:
+            write_text(
+                _REPO_ROOT / "docs" / "EVAL_QUESTIONS.md", render_eval_questions(ground_truth, args.out)
+            )
     except (ValueError, AssertionError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

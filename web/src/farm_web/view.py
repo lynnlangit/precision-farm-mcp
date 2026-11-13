@@ -10,9 +10,11 @@ and must never become markup.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import replace as dataclass_replace
 from html import escape
 
 from farm_host.cli import AnswerResult
+from farm_host.farms import Farm
 from farm_host.followups import TOPIC_LABELS, resolved_label
 from farm_model.query_schema import FollowUpContext
 
@@ -495,3 +497,27 @@ def build_view(result: AnswerResult) -> AnswerView:
         figures_html=_figures_html(result),
         source_html=_source_html(result),
     )
+
+
+def farm_badge_html(farm: Farm) -> str:
+    return (
+        f'<p class="pf-farm-badge pf-farm-{escape(farm.key)}">'
+        f"<strong>{escape(farm.name)}</strong> \u00b7 {escape(farm.records)}</p>"
+    )
+
+
+def farm_note_html(farm: Farm) -> str:
+    """The line under the farm picker."""
+    return f'<p class="pf-farm-note">{escape(farm.blurb)}</p>'
+
+
+def with_farm(view: AnswerView, farm: Farm) -> AnswerView:
+    """Marks the answer with the farm whose records it came from, so an
+    answer can never be mistaken for the other farm's."""
+    html = view.answer_html
+    if html.startswith("<div"):  # inside the answer card, above everything else
+        end = html.index(">") + 1
+        html = html[:end] + farm_badge_html(farm) + html[end:]
+    else:
+        html = farm_badge_html(farm) + html
+    return dataclass_replace(view, answer_html=html)

@@ -68,6 +68,13 @@ uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synt
 # never do this themselves, so every query refuses until this has run.
 uv run --project host farm-ingest
 
+# Farm 1 for the web app's farm picker: the same farm with clean records
+# (Farm 2 is the messy data above). Auto-approval is safe here only because
+# this is example data with a known answer key.
+uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
+uv run --project host farm-ingest --auto-approve-synthetic-only \
+  --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
+
 # Ask a question (requires a local Ollama with gemma3:4b pulled)
 ollama pull gemma3:4b
 uv run --project host farm-preflight  # confirms everything above is actually working
@@ -89,6 +96,15 @@ server answered.
 uv run --project web farm-web          # opens http://127.0.0.1:7860
 uv run --project web farm-web --lan    # also reachable by other laptops on the same Wi-Fi
 ```
+
+**Farm 1 or Farm 2.** A picker above the question box switches between two
+example farms: the same twelve fields and the same true profits, but Farm 1
+has clean records and Farm 2 has the mistakes real records have (a mistyped
+seed cost, a yield monitor out of calibration, a GPS dropout, a field name
+spelled five ways). Ask a question, then switch farms: the app asks it again
+of the other farm, and every answer is labeled with its farm. On Farm 1 the
+record checks pass; on Farm 2 they catch the problem. Farm 2's servers start
+the first time someone picks it.
 
 ![Below the answer: the checks the AI's sentence passed, the figures behind it, and where it came from](docs/images/farm-web-checks.png)
 

@@ -96,6 +96,22 @@ def plan_defects(farm: FarmModel) -> DefectPlan:
         "blank_rows_season": seasons[min(5, len(seasons) - 1)],
     }
 
+    if config.clean_records:
+        # Sentinels that never match a real field or season, so every writer
+        # keeps its existing code path and simply never applies the defect.
+        no_monitor_seasons = []
+        calibration_errors = []
+        missing_swath = {"field_id": None, "season": None, "gap_fraction": 0.0}
+        unit_inconsistency_by_season = dict.fromkeys(unit_inconsistency_by_season, "lb_per_ac")
+        total_dollars_season = None
+        transposed_season, transposed_field_id = None, None
+        spreadsheet_mess = {
+            "merged_header_season": None,
+            "notes_column": True,
+            "totals_row_season": None,
+            "blank_rows_season": None,
+        }
+
     bad_zone = None
     if BADZONE_FIELD_ID in farm.identity.canonical_fields:
         bad_zone_season = seasons[min(config.badzone_season_index, len(seasons) - 1)]
@@ -125,6 +141,7 @@ def build_structural_defect_records(farm: FarmModel, plan: DefectPlan) -> list[d
     """
     records: list[dict] = []
 
+    clean = farm.config.clean_records
     drift_field = next(
         f for f in farm.identity.canonical_fields.values() if f.role == "naming_drift"
     )
@@ -132,33 +149,38 @@ def build_structural_defect_records(farm: FarmModel, plan: DefectPlan) -> list[d
     variants_by_season = {
         s: drift_field.spreadsheet_alias_by_season[s] for s in drift_field.active_seasons
     }
-    records.append(
-        {
-            "defect_id": f"DEF-NAMEDRIFT-{drift_field.field_id}",
-            "type": "naming_drift",
-            "field_id": drift_field.field_id,
-            "season": None,
-            "canonical_name": canonical_name,
-            "variants_by_season": {str(s): v for s, v in variants_by_season.items()},
-            "detail": (
-                f"'{canonical_name}' appears in the cost ledger's Field column under "
-                "different spellings by season: "
-                + ", ".join(f"{s}={v!r}" for s, v in sorted(variants_by_season.items()))
-            ),
-            "expected_detection": (
-                "Alias resolution must map every spelling variant to the same "
-                "canonical field before any cross-season comparison."
-            ),
-            "ground_truth_correction": (
-                f"All variants refer to the single canonical field {drift_field.field_id} "
-                f"(boundaries/yield-monitor/scale-ticket files consistently call it "
-                f"'{canonical_name}')."
-            ),
-        }
-    )
+    if not clean:
+        records.append(
+            {
+                "defect_id": f"DEF-NAMEDRIFT-{drift_field.field_id}",
+                "type": "naming_drift",
+                "field_id": drift_field.field_id,
+                "season": None,
+                "canonical_name": canonical_name,
+                "variants_by_season": {str(s): v for s, v in variants_by_season.items()},
+                "detail": (
+                    f"'{canonical_name}' appears in the cost ledger's Field column under "
+                    "different spellings by season: "
+                    + ", ".join(f"{s}={v!r}" for s, v in sorted(variants_by_season.items()))
+                ),
+                "expected_detection": (
+                    "Alias resolution must map every spelling variant to the same "
+                    "canonical field before any cross-season comparison."
+                ),
+                "ground_truth_correction": (
+                    f"All variants refer to the single canonical field {drift_field.field_id} "
+                    f"(boundaries/yield-monitor/scale-ticket files consistently call it "
+                    f"'{canonical_name}')."
+                ),
+            }
+        )
 
     tie_a_id, tie_b_id = ALIAS_TIE_FIELD_IDS
-    if tie_a_id in farm.identity.canonical_fields and tie_b_id in farm.identity.canonical_fields:
+    if (
+        not clean
+        and tie_a_id in farm.identity.canonical_fields
+        and tie_b_id in farm.identity.canonical_fields
+    ):
         tie_field = farm.identity.canonical_fields[tie_a_id]
         wrong_field = farm.identity.canonical_fields[tie_b_id]
         seasons = farm.config.seasons
