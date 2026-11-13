@@ -1,8 +1,8 @@
 """One app version (eval-fix P5): farm_host.__version__ is the version users
-see (farm-cli --version, farm-preflight). Every app package -- core, model,
-host and the six MCP servers -- carries the same number, so a release bump
-can't leave one behind. The generator is versioned separately on purpose:
-its number is written into ground_truth.json as the data-format version.
+see (farm-cli --version, farm-preflight). Every package -- generator, core,
+model, host, web and the six MCP servers -- carries the same number, so a
+release bump can't leave one behind. The generator's number is also written
+into ground_truth.json.
 """
 
 from __future__ import annotations
@@ -19,9 +19,11 @@ from farm_host import cli
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 APP_PYPROJECTS = [
+    REPO_ROOT / "generator" / "pyproject.toml",
     REPO_ROOT / "core" / "pyproject.toml",
     REPO_ROOT / "model" / "pyproject.toml",
     REPO_ROOT / "host" / "pyproject.toml",
+    REPO_ROOT / "web" / "pyproject.toml",
     *sorted((REPO_ROOT / "servers").glob("*/pyproject.toml")),
 ]
 
@@ -42,7 +44,7 @@ def test_package_dunder_versions_match():
 
 
 def test_there_are_six_servers():
-    assert len(APP_PYPROJECTS) == 3 + 6
+    assert len(APP_PYPROJECTS) == 5 + 6
 
 
 def test_farm_cli_version_flag(capsys):

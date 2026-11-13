@@ -66,17 +66,10 @@ Three pieces of free software, installed once:
      powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
      ```
 
-   (Windows and Linux installers are on [astral.sh/uv](https://astral.sh/uv).
-   The core data-handling code — field matching, spreadsheet ingestion, the
-   audit log's file locking — runs in continuous integration on both Linux
-   and Windows on every change (see `.github/workflows/tests.yml`), so
-   that part is genuinely Windows-tested, not just Windows-intended. The
-   parts that talk to Ollama (`farm-web`, `farm-cli`, `farm-ingest`'s
-   question-and-answer step) are not yet exercised by that CI on Windows — day-to-day
-   development has happened on a Mac, so if something around installing or
-   running Ollama itself looks different on your machine, that's the part
-   most likely to have a rough edge; `farm-preflight`, below, is the fastest
-   way to find out where.)
+   (Installers for every OS are on [astral.sh/uv](https://astral.sh/uv).
+   CI tests the data-handling code on Windows and Linux; the parts that use
+   Ollama are tested on Linux and a Mac only, so `farm-preflight`, below, is
+   the quickest way to spot a Windows rough edge.)
 
 3. **Ollama**, running a small local AI model — this is what turns your
    question into a lookup and the answer into a sentence. Download it from
@@ -130,7 +123,7 @@ spreadsheet, once, so it never has to guess later:
 uv run --project host farm-ingest
 ```
 
-You'll see about a dozen prompts like:
+You'll see about 20 prompts like:
 
 ```
 [confirm] naming_drift_alias: Cost ledger name 'north eighty' in season 2017
@@ -331,3 +324,5 @@ you ever want to review it.
   with known-correct answers, good for building confidence in the tool.
 - [docs/ARCHITECTURE.md](ARCHITECTURE.md) — the full technical design, for
   the curious or the technically inclined.
+- [docs/VERIFICATION.md](VERIFICATION.md) — how the tool is tested, and what
+  those tests prove.

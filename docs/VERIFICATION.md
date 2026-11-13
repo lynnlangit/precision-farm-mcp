@@ -15,11 +15,13 @@ only the tests that call the model fail.
 | `generator` | 16 | No | Every PR (Ubuntu and Windows) |
 | `core` | 74 | No | Every PR (Ubuntu and Windows) |
 | `host` | 122 (11 are the opt-in `eval_nl` suite) | Some | Nightly and on demand |
-| `model` | 72 | Some | Nightly and on demand |
+| `model` | 74 | Some | Nightly and on demand |
 | `web` | 13 | No | Locally |
+| `docs/test_architecture_doc.py` | 1 | No | Locally |
 
 ```bash
 for pkg in generator core host model web; do (cd $pkg && uv run pytest -q); done
+uv run --project core pytest -q docs/test_architecture_doc.py
 ```
 
 Before a demo, run the `host` and `model` suites on a machine with Ollama,
@@ -33,7 +35,7 @@ refusal are checked. This suite is slow and opt-in:
 uv run --project host pytest -m eval_nl host/tests
 ```
 
-
+## What the tests prove
 
 - 💰 **Profit matches ground truth** for every field/season without a
   deliberate defect
