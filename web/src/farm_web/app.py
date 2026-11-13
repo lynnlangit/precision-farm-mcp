@@ -16,6 +16,8 @@ import os
 os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 
 import argparse  # noqa: E402
+import dataclasses  # noqa: E402
+import threading  # noqa: E402
 from html import escape  # noqa: E402
 from importlib.resources import files  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -24,12 +26,11 @@ import gradio as gr  # noqa: E402
 
 from farm_core.audit import AuditLog  # noqa: E402
 from farm_host.cli import DEFAULT_AUDIT_LOG, AnswerResult, answer_question  # noqa: E402
+from farm_host.farms import DEFAULT_FARM, FARMS, Farm  # noqa: E402
 from farm_host.followups import MAX_SUGGESTIONS, next_context, suggest_followups  # noqa: E402
 from farm_host.server_pool import ServerPool  # noqa: E402
 from farm_host.mcp_client import ServerStartTimeout  # noqa: E402
 from farm_host.preflight_cli import (  # noqa: E402
-    DEFAULT_CONFIRM_STORE,
-    DEFAULT_DATA_DIR,
     check_confirmed_mappings,
     check_model_pulled,
     check_ollama_running,
@@ -40,7 +41,14 @@ from . import __version__  # noqa: E402
 from .banner import BANNER_HTML, HOW_IT_WORKS_HTML  # noqa: E402
 from farm_model.query_schema import FollowUpContext  # noqa: E402
 
-from .view import AnswerView, build_view, context_html, empty_view  # noqa: E402
+from .view import (  # noqa: E402
+    AnswerView,
+    build_view,
+    context_html,
+    empty_view,
+    farm_note_html,
+    with_farm,
+)
 
 # The eval questions (docs/EVAL_QUESTIONS.md), grouped the way a grower thinks.
 EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -66,7 +74,7 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "Do the yield monitor and scale tickets agree on Home Quarter in 2019?",
             "Is there anything odd about the yield monitor coverage on Marginal Eighty in 2024?",
-            "Does the seed cost on Riverside in 2022 look right?",
+            "Does the seed cost on Sheyenne Bottom in 2022 look right?",
             'What does "north eighty" refer to in 2017?',
         ),
     ),
@@ -76,12 +84,9 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
 def status_html() -> str:
     """The quick preflight checks (no server start, no model call), as chips."""
     ollama_check, pulled = check_ollama_running()
-    checks = [
-        ollama_check,
-        check_model_pulled(pulled),
-        check_synthetic_data(DEFAULT_DATA_DIR),
-        check_confirmed_mappings(DEFAULT_CONFIRM_STORE),
-    ]
+    checks = [ollama_check, check_model_pulled(pulled)]
+    for farm in FARMS.values():
+        checks += _farm_checks(farm)
     chips = "".join(
         f'<span class="pf-chip {"ok" if c.ok else "bad"}" title="{escape(c.detail)}">'
         f"{escape(c.name)}</span>"
@@ -113,6 +118,22 @@ def status_html() -> str:
     )
 
 
+def _farm_checks(farm: Farm) -> list:
+    """The data checks, once per farm, named and fixed for that farm."""
+    data = check_synthetic_data(farm.data_dir)
+    mappings = check_confirmed_mappings(farm.confirm_store)
+    return [
+        dataclasses.replace(
+            data, name=f"{farm.name} data generated", fix=None if data.ok else f"run `{farm.generate_cmd}`"
+        ),
+        dataclasses.replace(
+            mappings,
+            name=f"{farm.name} farm-ingest has run",
+            fix=None if mappings.ok else f"run `{farm.ingest_cmd}`",
+        ),
+    ]
+
+
 def status_panels() -> tuple[str, str]:
     """(top, bottom): the prerequisites go at the top only when one fails."""
     html = status_html()
@@ -139,17 +160,52 @@ def _context_dump(context: FollowUpContext | None) -> dict | None:
     return context.model_dump(mode="json") if context is not None else None
 
 
-def make_ask(audit_log_path: Path, pool: ServerPool | None = None):
-    """The handler for one question. Gradio state holds only the follow-up
-    context (field, season, question type) -- never the answers themselves.
+class FarmPools:
+    """One ServerPool per farm, each started the first time it's needed.
 
-    `pool` keeps the MCP servers running between questions (see
+    Farm 1's servers start when the app opens; Farm 2's start when someone
+    first picks it (about 7 s, once), so a session that never switches
+    farms never pays for the second set."""
+
+    def __init__(self, audit_log_path: Path, factory=None):
+        audit_env = {"FARM_AUDIT_LOG": str(audit_log_path.resolve())}
+        self._factory = factory or (
+            lambda farm: ServerPool(env_overrides={**audit_env, **farm.server_env()})
+        )
+        self._pools: dict[str, object] = {}
+        self._lock = threading.Lock()
+
+    def get(self, farm_key: str):
+        with self._lock:
+            if farm_key not in self._pools:
+                self._pools[farm_key] = self._factory(FARMS[farm_key])
+            return self._pools[farm_key]
+
+    def warm(self, farm_key: str) -> None:
+        """Start that farm's servers in the background, if not started yet."""
+        pool = self.get(farm_key)
+        if hasattr(pool, "start_in_background"):  # a no-op once its servers are up
+            pool.start_in_background()
+
+
+def _farm_key(value: str | None) -> str:
+    return value if value in FARMS else DEFAULT_FARM
+
+
+def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
+    """The handler for one question. Gradio state holds only the follow-up
+    context (field, season, question type) and the picked farm -- never the
+    answers themselves.
+
+    `pools` keeps each farm's MCP servers running between questions (see
     farm_host.server_pool); without one, one is created here."""
     audit_log = AuditLog(audit_log_path)
-    server_env = {"FARM_AUDIT_LOG": str(audit_log_path.resolve())}
-    pool = pool or ServerPool(env_overrides=server_env)
+    pools = pools or FarmPools(audit_log_path)
 
-    def ask(question: str, context_state: dict | None = None) -> tuple:
+    def ask(question: str, context_state: dict | None = None, farm_key: str | None = None) -> tuple:
+        farm = FARMS[_farm_key(farm_key)]
+        pool = pools.get(farm.key)
+        server_env = {"FARM_AUDIT_LOG": str(audit_log_path.resolve()), **farm.server_env()}
         context = FollowUpContext.model_validate(context_state) if context_state else None
         question = (question or "").strip()
         if not question:
@@ -180,7 +236,7 @@ def make_ask(audit_log_path: Path, pool: ServerPool | None = None):
             )
         new_context = next_context(result, context)
         return (
-            *_panels(build_view(result)),
+            *_panels(with_farm(build_view(result), farm)),
             _context_dump(new_context),
             context_html(new_context),
             *_followup_updates(suggest_followups(result)),
@@ -190,9 +246,10 @@ def make_ask(audit_log_path: Path, pool: ServerPool | None = None):
 
 
 def build_app(
-    audit_log_path: Path = DEFAULT_AUDIT_LOG, pool: ServerPool | None = None
+    audit_log_path: Path = DEFAULT_AUDIT_LOG, pools: FarmPools | None = None
 ) -> gr.Blocks:
-    ask = make_ask(audit_log_path, pool)
+    pools = pools or FarmPools(audit_log_path)
+    ask = make_ask(audit_log_path, pools)
     empty = empty_view()
 
     with gr.Blocks(title="Precision Farm", analytics_enabled=False) as app:
@@ -203,8 +260,17 @@ def build_app(
 
         with gr.Row(equal_height=False):
             with gr.Column(scale=5, min_width=320):
-                gr.HTML('<p class="pf-h">Ask a question</p>'
-                        '<p class="pf-h-sub">About one of your fields and seasons.</p>')
+                gr.HTML('<p class="pf-h">Whose records?</p>')
+                farm_picker = gr.Radio(
+                    choices=[(f.label, f.key) for f in FARMS.values()],
+                    value=DEFAULT_FARM,
+                    show_label=False,
+                    container=False,
+                    elem_classes="pf-farm-picker",
+                )
+                farm_note = gr.HTML(farm_note_html(FARMS[DEFAULT_FARM]))
+                gr.HTML('<p class="pf-h" style="margin-top:14px">Ask a question</p>'
+                        '<p class="pf-h-sub">About one of the fields and seasons.</p>')
                 question = gr.Textbox(
                     show_label=False,
                     placeholder="e.g. Was East 80 a bad field or just a bad year?",
@@ -258,8 +324,23 @@ def build_app(
         context_state = gr.State(None)
         panels = [answer, checks, figures, source]
         outputs = [*panels, context_state, context_hint, followup_heading, *followup_buttons]
-        inputs = [question, context_state]
+        inputs = [question, context_state, farm_picker]
         ask_btn.click(ask, inputs=inputs, outputs=outputs)
+
+        def switch_farm(farm_key: str, current_question: str):
+            # Start the other farm's servers now, and drop the follow-up
+            # context: it described an answer from the other farm's records.
+            pools.warm(_farm_key(farm_key))
+            return farm_note_html(FARMS[_farm_key(farm_key)]), None, ""
+
+        # Then ask the same question again, so the two farms' answers can be
+        # compared directly; with an empty box, just reset the panels.
+        farm_picker.change(
+            switch_farm,
+            inputs=[farm_picker, question],
+            outputs=[farm_note, context_state, context_hint],
+            queue=False,
+        ).then(ask, inputs=inputs, outputs=outputs)
         question.submit(ask, inputs=inputs, outputs=outputs)
         clear_btn.click(
             lambda: ("", *_panels(empty_view()), None, "", *_followup_updates([])),
@@ -337,11 +418,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    # Start the MCP servers now, while the page opens, so the first question
-    # doesn't wait for them (about 7 s once, instead of about 4 s per question).
-    pool = ServerPool(env_overrides={"FARM_AUDIT_LOG": str(args.audit_log.resolve())})
-    pool.start_in_background()
-    app = build_app(args.audit_log, pool)
+    # Start Farm 1's MCP servers now, while the page opens, so the first
+    # question doesn't wait for them (about 7 s once, instead of about 4 s per
+    # question). Farm 2's start the first time someone picks it.
+    pools = FarmPools(args.audit_log)
+    pools.warm(DEFAULT_FARM)
+    app = build_app(args.audit_log, pools)
     host = "0.0.0.0" if args.lan else "127.0.0.1"
     if args.lan:
         print(

@@ -294,10 +294,10 @@ def test_prompt_shows_the_lead_and_the_reading_rules(monkeypatch):
 
 EVAL9_COST = {
     "results": [
-        {"field_name": "Riverside", "season": 2022, "line_item": "seed",
+        {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "seed",
          "ledger_cost_per_ac": 95.55, "as_applied_derived_cost_per_ac": 59.61,
          "pct_diff": 0.6, "outlier_flagged": True, "note": "n"},
-        {"field_name": "Riverside", "season": 2022, "line_item": "fertilizer",
+        {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "fertilizer",
          "ledger_cost_per_ac": 120.1, "as_applied_derived_cost_per_ac": 119.8,
          "pct_diff": 0.0025, "outlier_flagged": False, "note": "n"},
     ]
@@ -315,8 +315,8 @@ EVAL9_COST = {
          "tickets 17,430.5 bu: the totals agree within tolerance. But the yield monitor's "
          "coverage has a gap -- part of the field wasn't recorded, which a totals-only check "
          "would miss."),
-        (EVAL9_COST, "Does the seed cost on Riverside in 2022 look right?",
-         "For Riverside in 2022, this doesn't look right: seed (ledger $95.55/ac vs $59.61/ac "
+        (EVAL9_COST, "Does the seed cost on Sheyenne Bottom in 2022 look right?",
+         "For Sheyenne Bottom in 2022, this doesn't look right: seed (ledger $95.55/ac vs $59.61/ac "
          "from the as-applied records)."),
         ({"canonical_boundary_name": "N 80", "method": "alias"},
          'What does "north eighty" refer to in 2017?',

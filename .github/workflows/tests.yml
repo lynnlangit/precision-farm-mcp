@@ -94,6 +94,11 @@ jobs:
       - name: confirm synthetic data (non-interactive)
         run: uv run --project host farm-ingest --auto-approve-synthetic-only
 
+      - name: generate and confirm Farm 1 (clean records, web app farm picker)
+        run: |
+          uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
+          uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
+
       - name: host tests
         run: uv run --project host pytest -q host/tests
 

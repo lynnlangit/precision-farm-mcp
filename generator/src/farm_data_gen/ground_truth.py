@@ -110,6 +110,7 @@ def build_ground_truth(
             "num_fields": config.num_fields,
             "seasons": config.seasons,
             "version": __version__,
+            "clean_records": config.clean_records,
         },
         "canonical_fields": canonical_fields,
         "identity_events": [e.to_json() for e in farm.identity.events],

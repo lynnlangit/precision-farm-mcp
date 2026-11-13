@@ -25,7 +25,7 @@ async def test_every_successful_response_carries_the_modeled_field():
         (
             "cost-ledger",
             "get_cost_reconciliation",
-            {"field_name": "Riverside", "season": 2022},
+            {"field_name": "Sheyenne Bottom", "season": 2022},
         ),
     ]
     servers = sorted({server for server, _, _ in calls})

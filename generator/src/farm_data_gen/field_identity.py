@@ -330,7 +330,7 @@ def build_field_identity(config: SimConfig) -> FarmIdentity:
 
         if role == "rename":
             old_name = root_name
-            new_name = f"Riverside"  # noqa: F541 (deliberate: explicit final name)
+            new_name = "Sheyenne Bottom"  # explicit final name: an ND river, not a generic one
             names = {s: (old_name if s < rename_season else new_name) for s in seasons}
             canonical_fields[root_id] = CanonicalField(
                 field_id=root_id,
@@ -390,6 +390,8 @@ def build_field_identity(config: SimConfig) -> FarmIdentity:
                 s: _NAMING_DRIFT_VARIANTS[i % len(_NAMING_DRIFT_VARIANTS)]
                 for i, s in enumerate(seasons)
             }
+            if config.clean_records:
+                names = {s: root_name for s in seasons}
             canonical_fields[root_id] = CanonicalField(
                 field_id=root_id,
                 role="naming_drift",
@@ -413,7 +415,7 @@ def build_field_identity(config: SimConfig) -> FarmIdentity:
         )
 
     tie_a_id, tie_b_id = ALIAS_TIE_FIELD_IDS
-    if tie_a_id in canonical_fields and tie_b_id in canonical_fields:
+    if not config.clean_records and tie_a_id in canonical_fields and tie_b_id in canonical_fields:
         tie_field = canonical_fields[tie_a_id]
         tie_season = seasons[min(ALIAS_TIE_SEASON_INDEX, len(seasons) - 1)]
         if tie_season in tie_field.active_seasons:

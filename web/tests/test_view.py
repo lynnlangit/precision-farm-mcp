@@ -44,10 +44,10 @@ EAST_80 = {
 
 COST = {
     "results": [
-        {"field_name": "Riverside", "season": 2022, "line_item": "seed",
+        {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "seed",
          "ledger_cost_per_ac": 95.55, "as_applied_derived_cost_per_ac": 60.04,
          "pct_diff": -0.3716, "outlier_flagged": True, "note": "Seed differs by -37.2%."},
-        {"field_name": "Riverside", "season": 2022, "line_item": "fertilizer",
+        {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "fertilizer",
          "ledger_cost_per_ac": 134.31, "as_applied_derived_cost_per_ac": 128.62,
          "pct_diff": -0.0424, "outlier_flagged": False, "note": "Fertilizer reconciles."},
     ],
@@ -131,7 +131,7 @@ def test_figures_show_evidence_and_label_modeled_estimate():
 
 def test_cost_table_drops_repeated_context_and_flags_outlier():
     view = build_view(_result(payload=COST))
-    assert "Riverside" not in view.figures_html.split("</table>")[0]  # repeated column dropped
+    assert "Sheyenne Bottom" not in view.figures_html.split("</table>")[0]  # repeated column dropped
     assert "-37.2%" in view.figures_html
     assert '<td class="flag">Yes</td>' in view.figures_html
     assert 'class="pf-note pf-note-ok">Fertilizer reconciles.' in view.figures_html
@@ -199,8 +199,8 @@ def test_unresolved_follow_up_refusal_has_a_plain_title():
 def test_context_hint_names_what_follow_ups_carry():
     assert context_html(None) == ""
     html = context_html(
-        FollowUpContext(field_name="<b>Riverside</b>", season=2022,
+        FollowUpContext(field_name="<b>Sheyenne Bottom</b>", season=2022,
                         intent=QueryIntent.COST_RECONCILIATION)
     )
-    assert "&lt;b&gt;Riverside&lt;/b&gt; \u00b7 2022 \u00b7 ledger costs vs as-applied" in html
+    assert "&lt;b&gt;Sheyenne Bottom&lt;/b&gt; \u00b7 2022 \u00b7 ledger costs vs as-applied" in html
     assert "Clear" in html

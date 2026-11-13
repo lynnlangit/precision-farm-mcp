@@ -47,12 +47,14 @@ def render_readme(config: SimConfig, ground_truth: dict) -> str:
         f"- Root fields: {config.num_fields}",
         f"- Seasons: {seasons[0]}-{seasons[-1]} ({len(seasons)} seasons)",
         f"- Generator version: {ground_truth['generator']['version']}",
+        f"- Records: {'clean (Farm 1 in the web app)' if config.clean_records else 'messy (Farm 2 in the web app)'}",
         "",
         "Regenerate identically with:",
         "",
         "```bash",
         f"uv run python -m farm_data_gen.cli --seed {config.random_seed} "
-        f"--fields {config.num_fields} --seasons {config.num_seasons} --out data/synthetic",
+        f"--fields {config.num_fields} --seasons {config.num_seasons} "
+        + ("--clean --out data/synthetic-clean" if config.clean_records else "--out data/synthetic"),
         "```",
         "",
         "## Outputs",

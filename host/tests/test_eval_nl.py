@@ -23,6 +23,7 @@ import pytest
 
 from farm_core.audit import AuditLog
 from farm_host.cli import answer_question
+from farm_host.farms import FARMS
 from farm_host.preflight_cli import REQUIRED_MODEL, check_model_pulled, check_ollama_running
 
 pytestmark = pytest.mark.eval_nl
@@ -52,6 +53,11 @@ class Eval:
     contains: tuple[str, ...] = ()  # verified figures that must appear in the answer
     therefore: str | None = None  # expected Therefore line (substring); None = no line
     refusal_code: str | None = None  # expected structured refusal instead of an answer
+    farm: str = "farm2"  # the web app's Farm 2 (messy records) is data/synthetic
+
+    @property
+    def id(self) -> str:
+        return f"eval{self.number}" if self.farm == "farm2" else f"{self.farm}-eval{self.number}"
 
 
 EVALS = [
@@ -94,9 +100,9 @@ EVALS = [
          "yield_reconciliation", "yield-history", "get_yield_reconciliation",
          {"field_name": "Marginal Eighty", "season": 2024},
          contains=("17,513.6 bu", "17,430.5 bu", "agree within tolerance", "coverage has a gap")),
-    Eval(9, "Does the seed cost on Riverside in 2022 look right?",
+    Eval(9, "Does the seed cost on Sheyenne Bottom in 2022 look right?",
          "cost_reconciliation", "cost-ledger", "get_cost_reconciliation",
-         {"field_name": "Riverside", "season": 2022},
+         {"field_name": "Sheyenne Bottom", "season": 2022},
          contains=("doesn't look right", "$95.55/ac", "$60.04/ac")),
     Eval(10, 'What does "Township Rd 12" refer to in 2020?',
          "resolve_field_name", "field-registry", "resolve_field_name",
@@ -111,17 +117,42 @@ EVALS = [
 ]
 
 
+# The same questions asked of Farm 1 (same fields, clean records): the
+# answer key is identical, but every record agrees, so the record checks
+# pass where Farm 2's catch a problem -- the comparison growers see when
+# they switch farms in the web app.
+FARM1_EVALS = [
+    Eval(2, "Was East 80 a bad field or just a bad year?",
+         "bad_field_or_bad_year", "report-export", "bad_field_or_bad_year",
+         {"field_name": "East 80"},
+         contains=("bad year, not a bad field", "2020", "$68.19/ac"),
+         therefore="the loss was isolated to 2020", farm="farm1"),
+    # Farm 1's ledger never misspells N 80, so there is nothing to resolve.
+    Eval(6, 'What does "north eighty" refer to in 2017?',
+         "resolve_field_name", "field-registry", "resolve_field_name",
+         {"raw_name": "north eighty", "season": 2017},
+         refusal_code="not_found", farm="farm1"),
+    Eval(7, "Do the yield monitor and scale tickets agree on Home Quarter in 2019?",
+         "yield_reconciliation", "yield-history", "get_yield_reconciliation",
+         {"field_name": "Home Quarter", "season": 2019},
+         contains=("4,696.1 bu", "4,683.5 bu", "agree within tolerance"), farm="farm1"),
+    Eval(9, "Does the seed cost on Sheyenne Bottom in 2022 look right?",
+         "cost_reconciliation", "cost-ledger", "get_cost_reconciliation",
+         {"field_name": "Sheyenne Bottom", "season": 2022},
+         contains=("is in line with its as-applied records",), farm="farm1"),
+]
+
+
 def _norm(value):
     return value.strip().lower() if isinstance(value, str) else value
 
 
-@pytest.mark.parametrize("ev", EVALS, ids=lambda e: f"eval{e.number}")
+@pytest.mark.parametrize("ev", EVALS + FARM1_EVALS, ids=lambda e: e.id)
 async def test_eval_question_end_to_end(ev: Eval, tmp_path):
     audit_path = tmp_path / "audit.jsonl"
     audit_log = AuditLog(audit_path)
-    result = await answer_question(
-        ev.question, audit_log, env_overrides={"FARM_AUDIT_LOG": str(audit_path)}
-    )
+    env = {"FARM_AUDIT_LOG": str(audit_path), **FARMS[ev.farm].server_env()}
+    result = await answer_question(ev.question, audit_log, env_overrides=env)
     events = AuditLog(audit_path).entries()
     by_event = {e["event"]: e for e in events}
 
@@ -180,10 +211,10 @@ FOLLOW_UP_EVALS = [
                  "bad_field_or_bad_year", {"field_name": "Marginal Eighty"},
                  contains=("bad field, not a bad year", "10 of its 10")),
     # Swap the year, keep the field and question type.
-    FollowUpEval("swap_year", "Does the seed cost on Riverside in 2022 look right?",
+    FollowUpEval("swap_year", "Does the seed cost on Sheyenne Bottom in 2022 look right?",
                  "And in 2023?",
-                 "cost_reconciliation", {"field_name": "Riverside", "season": 2023},
-                 contains=("Riverside in 2023 is in line with its as-applied records",)),
+                 "cost_reconciliation", {"field_name": "Sheyenne Bottom", "season": 2023},
+                 contains=("Sheyenne Bottom in 2023 is in line with its as-applied records",)),
     # Swap the field, keep the season and question type.
     FollowUpEval("swap_field_keep_season",
                  "Do the yield monitor and scale tickets agree on Home Quarter in 2019?",

@@ -246,7 +246,8 @@ def _write_cost_tab(
             )
 
         if (
-            row.field_id == INJECTION_FIELD_ID
+            not farm.config.clean_records
+            and row.field_id == INJECTION_FIELD_ID
             and season == farm.config.seasons[min(INJECTION_SEASON_INDEX, len(farm.config.seasons) - 1)]
         ):
             row.notes = INJECTION_NOTE_TEXT

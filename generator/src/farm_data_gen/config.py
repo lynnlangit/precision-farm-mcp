@@ -95,6 +95,15 @@ class SimConfig:
 
     random_seed: int = 42
 
+    # Farm 1 in the grower web app: the same farm with clean record keeping.
+    # Turns off every record-keeping defect (misspelled names, a mistyped
+    # seed cost, monitor calibration and GPS dropouts, unit and spreadsheet
+    # mess, the injected note, the no-monitor seasons) and keeps the farm's
+    # real history: weather, the management shortfall, the weak zone, and
+    # the rename/split/merge/lost-lease events. Every RNG stream is keyed by
+    # name, so all other numbers match the default (messy) farm exactly.
+    clean_records: bool = False
+
     def with_overrides(self, **overrides: object) -> "SimConfig":
         return dataclasses.replace(self, **overrides)
 

@@ -221,6 +221,8 @@ __marimo__/
 # `generator/` + --seed, so only its generated README is tracked.
 data/synthetic/*
 !data/synthetic/README.md
+# Farm 1 (clean records) for the web app's farm picker: same generator, --clean.
+data/synthetic-clean/
 
 # Runtime state generated locally by farm-ingest/farm-cli (real usage
 # questions, machine-specific confirmed mappings) -- not fixture data,
@@ -228,4 +230,5 @@ data/synthetic/*
 data/audit.jsonl
 data/audit.jsonl.pre-a1-fix
 data/confirmed_mappings.json
+data/confirmed_mappings_clean.json
 .DS_Store

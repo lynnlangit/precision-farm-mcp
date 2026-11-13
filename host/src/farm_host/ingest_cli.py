@@ -22,6 +22,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR = REPO_ROOT / "data" / "synthetic"
 DEFAULT_CONFIRM_STORE = REPO_ROOT / "data" / "confirmed_mappings.json"
 DEFAULT_AUDIT_LOG = REPO_ROOT / "data" / "audit.jsonl"
+# The two example farms the generator writes (Farm 2 messy, Farm 1 clean):
+# the only places --auto-approve-synthetic-only will run.
+SYNTHETIC_DATA_DIRS = (DEFAULT_DATA_DIR, REPO_ROOT / "data" / "synthetic-clean")
 
 
 def _counting(gate: governance.ConfirmationGate) -> tuple[confirm.ConfirmFn, dict[str, int]]:
@@ -54,10 +57,11 @@ def run_ingest(
     auto_approve_synthetic_only: bool = False,
 ) -> dict[str, int]:
     if auto_approve_synthetic_only:
-        if not data_dir.resolve().is_relative_to(DEFAULT_DATA_DIR.resolve()):
+        if not any(data_dir.resolve().is_relative_to(d.resolve()) for d in SYNTHETIC_DATA_DIRS):
             raise SyntheticDataRequired(
                 f"--auto-approve-synthetic-only refuses to run against {data_dir} -- "
-                f"it only ever auto-approves the example data under {DEFAULT_DATA_DIR}. "
+                "it only ever auto-approves the example data under "
+                f"{' or '.join(str(d) for d in SYNTHETIC_DATA_DIRS)}. "
                 "Run farm-ingest without this flag for your own data."
             )
         confirm_fn_for_gate = confirm.auto_approve
@@ -103,9 +107,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--auto-approve-synthetic-only",
         action="store_true",
         help="Skip the interactive prompts and approve every proposal automatically. "
-        "Only for the example synthetic data (data/synthetic/ by default) -- for "
+        "Only for the example synthetic data (data/synthetic/ or data/synthetic-clean/) -- for "
         "workshop/demo setup and CI, never for your own data. Refuses (non-zero exit) "
-        "against any --data-dir outside data/synthetic/.",
+        "against any --data-dir outside those two.",
     )
     return parser.parse_args(argv)
 

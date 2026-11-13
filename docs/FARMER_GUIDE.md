@@ -151,6 +151,16 @@ prompt, `y` is correct. Notice the pattern for your own data too: a `low`
 confidence is the tool's own signal to slow down and actually check,
 rather than a formality.
 
+The app can also show a second example farm, **Farm 1**: the same fields
+with clean records, so you can compare a tidy set of records with a messy
+one. Set it up with two more commands (no prompts this time: it's example
+data whose answers are already known):
+
+```bash
+uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
+uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
+```
+
 Now open the app in your browser:
 
 ```bash
@@ -158,13 +168,22 @@ uv run --project web farm-web
 ```
 
 A browser tab opens at `http://127.0.0.1:7860`. When everything is set
-up, a small "Prerequisites loaded: 4 of 4" line sits at the bottom of the
-page (click it to see the four checks). If one fails, it moves to the top,
+up, a small "Prerequisites loaded: 6 of 6" line sits at the bottom of the
+page (click it to see the six checks). If one fails, it moves to the top,
 open, and tells you the command that fixes it. Type a question, or open
 one of the example question groups and tap a question, and you should get
 back a real, grounded answer in a few seconds. The app starts its lookup
 servers in the background when it opens, so later questions skip that step;
 if you regenerate the data or re-run `farm-ingest`, restart the app.
+
+**Whose records?** The picker above the question box chooses Farm 1 (clean
+records) or Farm 2 (messy records, the data you confirmed above). Both are
+the same farm with the same true profits; only the record keeping differs.
+Ask a question such as "Does the seed cost on Sheyenne Bottom in 2022 look
+right?", then switch farms: the app asks it again, and the answer card
+names the farm it came from. Farm 1 says the costs are in line; Farm 2
+catches the mistyped seed cost. The first switch to Farm 2 takes a few
+seconds while its lookup servers start.
 
 After an answer you can ask a follow-up such as "What about East 80?" or
 "And in 2023?". The line **Showing:** above each answer says which field,
