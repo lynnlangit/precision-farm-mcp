@@ -26,7 +26,8 @@ the arithmetic, never by guessing or predicting. For example:
 Everything happens on your own laptop. Your farm data is never sent
 anywhere — not to a server, not to the internet, not anywhere outside your
 machine. A small local AI model only ever does two things: turns your
-question into a lookup, and turns the computed answer into a sentence. It
+question into a lookup, and may add one sentence to an answer the tool has
+already calculated, which you only see if it passes every check. It
 never touches your numbers directly and it never sees the internet — see
 [README.md](../README.md) and [docs/ARCHITECTURE.md](ARCHITECTURE.md) for
 how that's actually enforced and tested, if you're curious.
@@ -70,8 +71,8 @@ Three pieces of free software, installed once:
    audit log's file locking — runs in continuous integration on both Linux
    and Windows on every change (see `.github/workflows/tests.yml`), so
    that part is genuinely Windows-tested, not just Windows-intended. The
-   parts that talk to Ollama (`farm-cli`, `farm-ingest`'s question-and-answer
-   step) are not yet exercised by that CI on Windows — day-to-day
+   parts that talk to Ollama (`farm-web`, `farm-cli`, `farm-ingest`'s
+   question-and-answer step) are not yet exercised by that CI on Windows — day-to-day
    development has happened on a Mac, so if something around installing or
    running Ollama itself looks different on your machine, that's the part
    most likely to have a rough edge; `farm-preflight`, below, is the fastest
@@ -87,7 +88,7 @@ Three pieces of free software, installed once:
    ```
 
    This downloads about 3-4 GB once. Ollama needs to be running in the
-   background whenever you use `farm-cli` (it starts automatically after
+   background whenever you use `farm-web` or `farm-cli` (it starts automatically after
    install on most systems).
 
 That's the whole setup. Nothing else is downloaded, and once installed,
@@ -157,14 +158,40 @@ prompt, `y` is correct. Notice the pattern for your own data too: a `low`
 confidence is the tool's own signal to slow down and actually check,
 rather than a formality.
 
-Now ask it something:
+Now open the app in your browser:
+
+```bash
+uv run --project web farm-web
+```
+
+A browser tab opens at `http://127.0.0.1:7860`. The "Ready check" row at
+the top should show four green dots; if one is red, it tells you the
+command that fixes it. Type a question, or tap one of the example
+questions, and you should get back a real, grounded answer in a few
+seconds.
+
+![The web app answering "Was East 80 a bad field or just a bad year?"](images/farm-web-answer.png)
+
+Each part of the answer is labelled. **Calculated from your records** is
+plain arithmetic on your files. **Added by the AI, then checked** is the
+one sentence the AI wrote, shown only because it passed every check.
+Below the answer you can see those checks, the exact figures the answer
+came from, and which records were read. If the AI's sentence failed a
+check, you'll see what it tried to say and why it was blocked.
+
+![Below the answer: the checks, the figures and where they came from](images/farm-web-checks.png)
+
+The app only works on this laptop. To let others in the room use it from
+their own laptops on the same Wi-Fi, start it with
+`uv run --project web farm-web --lan` instead, and only on a network you
+trust.
+
+If you prefer the terminal, the same question works there too:
 
 ```bash
 uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 ```
 
-You should get back a real, grounded answer in a few seconds. The
-[README](../README.md) has a short animated example of this in action, and
 [docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists eleven more example
 questions you can try, each with the verifiable correct answer written
 out, so you can check the tool's answer against the known-right one — a
@@ -254,7 +281,9 @@ Once your files are in place:
 # Confirm your own field names, column mappings, etc. -- once
 uv run --project host farm-ingest
 
-# Ask a real question about your own farm
+# Ask a real question about your own farm, in the browser...
+uv run --project web farm-web
+# ...or in the terminal
 uv run --project host farm-cli "which fields made money last year"
 ```
 
@@ -271,6 +300,10 @@ you ever want to review it.
 
 ## Troubleshooting
 
+- **The browser tab didn't open, or says it can't connect** — check the
+  terminal where you ran `farm-web` is still open, then go to
+  `http://127.0.0.1:7860` yourself. If another program already uses that
+  port, add `--port 7861`.
 - **"confirmation_required" refusal when asking a question** — you haven't
   run `farm-ingest` yet for this data, or you added new data since the last
   time you ran it. Run `farm-ingest` again.
