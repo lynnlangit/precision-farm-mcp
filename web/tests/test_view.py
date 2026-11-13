@@ -8,7 +8,9 @@ from farm_model.narrator import NarrationOutcome
 from farm_model.query_schema import QueryIntent, QueryObject
 from farm_model.verification import SEMANTIC_CHECKS, GroundingResult
 
-from farm_web.view import CHECKS, build_view, empty_view, format_value
+from farm_model.query_schema import FollowUpContext
+
+from farm_web.view import CHECKS, build_view, context_html, empty_view, format_value
 
 EAST_80 = {
     "canonical_id": "resolved_0002",
@@ -165,3 +167,40 @@ def test_format_value():
 
 def test_empty_view_invites_a_question():
     assert "tap an example question" in empty_view().answer_html
+
+
+def test_answer_shows_which_question_was_answered():
+    html = build_view(_result()).answer_html
+    assert '<p class="pf-resolved"><span>Showing:</span> East 80' in html
+    assert html.index("pf-resolved") < html.index("Your answer")
+
+
+def test_tool_refusal_also_shows_what_was_looked_up():
+    view = build_view(
+        AnswerResult(
+            text="no field named 'Easy 80' was found in the record (code: not_found)",
+            ok=False,
+            query=QueryObject(intent=QueryIntent.BAD_FIELD_OR_BAD_YEAR, field_name="Easy 80"),
+            tool_args={"field_name": "Easy 80"},
+            refusal_kind="tool_refused",
+        )
+    )
+    assert "Showing:</span> Easy 80" in view.answer_html
+
+
+def test_unresolved_follow_up_refusal_has_a_plain_title():
+    view = build_view(
+        AnswerResult(text="Try naming both.", ok=False, refusal_kind="unresolved_followup")
+    )
+    assert "wasn&#x27;t sure which field or season you meant" in view.answer_html
+    assert "pf-resolved" not in view.answer_html
+
+
+def test_context_hint_names_what_follow_ups_carry():
+    assert context_html(None) == ""
+    html = context_html(
+        FollowUpContext(field_name="<b>Riverside</b>", season=2022,
+                        intent=QueryIntent.COST_RECONCILIATION)
+    )
+    assert "&lt;b&gt;Riverside&lt;/b&gt; \u00b7 2022 \u00b7 ledger costs vs as-applied" in html
+    assert "Clear" in html
