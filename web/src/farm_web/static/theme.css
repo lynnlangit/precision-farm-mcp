@@ -95,7 +95,14 @@ footer { opacity: 0.6; }
 .pf-sub { margin: 0; font-size: 1.02rem; line-height: 1.5; max-width: 34em; }
 
 /* ---------- status chips ---------- */
-.pf-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 2px 0; }
+.pf-status-wrap > summary {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  list-style: none; margin: 2px 0;
+}
+.pf-status-wrap > summary::-webkit-details-marker { display: none; }
+.pf-status-wrap > summary::after { content: "\25B8"; font-size: 0.8rem; color: var(--pf-ink-soft); }
+.pf-status-wrap[open] > summary::after { content: "\25BE"; }
+.pf-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 2px; }
 .pf-status-label { font-size: 0.82rem; color: var(--pf-ink-soft); margin-right: 4px; }
 .pf-chip {
   display: inline-flex; align-items: center; gap: 6px;
@@ -162,6 +169,18 @@ button.pf-example:hover { border-color: var(--pf-wheat) !important; background: 
 }
 .pf-answer-empty p:last-child { font-family: var(--pf-serif); font-size: 1.15rem; color: var(--pf-ink-soft); }
 .pf-answer-refused { border-top-color: var(--pf-loss); }
+
+/* ---------- follow-ups ---------- */
+.pf-resolved {
+  margin: 0 0 12px; padding: 6px 10px; border-radius: 8px;
+  background: var(--pf-paper); border: 1px dashed var(--pf-card-edge);
+  font-size: 0.92rem; color: var(--pf-ink);
+}
+.pf-resolved span { font-weight: 700; color: var(--pf-wheat-deep); margin-right: 4px; }
+.dark .pf-resolved span { color: var(--pf-wheat); }
+.pf-context { margin: 6px 0 0; font-size: 0.88rem; color: var(--pf-ink-soft); }
+.pf-context strong { color: var(--pf-ink); font-weight: 600; }
+.pf-followups-group { gap: 6px !important; margin-top: 10px; }
 .pf-answer-refused .pf-eyebrow { color: var(--pf-loss); }
 .pf-line { padding: 10px 0 10px 14px; border-left: 3px solid var(--pf-verified); margin: 8px 0; }
 .pf-line p { margin: 6px 0 0; line-height: 1.5; }

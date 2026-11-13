@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from html import escape
 
 from farm_host.cli import AnswerResult
+from farm_host.followups import TOPIC_LABELS, resolved_label
+from farm_model.query_schema import FollowUpContext
 
 # The checks a model-written sentence must pass before a grower sees it, in
 # the order the narrator runs them. Labels are plain language on purpose:
@@ -239,28 +241,42 @@ def _sentence_case(text: str) -> str:
     return text[:1].upper() + text[1:]
 
 
+def _resolved_html(result: AnswerResult) -> str:
+    """Which question was actually answered -- most useful for a follow-up
+    like "what about East 80?", where a wrong guess would otherwise look
+    exactly like a right answer."""
+    label = resolved_label(result)
+    if not label:
+        return ""
+    return f'<p class="pf-resolved"><span>Showing:</span> {escape(label)}</p>'
+
+
 def _answer_html(result: AnswerResult) -> str:
     n = result.narration
+    resolved = _resolved_html(result)
     if not result.ok:
         title = {
             "model_unreachable": "The local AI model isn't running",
             "unparseable": "I couldn't match that to a question I can answer",
+            "unresolved_followup": "I wasn't sure which field or season you meant",
             "tool_refused": "Your records don't have an answer to that",
             "server_timeout": "The lookup took too long to start",
             "error": "Something went wrong on this computer",
         }.get(result.refusal_kind or "", "No answer this time")
         return (
             '<div class="pf-answer pf-answer-refused">'
+            f"{resolved}"
             f'<p class="pf-eyebrow">{escape(title)}</p>'
             f"<p>{escape(result.text)}</p>"
             '<p class="pf-muted">Saying "I don\'t know" is part of the design: '
             "this tool would rather refuse than guess.</p></div>"
         )
     if n is None:  # a caller that didn't come through the narrated path
-        return f'<div class="pf-answer"><p>{escape(result.text)}</p></div>'
+        return f'<div class="pf-answer">{resolved}<p>{escape(result.text)}</p></div>'
 
     parts = [
         '<div class="pf-answer">',
+        resolved,
         '<p class="pf-eyebrow">Your answer</p>',
         '<div class="pf-line pf-line-verified">',
         '<span class="pf-tag pf-tag-verified">Calculated from your records</span>',
@@ -400,6 +416,20 @@ def _source_html(result: AnswerResult) -> str:
         f'<dl class="pf-figures pf-source">{body}</dl>'
         '<p class="pf-muted">Nothing left this computer. Every question is also written to '
         "<code>data/audit.jsonl</code>.</p>"
+    )
+
+
+def context_html(context: FollowUpContext | None) -> str:
+    """The hint under the question box: what a follow-up will carry over."""
+    if context is None or context.is_empty():
+        return ""
+    parts = [context.field_name, str(context.season) if context.season else None]
+    if context.intent is not None:
+        parts.append(TOPIC_LABELS.get(context.intent))
+    carried = " \u00b7 ".join(escape(p) for p in parts if p)
+    return (
+        f'<p class="pf-context">Follow-up questions build on: <strong>{carried}</strong>. '
+        "Name a different field or year to change it, or press Clear to start over.</p>"
     )
 
 

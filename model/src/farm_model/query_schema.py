@@ -87,3 +87,32 @@ def resolve_relative_seasons(query: QueryObject, known_seasons: list[int]) -> li
         n = max(1, min(query.season_count_from_latest, len(known_seasons)))
         return sorted(known_seasons)[-n:]
     return list(known_seasons)
+
+
+class FollowUpContext(BaseModel):
+    """The light context a follow-up question carries: the field, season and
+    question type of the last answered question -- never the chat history.
+    A small model gets worse with long histories, and an earlier answer's
+    numbers must never leak into the next one, so nothing else is kept.
+
+    Built by the host from the last *verified* answer (see
+    farm_host.followups.next_context), never from model output alone.
+    """
+
+    field_name: str | None = None
+    season: int | None = None
+    intent: QueryIntent | None = None
+
+    def is_empty(self) -> bool:
+        return self.field_name is None and self.season is None and self.intent is None
+
+    def prompt_block(self) -> str:
+        """The few lines added to the parser's system prompt for a follow-up."""
+        lines = []
+        if self.field_name is not None:
+            lines.append(f'- field: "{self.field_name}"')
+        if self.season is not None:
+            lines.append(f"- season: {self.season}")
+        if self.intent is not None:
+            lines.append(f"- question type: {self.intent.value}")
+        return "\n".join(lines)

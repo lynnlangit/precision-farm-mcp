@@ -150,3 +150,85 @@ async def test_eval_question_end_to_end(ev: Eval, tmp_path):
     # The server side of the call landed in the same audit file (P5 --audit-log fix).
     assert "tool_executed" in by_event
     assert AuditLog(audit_path).verify() is True
+
+
+# --- Multi-turn evals: follow-up questions (grower web app) ---------------
+#
+# Each follow-up carries only the last verified answer's field, season and
+# question type (farm_host.followups.next_context), exactly as the web app
+# does. These check that the follow-up resolves to the right lookup, and that
+# it is then verified like any first question (its own tool call and
+# narration, with the expected verified figures) -- a follow-up can't skip
+# the checks or reuse an earlier answer.
+
+
+@dataclasses.dataclass(frozen=True)
+class FollowUpEval:
+    name: str
+    first: str
+    follow_up: str
+    intent: str
+    args: dict
+    contains: tuple[str, ...] = ()
+    refused_kind: str | None = None  # expected parse refusal instead of an answer
+
+
+FOLLOW_UP_EVALS = [
+    # Swap the field, keep the question type.
+    FollowUpEval("swap_field", "Was East 80 a bad field or just a bad year?",
+                 "What about Marginal Eighty?",
+                 "bad_field_or_bad_year", {"field_name": "Marginal Eighty"},
+                 contains=("bad field, not a bad year", "10 of its 10")),
+    # Swap the year, keep the field and question type.
+    FollowUpEval("swap_year", "Does the seed cost on Riverside in 2022 look right?",
+                 "And in 2023?",
+                 "cost_reconciliation", {"field_name": "Riverside", "season": 2023},
+                 contains=("Riverside in 2023 is in line with its as-applied records",)),
+    # Swap the field, keep the season and question type.
+    FollowUpEval("swap_field_keep_season",
+                 "Do the yield monitor and scale tickets agree on Home Quarter in 2019?",
+                 "What about East 80?",
+                 "yield_reconciliation", {"field_name": "East 80", "season": 2019},
+                 contains=("23,593.3 bu", "23,532.2 bu", "agree within tolerance")),
+    # Context never turns an out-of-scope question into a lookup.
+    FollowUpEval("still_out_of_scope", "Was East 80 a bad field or just a bad year?",
+                 "What should I plant there next year?",
+                 "", {}, refused_kind="out_of_scope"),
+]
+
+
+@pytest.mark.parametrize("ev", FOLLOW_UP_EVALS, ids=lambda e: e.name)
+async def test_follow_up_end_to_end(ev: FollowUpEval, tmp_path):
+    from farm_host.followups import next_context
+
+    env = {"FARM_AUDIT_LOG": str(tmp_path / "first.jsonl")}
+    first = await answer_question(ev.first, AuditLog(tmp_path / "first.jsonl"), env_overrides=env)
+    assert first.ok, first.text
+    context = next_context(first, None)
+
+    audit_path = tmp_path / "follow_up.jsonl"
+    result = await answer_question(
+        ev.follow_up,
+        AuditLog(audit_path),
+        env_overrides={"FARM_AUDIT_LOG": str(audit_path)},
+        context=context,
+    )
+    by_event = {e["event"]: e for e in AuditLog(audit_path).entries()}
+    assert by_event["query"]["follow_up_context"]["field_name"] == context.field_name
+
+    if ev.refused_kind:
+        assert not result.ok
+        assert by_event["parse_refused"]["kind"] == ev.refused_kind
+        assert "tool_call" not in by_event
+        return
+
+    assert "parse_refused" not in by_event, by_event.get("parse_refused")
+    assert by_event["parsed"]["intent"] == ev.intent
+    for key, expected in ev.args.items():
+        assert _norm(by_event["tool_call"]["args"].get(key)) == _norm(expected), by_event
+    # Verified from scratch: its own lookup, its own narration and checks.
+    assert "tool_executed" in by_event and "narration" in by_event
+    assert result.ok, result.text
+    for figure in ev.contains:
+        assert figure in result.text, (figure, result.text)
+    assert AuditLog(audit_path).verify() is True

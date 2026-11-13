@@ -25,6 +25,7 @@ import gradio as gr  # noqa: E402
 
 from farm_core.audit import AuditLog  # noqa: E402
 from farm_host.cli import DEFAULT_AUDIT_LOG, AnswerResult, answer_question  # noqa: E402
+from farm_host.followups import MAX_SUGGESTIONS, next_context, suggest_followups  # noqa: E402
 from farm_host.mcp_client import ServerStartTimeout  # noqa: E402
 from farm_host.preflight_cli import (  # noqa: E402
     DEFAULT_CONFIRM_STORE,
@@ -37,7 +38,9 @@ from farm_host.preflight_cli import (  # noqa: E402
 
 from . import __version__  # noqa: E402
 from .banner import BANNER_HTML, HOW_IT_WORKS_HTML  # noqa: E402
-from .view import AnswerView, build_view, empty_view  # noqa: E402
+from farm_model.query_schema import FollowUpContext  # noqa: E402
+
+from .view import AnswerView, build_view, context_html, empty_view  # noqa: E402
 
 # The eval questions (docs/EVAL_QUESTIONS.md), grouped the way a grower thinks.
 EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -92,9 +95,20 @@ def status_html() -> str:
         if fixes
         else ""
     )
+    # Collapsed to one line when everything is ready; open when something
+    # needs fixing, so a problem is never hidden.
+    failing = sum(1 for c in checks if not c.ok)
+    if failing:
+        summary = f"{failing} of {len(checks)} need attention"
+        cls, open_attr = "bad", " open"
+    else:
+        summary = f"all {len(checks)} passed"
+        cls, open_attr = "ok", ""
     return (
-        f'<div class="pf-status"><span class="pf-status-label">Ready check</span>{chips}</div>'
-        f"{fix_list}"
+        f'<details class="pf-status-wrap"{open_attr}>'
+        f'<summary><span class="pf-status-label">Ready check</span>'
+        f'<span class="pf-chip {cls}">{summary}</span></summary>'
+        f'<div class="pf-status">{chips}</div>{fix_list}</details>'
     )
 
 
@@ -102,18 +116,44 @@ def _panels(view: AnswerView) -> tuple[str, str, str, str]:
     return view.answer_html, view.checks_html, view.figures_html, view.source_html
 
 
+def _followup_updates(suggestions: list[str]) -> list:
+    """One update for the heading, then one per suggestion button slot."""
+    heading = gr.update(visible=bool(suggestions))
+    buttons = [
+        gr.update(value=suggestions[i], visible=True)
+        if i < len(suggestions)
+        else gr.update(value="", visible=False)
+        for i in range(MAX_SUGGESTIONS)
+    ]
+    return [heading, *buttons]
+
+
+def _context_dump(context: FollowUpContext | None) -> dict | None:
+    return context.model_dump(mode="json") if context is not None else None
+
+
 def make_ask(audit_log_path: Path):
+    """The handler for one question. Gradio state holds only the follow-up
+    context (field, season, question type) -- never the answers themselves."""
     audit_log = AuditLog(audit_log_path)
     server_env = {"FARM_AUDIT_LOG": str(audit_log_path.resolve())}
 
-    def ask(question: str) -> tuple[str, str, str, str]:
+    def ask(question: str, context_state: dict | None = None) -> tuple:
+        context = FollowUpContext.model_validate(context_state) if context_state else None
         question = (question or "").strip()
         if not question:
-            return _panels(empty_view())
+            return (
+                *_panels(empty_view()),
+                _context_dump(context),
+                context_html(context),
+                *_followup_updates([]),
+            )
         try:
             # Sync handler on Gradio's worker thread, with its own event loop,
             # exactly like the CLI's asyncio.run().
-            result = asyncio.run(answer_question(question, audit_log, env_overrides=server_env))
+            result = asyncio.run(
+                answer_question(question, audit_log, env_overrides=server_env, context=context)
+            )
         except ServerStartTimeout as e:
             result = AnswerResult(text=str(e), ok=False, refusal_kind="server_timeout")
         except Exception as e:  # noqa: BLE001 -- show a grower a sentence, not a traceback
@@ -125,7 +165,13 @@ def make_ask(audit_log_path: Path):
                 ok=False,
                 refusal_kind="error",
             )
-        return _panels(build_view(result))
+        new_context = next_context(result, context)
+        return (
+            *_panels(build_view(result)),
+            _context_dump(new_context),
+            context_html(new_context),
+            *_followup_updates(suggest_followups(result)),
+        )
 
     return ask
 
@@ -153,6 +199,7 @@ def build_app(audit_log_path: Path = DEFAULT_AUDIT_LOG) -> gr.Blocks:
                 with gr.Row():
                     ask_btn = gr.Button("Ask my records", variant="primary", scale=3)
                     clear_btn = gr.Button("Clear", variant="secondary", scale=1)
+                context_hint = gr.HTML("")
                 example_buttons: list[tuple[gr.Button, str]] = []
                 for heading, qs in EXAMPLES:
                     gr.HTML(f'<p class="pf-eyebrow" style="margin-top:10px">{escape(heading)}</p>')
@@ -162,6 +209,17 @@ def build_app(audit_log_path: Path = DEFAULT_AUDIT_LOG) -> gr.Blocks:
                             example_buttons.append((b, q))
             with gr.Column(scale=7, min_width=340):
                 answer = gr.HTML(empty.answer_html)
+                followup_heading = gr.HTML(
+                    '<p class="pf-eyebrow" style="margin-top:12px">Ask next</p>'
+                    '<p class="pf-muted">Each one is a full question, looked up and checked '
+                    "from scratch.</p>",
+                    visible=False,
+                )
+                with gr.Column(elem_classes="pf-followups-group"):
+                    followup_buttons = [
+                        gr.Button("", size="sm", elem_classes="pf-example", visible=False)
+                        for _ in range(MAX_SUGGESTIONS)
+                    ]
 
         with gr.Row(equal_height=False):
             with gr.Column(scale=4, min_width=300, elem_classes="pf-panel"):
@@ -176,15 +234,27 @@ def build_app(audit_log_path: Path = DEFAULT_AUDIT_LOG) -> gr.Blocks:
                 gr.HTML('<p class="pf-h" style="margin-top:12px">Where it came from</p>')
                 source = gr.HTML(empty.source_html)
 
-        outputs = [answer, checks, figures, source]
-        ask_btn.click(ask, inputs=question, outputs=outputs)
-        question.submit(ask, inputs=question, outputs=outputs)
+        # Follow-up context: the last verified answer's field, season and
+        # question type. Per browser tab; Clear resets it.
+        context_state = gr.State(None)
+        panels = [answer, checks, figures, source]
+        outputs = [*panels, context_state, context_hint, followup_heading, *followup_buttons]
+        inputs = [question, context_state]
+        ask_btn.click(ask, inputs=inputs, outputs=outputs)
+        question.submit(ask, inputs=inputs, outputs=outputs)
         clear_btn.click(
-            lambda: ("", *_panels(empty_view())), outputs=[question, *outputs], queue=False
+            lambda: ("", *_panels(empty_view()), None, "", *_followup_updates([])),
+            outputs=[question, *outputs],
+            queue=False,
         )
         for b, q in example_buttons:
             b.click(lambda q=q: q, outputs=question, queue=False).then(
-                ask, inputs=question, outputs=outputs
+                ask, inputs=inputs, outputs=outputs
+            )
+        for b in followup_buttons:
+            # The button's own label is the question it asks.
+            b.click(lambda label: label, inputs=b, outputs=question, queue=False).then(
+                ask, inputs=inputs, outputs=outputs
             )
         app.load(status_html, outputs=status)
 

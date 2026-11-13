@@ -24,6 +24,7 @@ from farm_model.narrator import NarrationOutcome, narrate_verified
 from farm_model.query_parser import ParseFailure, parse_question
 from farm_model.query_schema import (
     REQUIRED_FIELDS,
+    FollowUpContext,
     QueryIntent,
     QueryObject,
     resolve_relative_seasons,
@@ -100,18 +101,50 @@ class AnswerResult:
     payload: dict | None = None
     narration: NarrationOutcome | None = None
     therefore: str | None = None
-    # "model_unreachable", "unparseable" or "tool_refused" when ok is False.
+    # "model_unreachable", "unparseable", "unresolved_followup" or "tool_refused"
+    # when ok is False.
     refusal_kind: str | None = None
 
 
 async def answer_question(
-    question: str, audit_log: AuditLog, env_overrides: dict[str, str] | None = None
+    question: str,
+    audit_log: AuditLog,
+    env_overrides: dict[str, str] | None = None,
+    context: FollowUpContext | None = None,
 ) -> AnswerResult:
-    audit_log.log("query", question=question)
+    """`context` is set only for a follow-up (the grower web app): the last
+    verified answer's field, season and question type. It only helps parse
+    the question -- the lookup, verification and narration below are exactly
+    the same as for a first question, and the narrator never sees it.
+    """
+    if context is not None and context.is_empty():
+        context = None
+    if context is None:
+        audit_log.log("query", question=question)
+    else:
+        audit_log.log(
+            "query", question=question, follow_up_context=context.model_dump(mode="json")
+        )
 
-    query = parse_question(question, SEASONS)
+    # A first question calls the parser exactly as before; only a follow-up
+    # passes the extra context.
+    query = (
+        parse_question(question, SEASONS)
+        if context is None
+        else parse_question(question, SEASONS, context=context)
+    )
     if isinstance(query, ParseFailure):
         audit_log.log("parse_refused", question=question, reason=query.reason, kind=query.kind)
+        if query.kind == "unresolved_followup":
+            return AnswerResult(
+                text=(
+                    "I wasn't sure which field or season you meant, so I didn't look "
+                    "anything up. Try naming both, e.g. \"Does the seed cost on "
+                    f"Riverside in 2023 look right?\" (Reason: {query.reason})"
+                ),
+                ok=False,
+                refusal_kind="unresolved_followup",
+            )
         if query.kind == "model_unreachable":
             return AnswerResult(
                 text=(
