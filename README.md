@@ -7,7 +7,7 @@ plain-English question about your own farm's ten-season record — costs,
 yields, profit — and get back an answer grounded entirely in your own
 files, never a prediction or a guess.
 
-![farm-cli answering a question from a real run](docs/images/farm-cli-example.svg)
+![The grower web app answering "Was East 80 a bad field or just a bad year?" from a real run](docs/images/farm-web-answer.png)
 
 Under the hood, a small local model (Gemma 3B via Ollama) only ever turns
 the question into a structured lookup and may add one checked sentence of
@@ -71,7 +71,8 @@ uv run --project host farm-ingest
 # Ask a question (requires a local Ollama with gemma3:4b pulled)
 ollama pull gemma3:4b
 uv run --project host farm-preflight  # confirms everything above is actually working
-uv run --project host farm-cli "was the north eighty a bad field or a bad year"
+uv run --project web farm-web         # growers: the web app in your browser
+uv run --project host farm-cli "was the north eighty a bad field or a bad year"   # developers
 ```
 
 ## Grower web app
@@ -89,9 +90,19 @@ uv run --project web farm-web          # opens http://127.0.0.1:7860
 uv run --project web farm-web --lan    # also reachable by other laptops on the same Wi-Fi
 ```
 
+![Below the answer: the checks the AI's sentence passed, the figures behind it, and where it came from](docs/images/farm-web-checks.png)
+
 It only listens on this computer unless you pass `--lan`, never creates a
 public share link, sends no usage analytics, and writes every question to
-`data/audit.jsonl` like the CLI. Developers keep using `farm-cli`.
+`data/audit.jsonl` like the CLI.
+
+### For developers: the terminal
+
+`farm-cli` stays the developers' interface. It answers through the same
+code, prints the same answer, and adds a model-free `--intent` path that
+returns raw JSON (`farm-cli --list-intents`).
+
+![farm-cli answering a question from a real run](docs/images/farm-cli-example.svg)
 
 ## Repository layout
 
@@ -105,6 +116,7 @@ public share link, sends no usage analytics, and writes every question to
 | `model/` (`farm_model`) | The bounded Gemma layer: question → query, result → narration, plus the verification that keeps it bounded |
 | `docs/FARMER_GUIDE.md` | Plain-language setup and usage guide, no programming background assumed |
 | `docs/ARCHITECTURE.md` | The full technical architecture and diagram |
+| `docs/VERIFICATION.md` | How to run the tests and what they prove |
 | `docs/EVAL_QUESTIONS.md` | Eleven independent evaluation questions, each verifiable against `ground_truth.json` |
 | `docs/PROJECT_HISTORY.md` | The phase history and roadmap |
 
@@ -129,48 +141,11 @@ public share link, sends no usage analytics, and writes every question to
 
 ## Verification
 
-273 tests across the four packages, including all 11 evaluation questions
-from `docs/EVAL_QUESTIONS.md` at the tool level, all green in CI. The host
-and model suites need Ollama running with `gemma3:4b`; without it, only the
-tests that call the model fail.
-
-```bash
-for pkg in generator core host model; do (cd $pkg && uv run pytest -q); done
-```
-
-The same 11 questions also run end to end in plain English — Gemma parses
-each one, the host routes it, and the answer's figures, summary line, or
-refusal are checked. This suite is slow and opt-in:
-
-```bash
-uv run --project host pytest -m eval_nl host/tests
-```
-
-Notably:
-
-- 💰 **Profit matches ground truth** for every field/season without a
-  deliberate defect
-- 🔍 **Every injected defect is caught by its ID** — including
-  `DEF-ALIASTIE`, proving auto-approval gives a confidently *wrong* answer
-  where confirmation gives the right one
-- 🌐 **Zero non-loopback network calls** (`test_no_network.py`)
-- 🔗 **Audit log stays tamper-evident** under real concurrent writes from
-  the host process and two live server subprocesses
-  (`test_audit_multiprocess.py`)
-- 🛡️ **Prompt injection has no effect** — `DEF-INJECTION` proves the
-  narration is unaffected, not just non-crashing (`test_injection_defect.py`)
-- 🚪 **The model-free query path really is model-free** —
-  `farm-cli --intent ...` reaches an answer with zero `ollama.chat` calls,
-  verified directly (`test_structured_path_never_calls_ollama`)
-- ✅ **Answers lead with verified text** — every answer opens with a
-  deterministic template sentence built from the tool result. The model may
-  add one sentence of context, shown only if every number traces to the
-  payload, no verdict is contradicted, and it passes five meaning checks
-  (sign, zone premise, reconciliation, attribution, unsupported cause);
-  otherwise it is dropped after one retry
-- 📊 **Governance is measurable, not just asserted** — `farm-metrics`
-  reports HITL catch rate, tool grounding, narration faithfulness, and
-  sovereignty integrity straight from the audit log
+About 300 tests across the five packages check the arithmetic against
+ground truth, every planted defect, the network and audit guarantees, and
+the checks that keep the model bounded. See
+[docs/VERIFICATION.md](docs/VERIFICATION.md) for how to run them and what
+they prove.
 
 ## License
 
