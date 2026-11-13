@@ -20,7 +20,7 @@ from pydantic import ValidationError
 
 from farm_core.audit import AuditLog
 from farm_core.pipeline import SEASONS
-from farm_model.narrator import narrate_verified
+from farm_model.narrator import NarrationOutcome, narrate_verified
 from farm_model.query_parser import ParseFailure, parse_question
 from farm_model.query_schema import (
     REQUIRED_FIELDS,
@@ -90,6 +90,18 @@ class AnswerResult:
 
     text: str
     ok: bool
+    # Optional structured detail for richer front ends (the grower web app in
+    # web/). The CLI only ever prints `text`; every field below defaults to
+    # None so existing callers and tests are unaffected.
+    query: QueryObject | None = None
+    server: str | None = None
+    tool: str | None = None
+    tool_args: dict | None = None
+    payload: dict | None = None
+    narration: NarrationOutcome | None = None
+    therefore: str | None = None
+    # "model_unreachable", "unparseable" or "tool_refused" when ok is False.
+    refusal_kind: str | None = None
 
 
 async def answer_question(
@@ -108,6 +120,7 @@ async def answer_question(
                     f"farm-preflight` to see exactly what. ({query.reason})"
                 ),
                 ok=False,
+                refusal_kind="model_unreachable",
             )
         return AnswerResult(
             text=(
@@ -119,6 +132,7 @@ async def answer_question(
                 f"(Reason: {query.reason})"
             ),
             ok=False,
+            refusal_kind="unparseable",
         )
 
     # What the parser decided, before routing -- lets the eval runner (and a
@@ -144,7 +158,16 @@ async def answer_question(
     result = tool_result.data
     if "error" in result:
         audit_log.log("tool_refused", server=server, tool=tool, code=result.get("code"))
-        return AnswerResult(text=f"{result['error']} (code: {result.get('code')})", ok=False)
+        return AnswerResult(
+            text=f"{result['error']} (code: {result.get('code')})",
+            ok=False,
+            query=query,
+            server=server,
+            tool=tool,
+            tool_args=args,
+            payload=result,
+            refusal_kind="tool_refused",
+        )
 
     outcome = narrate_verified(question, result, untrusted_paths=tool_result.untrusted_paths)
     if outcome.truncated:
@@ -164,7 +187,17 @@ async def answer_question(
     )
     therefore = build_therefore_line(result)
     text = f"{outcome.text}\n\n{therefore}" if therefore else outcome.text
-    return AnswerResult(text=text, ok=True)
+    return AnswerResult(
+        text=text,
+        ok=True,
+        query=query,
+        server=server,
+        tool=tool,
+        tool_args=args,
+        payload=result,
+        narration=outcome,
+        therefore=therefore,
+    )
 
 
 async def answer_question_structured(

@@ -1,0 +1,41 @@
+[project]
+name = "farm-web"
+version = "0.1.0"
+description = "Precision Farm MCP: local web app for growers (a thin Gradio layer over farm-host)"
+requires-python = ">=3.11"
+dependencies = [
+    "gradio>=5.0",
+    "farm-host",
+]
+
+[project.scripts]
+farm-web = "farm_web.app:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+farm_web = ["static/*"]
+
+[tool.uv.sources]
+farm-host = { path = "../host", editable = true }
+farm-core = { path = "../core", editable = true }
+farm-model = { path = "../model", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Inline SVG markup.
+"src/farm_web/banner.py" = ["E501"]
