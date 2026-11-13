@@ -206,9 +206,9 @@ def test_cost_reconciliation_results_get_no_ranking_line():
     items also live under "results". Cost reconciliation has no verdict to restate."""
     payload = {
         "results": [
-            {"field_name": "Riverside", "season": 2022, "line_item": "seed",
+            {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "seed",
              "ledger_cost_per_ac": 95.55, "outlier_flagged": True},
-            {"field_name": "Riverside", "season": 2022, "line_item": "fertilizer",
+            {"field_name": "Sheyenne Bottom", "season": 2022, "line_item": "fertilizer",
              "ledger_cost_per_ac": 134.31, "outlier_flagged": False},
         ]
     }

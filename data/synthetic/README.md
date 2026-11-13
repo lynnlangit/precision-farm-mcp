@@ -6,6 +6,7 @@
 - Root fields: 12
 - Seasons: 2016-2025 (10 seasons)
 - Generator version: 0.1.1
+- Records: messy (Farm 2 in the web app)
 
 Regenerate identically with:
 
@@ -67,7 +68,7 @@ Every defect below is deliberate and recorded in `ground_truth.json` under `defe
 
 ### Field renamed
 
-- `evt_rename_root_06` (season 2021): Farmer renamed River Bottom to Riverside starting season 2021; it is the same ground.
+- `evt_rename_root_06` (season 2021): Farmer renamed River Bottom to Sheyenne Bottom starting season 2021; it is the same ground.
 
 ### Rental ground lost
 
@@ -95,7 +96,7 @@ Every defect below is deliberate and recorded in `ground_truth.json` under `defe
 
 ### Spreadsheet mess: transposed digit
 
-- `DEF-DIGIT-2022-root_06` (season 2022): Seed cost cell for Riverside in 2022 reads 95.55 instead of the correct 59.55.
+- `DEF-DIGIT-2022-root_06` (season 2022): Seed cost cell for Sheyenne Bottom in 2022 reads 95.55 instead of the correct 59.55.
 
 ### Unit inconsistency (N rate)
 

@@ -33,15 +33,15 @@ def _stub_chat(monkeypatch, output: dict) -> dict:
 def test_cost_reconciliation_rule_and_examples_reach_the_model(monkeypatch):
     captured = _stub_chat(
         monkeypatch,
-        {"intent": "cost_reconciliation", "field_name": "Riverside", "season": 2022},
+        {"intent": "cost_reconciliation", "field_name": "Sheyenne Bottom", "season": 2022},
     )
-    result = parse_question("Does the seed cost on Riverside in 2022 look right?", KNOWN_SEASONS)
+    result = parse_question("Does the seed cost on Sheyenne Bottom in 2022 look right?", KNOWN_SEASONS)
     system_prompt = captured["messages"][0]["content"]
     assert "ALWAYS this intent, never bad_field_or_bad_year" in system_prompt
-    assert '"Does the seed cost on Riverside in 2022 look right?"' in system_prompt
+    assert '"Does the seed cost on Sheyenne Bottom in 2022 look right?"' in system_prompt
     assert not isinstance(result, ParseFailure)
     assert result.intent == QueryIntent.COST_RECONCILIATION
-    assert result.field_name == "Riverside"
+    assert result.field_name == "Sheyenne Bottom"
     assert result.season == 2022
 
 
@@ -74,7 +74,7 @@ def test_names_containing_digits_still_pass(monkeypatch, name):
 # --- follow-up questions (grower web app) ---------------------------------
 
 COST_CONTEXT = FollowUpContext(
-    field_name="Riverside", season=2022, intent=QueryIntent.COST_RECONCILIATION
+    field_name="Sheyenne Bottom", season=2022, intent=QueryIntent.COST_RECONCILIATION
 )
 
 
@@ -87,17 +87,17 @@ def test_no_context_means_no_follow_up_prompt(monkeypatch):
 
 def test_context_reaches_the_prompt_but_not_the_history(monkeypatch):
     captured = _stub_chat(
-        monkeypatch, {"intent": "cost_reconciliation", "field_name": "Riverside", "season": 2023}
+        monkeypatch, {"intent": "cost_reconciliation", "field_name": "Sheyenne Bottom", "season": 2023}
     )
     result = parse_question("And in 2023?", KNOWN_SEASONS, context=COST_CONTEXT)
     system_prompt = captured["messages"][0]["content"]
-    assert 'field: "Riverside"' in system_prompt
+    assert 'field: "Sheyenne Bottom"' in system_prompt
     assert "season: 2022" in system_prompt
     assert "question type: cost_reconciliation" in system_prompt
     assert [m["role"] for m in captured["messages"]] == ["system", "user"]
     assert captured["messages"][1]["content"] == "And in 2023?"
     assert not isinstance(result, ParseFailure)
-    assert (result.field_name, result.season) == ("Riverside", 2023)
+    assert (result.field_name, result.season) == ("Sheyenne Bottom", 2023)
 
 
 def test_follow_up_may_swap_the_field(monkeypatch):
@@ -123,7 +123,7 @@ def test_follow_up_field_from_nowhere_is_refused(monkeypatch):
 
 def test_follow_up_season_from_nowhere_is_refused(monkeypatch):
     _stub_chat(
-        monkeypatch, {"intent": "cost_reconciliation", "field_name": "Riverside", "season": 2024}
+        monkeypatch, {"intent": "cost_reconciliation", "field_name": "Sheyenne Bottom", "season": 2024}
     )
     result = parse_question("What about the year before?", KNOWN_SEASONS, context=COST_CONTEXT)
     assert isinstance(result, ParseFailure)
@@ -133,7 +133,7 @@ def test_follow_up_season_from_nowhere_is_refused(monkeypatch):
 def test_follow_up_that_drops_the_named_year_is_refused(monkeypatch):
     # The farmer said 2023 but the model kept the earlier 2022.
     _stub_chat(
-        monkeypatch, {"intent": "cost_reconciliation", "field_name": "Riverside", "season": 2022}
+        monkeypatch, {"intent": "cost_reconciliation", "field_name": "Sheyenne Bottom", "season": 2022}
     )
     result = parse_question("And in 2023?", KNOWN_SEASONS, context=COST_CONTEXT)
     assert isinstance(result, ParseFailure)
@@ -171,10 +171,10 @@ def _ollama_ready() -> bool:
 
 @pytest.mark.skipif(not _ollama_ready(), reason="needs a local Ollama with the default model")
 def test_live_eval_9_parses_as_cost_reconciliation():
-    result = parse_question("Does the seed cost on Riverside in 2022 look right?", KNOWN_SEASONS)
+    result = parse_question("Does the seed cost on Sheyenne Bottom in 2022 look right?", KNOWN_SEASONS)
     assert not isinstance(result, ParseFailure)
     assert result.intent == QueryIntent.COST_RECONCILIATION
-    assert result.field_name == "Riverside"
+    assert result.field_name == "Sheyenne Bottom"
     assert result.season == 2022
 
 

@@ -145,7 +145,7 @@ async def answer_question(
                 text=(
                     "I wasn't sure which field or season you meant, so I didn't look "
                     "anything up. Try naming both, e.g. \"Does the seed cost on "
-                    f"Riverside in 2023 look right?\" (Reason: {query.reason})"
+                    f"Sheyenne Bottom in 2023 look right?\" (Reason: {query.reason})"
                 ),
                 ok=False,
                 refusal_kind="unresolved_followup",
