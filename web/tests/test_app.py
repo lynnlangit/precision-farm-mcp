@@ -21,7 +21,7 @@ def test_examples_are_the_eval_questions():
 
 
 def _fake_answer(seen: list):
-    async def fake(question, audit_log, env_overrides=None, context=None):
+    async def fake(question, audit_log, env_overrides=None, context=None, fleet=None):
         seen.append(context)
         if question == "nonsense":
             return AnswerResult(text="no", ok=False, refusal_kind="unparseable")
@@ -36,10 +36,19 @@ def _fake_answer(seen: list):
     return fake
 
 
+class _FakePool:
+    """Stands in for ServerPool: no servers, the coroutine just runs."""
+
+    def run(self, fn):
+        import asyncio
+
+        return asyncio.run(fn(None))
+
+
 def test_ask_carries_context_and_offers_follow_ups(monkeypatch, tmp_path):
     seen: list = []
     monkeypatch.setattr(web_app, "answer_question", _fake_answer(seen))
-    ask = make_ask(tmp_path / "audit.jsonl")
+    ask = make_ask(tmp_path / "audit.jsonl", _FakePool())
 
     out = ask("Was east 80 a bad field or just a bad year?", None)
     answer_html, _, _, _, state, hint, heading, *buttons = out
@@ -70,9 +79,19 @@ def test_ready_check_collapses_when_all_pass_and_opens_on_a_problem(monkeypatch)
     monkeypatch.setattr(web_app, "check_confirmed_mappings", lambda d: _check("ingest", True))
     html = web_app.status_html()
     assert html.startswith('<details class="pf-status-wrap">')  # collapsed
-    assert "all 4 passed" in html
+    assert "Prerequisites loaded" in html and "4 of 4" in html
+    assert web_app.status_panels() == ("", html)  # at the bottom
 
     monkeypatch.setattr(web_app, "check_model_pulled", lambda pulled: _check("gemma", False))
     html = web_app.status_html()
     assert html.startswith('<details class="pf-status-wrap" open>')
     assert "1 of 4 need attention" in html and "do the thing" in html
+    assert web_app.status_panels() == (html, "")  # at the top
+
+
+def test_example_groups_start_collapsed(tmp_path):
+    app = build_app(tmp_path / "audit.jsonl", _FakePool())
+    accordions = [b for b in app.blocks.values() if type(b).__name__ == "Accordion"]
+    assert len(accordions) == len(EXAMPLES)
+    assert all(a.open is False for a in accordions)
+    assert accordions[0].label == "Bad field or bad year? (3)"

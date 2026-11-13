@@ -16,7 +16,6 @@ import os
 os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 
 import argparse  # noqa: E402
-import asyncio  # noqa: E402
 from html import escape  # noqa: E402
 from importlib.resources import files  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -26,6 +25,7 @@ import gradio as gr  # noqa: E402
 from farm_core.audit import AuditLog  # noqa: E402
 from farm_host.cli import DEFAULT_AUDIT_LOG, AnswerResult, answer_question  # noqa: E402
 from farm_host.followups import MAX_SUGGESTIONS, next_context, suggest_followups  # noqa: E402
+from farm_host.server_pool import ServerPool  # noqa: E402
 from farm_host.mcp_client import ServerStartTimeout  # noqa: E402
 from farm_host.preflight_cli import (  # noqa: E402
     DEFAULT_CONFIRM_STORE,
@@ -95,21 +95,28 @@ def status_html() -> str:
         if fixes
         else ""
     )
-    # Collapsed to one line when everything is ready; open when something
-    # needs fixing, so a problem is never hidden.
+    # Collapsed to one line at the bottom of the page when everything is
+    # ready; at the top, open, when something needs fixing, so a problem is
+    # never hidden.
     failing = sum(1 for c in checks if not c.ok)
     if failing:
         summary = f"{failing} of {len(checks)} need attention"
         cls, open_attr = "bad", " open"
     else:
-        summary = f"all {len(checks)} passed"
+        summary = f"{len(checks)} of {len(checks)}"
         cls, open_attr = "ok", ""
     return (
         f'<details class="pf-status-wrap"{open_attr}>'
-        f'<summary><span class="pf-status-label">Ready check</span>'
+        f'<summary><span class="pf-status-label">Prerequisites loaded</span>'
         f'<span class="pf-chip {cls}">{summary}</span></summary>'
         f'<div class="pf-status">{chips}</div>{fix_list}</details>'
     )
+
+
+def status_panels() -> tuple[str, str]:
+    """(top, bottom): the prerequisites go at the top only when one fails."""
+    html = status_html()
+    return (html, "") if " open>" in html else ("", html)
 
 
 def _panels(view: AnswerView) -> tuple[str, str, str, str]:
@@ -132,11 +139,15 @@ def _context_dump(context: FollowUpContext | None) -> dict | None:
     return context.model_dump(mode="json") if context is not None else None
 
 
-def make_ask(audit_log_path: Path):
+def make_ask(audit_log_path: Path, pool: ServerPool | None = None):
     """The handler for one question. Gradio state holds only the follow-up
-    context (field, season, question type) -- never the answers themselves."""
+    context (field, season, question type) -- never the answers themselves.
+
+    `pool` keeps the MCP servers running between questions (see
+    farm_host.server_pool); without one, one is created here."""
     audit_log = AuditLog(audit_log_path)
     server_env = {"FARM_AUDIT_LOG": str(audit_log_path.resolve())}
+    pool = pool or ServerPool(env_overrides=server_env)
 
     def ask(question: str, context_state: dict | None = None) -> tuple:
         context = FollowUpContext.model_validate(context_state) if context_state else None
@@ -149,10 +160,12 @@ def make_ask(audit_log_path: Path):
                 *_followup_updates([]),
             )
         try:
-            # Sync handler on Gradio's worker thread, with its own event loop,
-            # exactly like the CLI's asyncio.run().
-            result = asyncio.run(
-                answer_question(question, audit_log, env_overrides=server_env, context=context)
+            # Runs on the pool's event loop, against servers that are already
+            # running; the answer path itself is the CLI's answer_question.
+            result = pool.run(
+                lambda fleet: answer_question(
+                    question, audit_log, env_overrides=server_env, context=context, fleet=fleet
+                )
             )
         except ServerStartTimeout as e:
             result = AnswerResult(text=str(e), ok=False, refusal_kind="server_timeout")
@@ -176,13 +189,16 @@ def make_ask(audit_log_path: Path):
     return ask
 
 
-def build_app(audit_log_path: Path = DEFAULT_AUDIT_LOG) -> gr.Blocks:
-    ask = make_ask(audit_log_path)
+def build_app(
+    audit_log_path: Path = DEFAULT_AUDIT_LOG, pool: ServerPool | None = None
+) -> gr.Blocks:
+    ask = make_ask(audit_log_path, pool)
     empty = empty_view()
 
     with gr.Blocks(title="Precision Farm", analytics_enabled=False) as app:
         gr.HTML(BANNER_HTML)
-        status = gr.HTML(status_html())
+        top_status, bottom_html = status_panels()
+        status_top = gr.HTML(top_status)
         gr.HTML(HOW_IT_WORKS_HTML)
 
         with gr.Row(equal_height=False):
@@ -201,12 +217,15 @@ def build_app(audit_log_path: Path = DEFAULT_AUDIT_LOG) -> gr.Blocks:
                     clear_btn = gr.Button("Clear", variant="secondary", scale=1)
                 context_hint = gr.HTML("")
                 example_buttons: list[tuple[gr.Button, str]] = []
+                gr.HTML('<p class="pf-eyebrow" style="margin-top:14px">Example questions</p>')
                 for heading, qs in EXAMPLES:
-                    gr.HTML(f'<p class="pf-eyebrow" style="margin-top:10px">{escape(heading)}</p>')
-                    with gr.Column(elem_classes="pf-examples-group"):
-                        for q in qs:
-                            b = gr.Button(q, size="sm", elem_classes="pf-example")
-                            example_buttons.append((b, q))
+                    with gr.Accordion(
+                        f"{heading} ({len(qs)})", open=False, elem_classes="pf-example-group"
+                    ):
+                        with gr.Column(elem_classes="pf-examples-group"):
+                            for q in qs:
+                                b = gr.Button(q, size="sm", elem_classes="pf-example")
+                                example_buttons.append((b, q))
             with gr.Column(scale=7, min_width=340):
                 answer = gr.HTML(empty.answer_html)
                 followup_heading = gr.HTML(
@@ -256,7 +275,8 @@ def build_app(audit_log_path: Path = DEFAULT_AUDIT_LOG) -> gr.Blocks:
             b.click(lambda label: label, inputs=b, outputs=question, queue=False).then(
                 ask, inputs=inputs, outputs=outputs
             )
-        app.load(status_html, outputs=status)
+        status_bottom = gr.HTML(bottom_html)
+        app.load(status_panels, outputs=[status_top, status_bottom])
 
         gr.HTML(
             f'<p class="pf-muted" style="text-align:center;margin-top:8px">'
@@ -317,7 +337,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    app = build_app(args.audit_log)
+    # Start the MCP servers now, while the page opens, so the first question
+    # doesn't wait for them (about 7 s once, instead of about 4 s per question).
+    pool = ServerPool(env_overrides={"FARM_AUDIT_LOG": str(args.audit_log.resolve())})
+    pool.start_in_background()
+    app = build_app(args.audit_log, pool)
     host = "0.0.0.0" if args.lan else "127.0.0.1"
     if args.lan:
         print(
