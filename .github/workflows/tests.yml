@@ -16,10 +16,24 @@ name: tests
 #   ubuntu-latest only rather than silently claiming Windows coverage it
 #   doesn't have.
 
+# When it runs (kept fast for iterative work on a teaching tool):
+# - Pull requests run only the deterministic job (~2-4 min). CI no longer
+#   re-runs on the merge to main, which doubled every wait.
+# - Docs-only changes (*.md, docs/, images/) skip CI entirely.
+# - The real-model job (Gemma on a CPU-only runner, ~12 min) runs nightly on
+#   main and on demand (Actions -> tests -> Run workflow). Before a demo, run
+#   the host + model suites locally where Ollama is fast.
 on:
-  push:
-    branches: [main]
   pull_request:
+    paths-ignore: ["**/*.md", "docs/**", "images/**"]
+  schedule:
+    - cron: "0 9 * * *"  # 09:00 UTC = 3-4 AM US Central
+  workflow_dispatch:
+
+# A new push to the same PR cancels the run it supersedes.
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deterministic:
@@ -43,6 +57,8 @@ jobs:
 
   full:
     name: host + model (ubuntu-latest, needs Ollama)
+    # Nightly and manual runs only -- see "When it runs" above.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
