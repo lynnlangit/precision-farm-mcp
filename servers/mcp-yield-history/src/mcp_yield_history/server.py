@@ -146,7 +146,7 @@ def get_yield_reconciliation(field_name: str, season: int) -> dict:
             "code": "not_found",
         }
     _audit_log().log(
-        "tool_call", tool="get_yield_reconciliation", field_name=field_name, season=season
+        "tool_executed", tool="get_yield_reconciliation", field_name=field_name, season=season
     )
     return YieldReconciliationResult(
         **_rounded(match), provenance=SnapshotProvenance(**_provenance())
@@ -171,7 +171,7 @@ def list_yield_reconciliation(season: int) -> dict:
             "error": f"unknown season {season}; known seasons are {snap.seasons}",
             "code": "invalid_input",
         }
-    _audit_log().log("tool_call", tool="list_yield_reconciliation", season=season)
+    _audit_log().log("tool_executed", tool="list_yield_reconciliation", season=season)
     results = [_rounded(r) for r in _reconciliation() if r.season == season]
     return ListYieldReconciliationResult(
         results=results, provenance=SnapshotProvenance(**_provenance())

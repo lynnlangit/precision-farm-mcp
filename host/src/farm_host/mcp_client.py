@@ -8,9 +8,12 @@ other layer reaches an MCP server directly.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import dataclasses
 import json
+import os
+import time
 from pathlib import Path
 
 from mcp import ClientSession
@@ -93,14 +96,55 @@ SERVERS: dict[str, tuple[str, str]] = {
 }
 
 
+# Every server child gets these unless env_overrides says otherwise: no
+# FastMCP banner, no "Update available" check (a network call) and no INFO
+# "Starting MCP server" lines on every question. Warnings and errors still
+# show. FastMCP stays pinned at 3.4.5.
+DEFAULT_CHILD_ENV: dict[str, str] = {
+    "FASTMCP_SHOW_SERVER_BANNER": "false",
+    "FASTMCP_CHECK_FOR_UPDATES": "off",
+    "FASTMCP_LOG_LEVEL": "WARNING",
+}
+
+# How long one server may take to answer `initialize`. The first start of a
+# server builds its .venv inside this window, so the default is generous.
+START_TIMEOUT_ENV = "FARM_SERVER_START_TIMEOUT"
+DEFAULT_START_TIMEOUT_SECONDS = 120.0
+
+
+def _start_timeout_from_env() -> float:
+    raw = os.environ.get(START_TIMEOUT_ENV)
+    if not raw:
+        return DEFAULT_START_TIMEOUT_SECONDS
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_START_TIMEOUT_SECONDS
+    return value if value > 0 else DEFAULT_START_TIMEOUT_SECONDS
+
+
 def _params_for(name: str, env: dict[str, str] | None = None) -> StdioServerParameters:
     dir_name, module_name = SERVERS[name]
     server_path = REPO_ROOT / "servers" / dir_name
     return StdioServerParameters(
         command="uv",
         args=["run", "--project", str(server_path), "python", "-m", module_name],
-        env=env,
+        env={**DEFAULT_CHILD_ENV, **(env or {})},
     )
+
+
+class ServerStartTimeout(Exception):
+    """A server didn't finish starting (answer `initialize`) in time --
+    usually its first run, while uv builds its environment."""
+
+    def __init__(self, name: str, timeout: float):
+        self.server = name
+        self.timeout = timeout
+        super().__init__(
+            f"Server {name} didn't start within {timeout:g}s -- the first run builds "
+            "its environment. Run `uv run --project host farm-preflight` once to build "
+            f"every server, or raise {START_TIMEOUT_ENV}."
+        )
 
 
 class ToolCallFailed(Exception):
@@ -120,8 +164,12 @@ class MCPFleet:
         self,
         server_names: list[str] | None = None,
         env_overrides: dict[str, str] | None = None,
+        start_timeout: float | None = None,
     ):
         self.server_names = server_names or list(SERVERS)
+        self.start_timeout = start_timeout if start_timeout is not None else _start_timeout_from_env()
+        # Seconds each server took to start (launch + initialize), for preflight.
+        self.start_seconds: dict[str, float] = {}
         # Passed straight to each spawned server's StdioServerParameters.env --
         # stdio_client merges this on top of a curated safe subset of the
         # parent's own environment (PATH, HOME, ...), it doesn't replace it.
@@ -133,10 +181,16 @@ class MCPFleet:
 
     async def __aenter__(self) -> MCPFleet:
         for name in self.server_names:
+            started = time.monotonic()
             params = _params_for(name, env=self.env_overrides)
             read, write = await self._stack.enter_async_context(stdio_client(params))
             session = await self._stack.enter_async_context(ClientSession(read, write))
-            await session.initialize()
+            try:
+                await asyncio.wait_for(session.initialize(), timeout=self.start_timeout)
+            except TimeoutError:
+                await self._stack.aclose()
+                raise ServerStartTimeout(name, self.start_timeout) from None
+            self.start_seconds[name] = time.monotonic() - started
             self.sessions[name] = session
         return self
 

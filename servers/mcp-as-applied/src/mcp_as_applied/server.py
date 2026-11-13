@@ -122,7 +122,7 @@ def get_as_applied_events(field_name: str, season: int) -> dict:
     ).fetchall()
 
     _audit_log().log(
-        "tool_call", tool="get_as_applied_events", field_name=field_name, season=season
+        "tool_executed", tool="get_as_applied_events", field_name=field_name, season=season
     )
     events = [
         {

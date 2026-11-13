@@ -20,6 +20,7 @@ import ollama
 from farm_core.audit import AuditLog
 
 from .cli import answer_question
+from .mcp_client import SERVERS, MCPFleet, ServerStartTimeout
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR = REPO_ROOT / "data" / "synthetic"
@@ -27,6 +28,9 @@ DEFAULT_CONFIRM_STORE = REPO_ROOT / "data" / "confirmed_mappings.json"
 DEFAULT_AUDIT_LOG = REPO_ROOT / "data" / "audit.jsonl"
 REQUIRED_MODEL = "gemma3:4b"
 DEFAULT_TEST_QUESTION = "was the north eighty a bad field or a bad year"
+# Preflight is where first-run environment builds are expected, so it gives
+# each server far longer than farm-cli's own start timeout.
+PREFLIGHT_START_TIMEOUT_SECONDS = 600.0
 
 
 @dataclass(frozen=True)
@@ -110,6 +114,36 @@ def check_confirmed_mappings(confirm_store: Path) -> CheckResult:
     return CheckResult("farm-ingest has run", True, f"found {confirm_store}")
 
 
+async def _start_all_servers(timeout: float) -> dict[str, float]:
+    async with MCPFleet(list(SERVERS), start_timeout=timeout) as fleet:
+        return dict(fleet.start_seconds)
+
+
+def check_servers_start(timeout: float = PREFLIGHT_START_TIMEOUT_SECONDS) -> CheckResult:
+    """Starts each MCP server once. The first start builds the server's
+    environment, which otherwise happens silently inside a user's first
+    farm-cli question and looks like a hang."""
+    try:
+        times = asyncio.run(_start_all_servers(timeout))
+    except ServerStartTimeout as e:
+        return CheckResult(
+            "MCP servers start",
+            False,
+            f"{e.server} didn't start within {e.timeout:g}s",
+            "check your network connection (the first run downloads packages), "
+            "then re-run farm-preflight",
+        )
+    except Exception as e:  # noqa: BLE001 -- surfaced as a failed check, not a crash
+        return CheckResult(
+            "MCP servers start",
+            False,
+            f"raised an exception: {e}",
+            "run `uv sync` in the failing server's directory under servers/ to see the error",
+        )
+    detail = ", ".join(f"{name} {secs:.1f}s" for name, secs in times.items())
+    return CheckResult("MCP servers start", True, f"all {len(times)} started ({detail})")
+
+
 def check_live_query(
     data_dir: Path,
     confirm_store: Path,
@@ -147,6 +181,8 @@ def run_all(
     question: str,
 ) -> list[CheckResult]:
     results = [check_uv()]
+    if results[0].ok:
+        results.append(check_servers_start())
 
     ollama_check, pulled_models = check_ollama_running()
     results.append(ollama_check)

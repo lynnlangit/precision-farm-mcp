@@ -129,7 +129,7 @@ def get_season_weather(season: int) -> dict:
             "code": "not_found",
         }
 
-    _audit_log().log("tool_call", tool="get_season_weather", season=season)
+    _audit_log().log("tool_executed", tool="get_season_weather", season=season)
     return GetSeasonWeatherResult(
         season=season,
         total_precip_mm=round(float(row[0]), 1),
@@ -175,7 +175,7 @@ def get_field_soil(field_name: str) -> dict:
             "code": "not_found",
         }
 
-    _audit_log().log("tool_call", tool="get_field_soil", field_name=field_name)
+    _audit_log().log("tool_executed", tool="get_field_soil", field_name=field_name)
     return GetFieldSoilResult(
         field_name=row[0], awc_in=float(row[1]), provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
