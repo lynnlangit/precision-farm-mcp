@@ -1,4 +1,4 @@
-"""Automated version of docs/EVAL_QUESTIONS.md's 11 evaluation questions
+"""Automated version of docs/EVAL_QUESTIONS.md's 15 evaluation questions
 (tool level -- test_eval_nl.py runs the same questions through the parser).
 Each is independent, read-only, and checked against a single verifiable
 figure from data/synthetic/ground_truth.json (seed 42) -- see that doc for
@@ -197,3 +197,61 @@ async def test_q11_hidden_bad_zone_inside_a_profitable_field():
     # The shortfall is confined to zone 0: every other measurable zone made money.
     others = [z for z in r["zones"] if z["zone_index"] != 0 and z["available"]]
     assert others and all(z["profit"] > 0 for z in others)
+
+
+async def test_q12_forced_drought_season_is_the_driest():
+    """DEF-WEATHERSHORTFALL-2018-root_01: the forced drought season."""
+    ws = _GROUND_TRUTH["weathershortfall"]
+    async with MCPFleet(["weather-history"]) as fleet:
+        result = await fleet.call("weather-history", "get_season_weather", season=ws["season"])
+    r = result.data
+    assert r["total_precip_mm"] == 172.6  # pipeline golden
+    assert r["farm_average_precip_mm"] == 434.4
+    assert r["precip_rank_driest"] == 1
+    assert r["num_seasons_compared"] == 10
+    assert r["precip_short_of_need_mm"] == 277.4
+
+
+async def test_q13_field_soil_water_capacity():
+    async with MCPFleet(["weather-history"]) as fleet:
+        result = await fleet.call("weather-history", "get_field_soil", field_name="Coulee Field")
+    r = result.data
+    assert r["awc_in"] == 6.93
+    assert (r["min_field_name"], r["farm_min_awc_in"]) == ("West 120", 4.08)
+
+
+async def test_q14_applied_inputs_convert_uan_gallons():
+    """DEF-UNIT-2023: nitrogen logged in gal/ac of UAN 32% must be converted."""
+    async with MCPFleet(["as-applied"]) as fleet:
+        result = await fleet.call(
+            "as-applied", "get_applied_inputs", field_name="Coulee Field", season=2023
+        )
+    r = result.data
+    n = next(e for e in r["applied_inputs"] if e["input"] == "nitrogen")
+    assert (n["as_logged_rate"], n["as_logged_unit"]) == (41.22, "gal/ac")
+    assert (n["rate"], n["unit"]) == (145.9, "lb N/ac")
+    assert r["nitrogen_lb_n_ac"] == 145.9
+
+
+async def test_q14b_season_before_logs_is_empty_not_refused():
+    async with MCPFleet(["as-applied"]) as fleet:
+        result = await fleet.call(
+            "as-applied", "get_applied_inputs", field_name="Coulee Field", season=2019
+        )
+    r = result.data
+    assert "code" not in r
+    assert r["logged"] is False and r["applied_inputs"] == []
+
+
+async def test_q15_nitrogen_history_by_crop():
+    async with MCPFleet(["as-applied"]) as fleet:
+        result = await fleet.call(
+            "as-applied", "get_nitrogen_history", field_name="Section Corner"
+        )
+    r = result.data
+    assert [(x["season"], x["n_lb_n_ac"]) for x in r["nitrogen_by_season"]] == [
+        (2022, 5.2), (2023, 160.6), (2024, 6.2), (2025, 141.3)
+    ]
+    corn = r["nitrogen_by_crop"]["corn"]
+    assert (corn["min_lb_n_ac"], corn["max_lb_n_ac"], corn["spread_lb_n_ac"]) == (141.3, 160.6, 19.3)
+    assert r["logs_start_season"] == 2022

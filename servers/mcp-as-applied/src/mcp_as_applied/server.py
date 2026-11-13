@@ -14,7 +14,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
-from farm_core import pipeline
+from farm_core import field_conditions, pipeline
 from farm_core.audit import AuditLog
 
 mcp = FastMCP("as-applied")
@@ -44,6 +44,61 @@ class GetAsAppliedEventsResult(BaseModel):
     events: list[AsAppliedEvent]
     provenance: SnapshotProvenance
     modeled: dict[str, Any] | None = None
+
+class AppliedInput(BaseModel):
+    input: str
+    product: str
+    rate: float
+    unit: str
+    as_logged_rate: float
+    as_logged_unit: str
+    converted: bool
+
+
+class GetAppliedInputsResult(BaseModel):
+    field_name: str
+    asked_name: str
+    season: int
+    crop: str | None
+    logged: bool
+    logged_seasons: list[int]
+    applied_inputs: list[AppliedInput]
+    nitrogen_lb_n_ac: float | None
+    uan32_lb_n_per_gal: float
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
+
+class NitrogenSeason(BaseModel):
+    season: int
+    field_name: str
+    crop: str | None
+    product: str
+    n_lb_n_ac: float
+    as_logged_rate: float
+    as_logged_unit: str
+    converted: bool
+
+
+class NitrogenCropRange(BaseModel):
+    num_seasons: int
+    min_lb_n_ac: float
+    min_season: int
+    max_lb_n_ac: float
+    max_season: int
+    spread_lb_n_ac: float
+
+
+class GetNitrogenHistoryResult(BaseModel):
+    field_name: str
+    asked_name: str
+    nitrogen_by_season: list[NitrogenSeason]
+    nitrogen_by_crop: dict[str, NitrogenCropRange]
+    logs_start_season: int
+    uan32_lb_n_per_gal: float
+    provenance: SnapshotProvenance
+    modeled: dict[str, Any] | None = None
+
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
@@ -137,6 +192,61 @@ def get_as_applied_events(field_name: str, season: int) -> dict:
     ]
     return GetAsAppliedEventsResult(
         events=events, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+@_confirmation_guarded
+def get_applied_inputs(field_name: str, season: int) -> dict:
+    """What the as-applied log shows for one field and season: seed, N, P,
+    K and herbicide rates. Nitrogen is always reported in lb N/ac; a season
+    logged in gal/ac of UAN 32% is converted (the as-logged reading is kept
+    beside it). A season before the logs start returns logged=false and an
+    empty list, not an error.
+
+    Args:
+        field_name: The field name, current or from a past season.
+        season: The season year.
+
+    Returns:
+        {"applied_inputs": [...], "nitrogen_lb_n_ac": ..., "logged": ...,
+        "provenance": {...}} on success, or {"error": "...", "code": ...}
+        for an unknown season or field.
+    """
+    try:
+        summary = field_conditions.applied_inputs(_snapshot(), field_name, season)
+    except field_conditions.LookupRefused as e:
+        return {"error": e.reason, "code": e.code}
+    _audit_log().log(
+        "tool_executed", tool="get_applied_inputs", field_name=field_name, season=season
+    )
+    return GetAppliedInputsResult(
+        **summary, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+@_confirmation_guarded
+def get_nitrogen_history(field_name: str) -> dict:
+    """Nitrogen in lb N/ac for every logged season of one field, with the
+    crop each season and the lowest/highest rate per crop (corn and soybean
+    take very different N, so they are never compared with each other).
+
+    Args:
+        field_name: The field name, current or from a past season.
+
+    Returns:
+        {"nitrogen_by_season": [...], "nitrogen_by_crop": {...},
+        "logs_start_season": ..., "provenance": {...}} on success, or
+        {"error": "...", "code": "not_found"}.
+    """
+    try:
+        summary = field_conditions.nitrogen_history(_snapshot(), field_name)
+    except field_conditions.LookupRefused as e:
+        return {"error": e.reason, "code": e.code}
+    _audit_log().log("tool_executed", tool="get_nitrogen_history", field_name=field_name)
+    return GetNitrogenHistoryResult(
+        **summary, provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
 
 

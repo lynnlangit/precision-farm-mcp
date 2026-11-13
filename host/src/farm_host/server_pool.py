@@ -2,8 +2,8 @@
 
 Without this, every question starts its server with `uv run` and the server
 rebuilds the farm data snapshot on its first tool call: about 4 seconds per
-question before Gemma does anything. A ServerPool starts the four servers the
-question types route to once, warms each snapshot, and then reuses them.
+question before Gemma does anything. A ServerPool starts every server the
+question types route to (all six) once, warms each snapshot, and then reuses them.
 
 The servers, their tools, the audit log and every check are unchanged; only
 when the servers start differs. The CLI still starts one server per question.
@@ -51,6 +51,8 @@ _WARMUP_CALLS: dict[str, tuple[str, dict]] = {
         "get_yield_reconciliation", {"field_name": "__warmup__", "season": SEASONS[0]}
     ),
     "cost-ledger": ("get_cost_reconciliation", {"field_name": "__warmup__", "season": 0}),
+    "weather-history": ("get_season_weather", {"season": 0}),
+    "as-applied": ("get_applied_inputs", {"field_name": "__warmup__", "season": 0}),
 }
 
 

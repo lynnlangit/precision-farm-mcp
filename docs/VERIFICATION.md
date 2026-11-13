@@ -5,7 +5,7 @@ overview and quick start, see the [README](../README.md).
 
 ## Running the tests
 
-About 300 tests across the five packages, including all 11 evaluation
+About 300 tests across the five packages, including all 15 evaluation
 questions from [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) at the tool level.
 The host and model suites need Ollama running with `gemma3:4b`; without it,
 only the tests that call the model fail.
@@ -27,7 +27,7 @@ uv run --project core pytest -q docs/test_architecture_doc.py
 Before a demo, run the `host` and `model` suites on a machine with Ollama,
 where Gemma is fast.
 
-The same 11 questions also run end to end in plain English — Gemma parses
+The same 15 questions also run end to end in plain English — Gemma parses
 each one, the host routes it, and the answer's figures, summary line, or
 refusal are checked. This suite is slow and opt-in:
 
@@ -65,4 +65,4 @@ uv run --project host pytest -m eval_nl host/tests
 ## See also
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — the full technical design
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — the eleven evaluation questions and their verifiable answers
+- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — the fifteen evaluation questions and their verifiable answers

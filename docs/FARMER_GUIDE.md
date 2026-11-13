@@ -213,7 +213,7 @@ If you prefer the terminal, the same question works there too:
 uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 ```
 
-[docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists eleven more example
+[docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists fifteen more example
 questions you can try, each with the verifiable correct answer written
 out, so you can check the tool's answer against the known-right one — a
 good way to build trust in it before moving to Step 2.
@@ -348,7 +348,7 @@ you ever want to review it.
 
 - [README.md](../README.md) — the technical overview, if you want more detail
   on how the tool is built and what makes it trustworthy.
-- [docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — eleven example questions
+- [docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — fifteen example questions
   with known-correct answers, good for building confidence in the tool.
 - [docs/ARCHITECTURE.md](ARCHITECTURE.md) — the full technical design, for
   the curious or the technically inclined.

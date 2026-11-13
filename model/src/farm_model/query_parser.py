@@ -87,6 +87,20 @@ of X is losing money", "is any part of X unprofitable". Requires \
 - unprofitable_zones_in_profitable_fields: asks about the WHOLE farm, no \
 field named, e.g. "what share of acres are losing money in otherwise good \
 fields". Requires nothing.
+- season_weather: how much rain fell or how hot it was in one season, e.g. \
+"how dry was 2018", "what was the weather like in 2021", "how much rain did \
+we get in 2024". Requires "season". No field -- weather is farm-wide.
+- field_soil: how much water a field's soil holds (water-holding capacity, \
+AWC), e.g. "how much water does Coulee Field's soil hold". Requires \
+"field_name". No season -- soil doesn't change by year.
+- applied_inputs: what was applied (seed, fertilizer, nitrogen, herbicide \
+rates) on one field in one season, e.g. "what did I put on Coulee Field in \
+2023", "what was applied on Section Corner in 2024". Requires "field_name" \
+and "season". A question about the COST of an input is cost_reconciliation \
+instead.
+- nitrogen_history: compares nitrogen rates on one field across years, e.g. \
+"did I put the same nitrogen on Coulee Field every year", "how has my N rate \
+on Home Quarter changed". Requires "field_name"; no season.
 - unrecognized: the question asks for something else entirely -- a \
 prediction, a recommendation, a yield forecast, a prescription map, anything \
 not a lookup against past records. Use this rather than forcing a fit.
@@ -152,6 +166,8 @@ def _check_follow_up(
         QueryIntent.RESOLVE_FIELD_NAME,
         QueryIntent.YIELD_RECONCILIATION,
         QueryIntent.COST_RECONCILIATION,
+        QueryIntent.SEASON_WEATHER,
+        QueryIntent.APPLIED_INPUTS,
     )
     dropped = sorted(named_years - used)
     if takes_seasons and dropped:

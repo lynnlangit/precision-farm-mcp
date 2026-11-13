@@ -127,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
         # are about the defects the clean farm doesn't have.
         if not config.clean_records:
             write_text(
-                _REPO_ROOT / "docs" / "EVAL_QUESTIONS.md", render_eval_questions(ground_truth)
+                _REPO_ROOT / "docs" / "EVAL_QUESTIONS.md", render_eval_questions(ground_truth, args.out)
             )
     except (ValueError, AssertionError) as e:
         print(f"error: {e}", file=sys.stderr)

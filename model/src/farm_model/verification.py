@@ -469,12 +469,89 @@ def check_no_unsupported_cause(narration: str, payload: object) -> bool:
                 return False
     return True
 
+# A number written with a unit in the narration ("172.6 mm", "41.22 gal/ac",
+# "6.93 inches") must match a payload value recorded in that same unit. This
+# is what catches a sentence that reads a gal/ac log entry as lb N/ac, or a
+# soil figure in inches as rain in mm -- each number is grounded on its own,
+# so plain grounding can't see the swap.
+_UNIT_NUMBER_RE = re.compile(
+    r"(?<![\d.])(\d[\d,]*\.?\d*)\s*"
+    r"(mm\b|millimet(?:er|re)s?\b|inch(?:es)?\b|in(?=[).,;]|$)|gal(?:lons?)?\b|lbs?\b|pounds?\b)",
+    re.IGNORECASE,
+)
+
+
+def _unit_family(token: str) -> str:
+    t = token.lower()
+    if t.startswith(("mm", "millimet")):
+        return "mm"
+    if t.startswith("in"):
+        return "in"
+    if t.startswith("gal"):
+        return "gal"
+    return "lb"
+
+
+def _payload_unit_values(payload: object) -> dict[str, set[float]]:
+    found: dict[str, set[float]] = {}
+
+    def add(family: str, value: object) -> None:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            found.setdefault(family, set()).add(float(value))
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            unit = str(value.get("unit") or "")
+            logged_unit = str(value.get("as_logged_unit") or "")
+            for key, item in value.items():
+                if not isinstance(key, str):
+                    continue
+                if key.endswith("_mm"):
+                    add("mm", item)
+                elif key.endswith("_in"):
+                    add("in", item)
+                elif "lb_n" in key or key.endswith("_lb_ac"):
+                    add("lb", item)
+                elif key == "rate" and unit.startswith("lb"):
+                    add("lb", item)
+                elif key == "as_logged_rate" and logged_unit.startswith("gal"):
+                    add("gal", item)
+                elif key == "as_logged_rate" and logged_unit.startswith("lb"):
+                    add("lb", item)
+                walk(item)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                walk(item)
+
+    walk(_without_provenance(payload))
+    return found
+
+
+def check_units_consistent(narration: str, payload: object) -> bool:
+    """Fails a sentence that puts a unit on a number the payload records in
+    a different unit (or not at all). Applies only to payloads that carry
+    unit-tagged values (weather, soil, as-applied); others pass untouched.
+    """
+    by_unit = _payload_unit_values(payload)
+    if not by_unit:
+        return True
+    for number, unit in _UNIT_NUMBER_RE.findall(narration):
+        value = _parse_number(number)
+        if value is None:
+            continue
+        allowed = by_unit.get(_unit_family(unit), set())
+        if not any(_close(value, v) for v in allowed):
+            return False
+    return True
+
+
 SEMANTIC_CHECKS = {
     "sign": check_sign_consistency,
     "zone_premise": check_zone_premise,
     "reconciliation": check_reconciliation_claim,
     "attribution": check_attribution_not_causal,
     "unsupported_cause": check_no_unsupported_cause,
+    "units": check_units_consistent,
 }
 
 

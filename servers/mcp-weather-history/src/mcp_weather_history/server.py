@@ -16,7 +16,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
-from farm_core import expectation, pipeline
+from farm_core import field_conditions, pipeline
 from farm_core.audit import AuditLog
 
 mcp = FastMCP("weather-history")
@@ -36,7 +36,14 @@ class SnapshotProvenance(BaseModel):
 class GetSeasonWeatherResult(BaseModel):
     season: int
     total_precip_mm: float
+    farm_average_precip_mm: float
+    pct_vs_farm_average: int
+    num_seasons_compared: int
+    precip_rank_driest: int
+    crop_water_need_mm: float
+    precip_short_of_need_mm: float
     heat_stress_days: int
+    farm_average_heat_stress_days: float
     heat_stress_threshold_c: float
     provenance: SnapshotProvenance
     modeled: dict[str, Any] | None = None
@@ -44,7 +51,13 @@ class GetSeasonWeatherResult(BaseModel):
 
 class GetFieldSoilResult(BaseModel):
     field_name: str
+    asked_name: str
     awc_in: float
+    farm_min_awc_in: float
+    min_field_name: str
+    farm_max_awc_in: float
+    max_field_name: str
+    num_current_fields: int
     provenance: SnapshotProvenance
     modeled: dict[str, Any] | None = None
 
@@ -98,86 +111,55 @@ def _provenance() -> dict[str, Any]:
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
 @_confirmation_guarded
 def get_season_weather(season: int) -> dict:
-    """Season-wide daily weather aggregate: total precipitation and count of
-    days above the heat-stress threshold. Weather is shared across every
-    field active that season, not per-field.
+    """Season-wide weather: total precipitation and days above the
+    heat-stress threshold, set against every season on record (farm
+    average, driest-to-wettest rank, and the crop water need). Weather is
+    shared across every field active that season, not per-field.
 
     Args:
         season: The season year.
 
     Returns:
-        {"total_precip_mm": ..., "heat_stress_days": ..., "provenance": {...}}
-        on success, or {"error": "...", "code": "invalid_input"} for an
-        unrecognized season, or {"code": "not_found"} if that season has no
-        weather coverage.
+        {"total_precip_mm": ..., "farm_average_precip_mm": ...,
+        "heat_stress_days": ..., "provenance": {...}} on success, or
+        {"error": "...", "code": "invalid_input"} for an unrecognized
+        season, or {"code": "not_found"} if that season has no weather
+        coverage.
     """
-    snap = _snapshot()
-    if season not in snap.seasons:
-        return {
-            "error": f"unknown season {season}; known seasons are {snap.seasons}",
-            "code": "invalid_input",
-        }
-
-    row = snap.con.execute(
-        "SELECT SUM(precip_mm), SUM(CASE WHEN temp_max_c > ? THEN 1 ELSE 0 END) "
-        "FROM weather_daily WHERE season = ?",
-        [expectation.HEAT_STRESS_THRESHOLD_C, season],
-    ).fetchone()
-    if row is None or row[0] is None:
-        return {
-            "error": f"no weather coverage for season {season}",
-            "code": "not_found",
-        }
-
+    try:
+        summary = field_conditions.season_weather_summary(_snapshot(), season)
+    except field_conditions.LookupRefused as e:
+        return {"error": e.reason, "code": e.code}
     _audit_log().log("tool_executed", tool="get_season_weather", season=season)
     return GetSeasonWeatherResult(
-        season=season,
-        total_precip_mm=round(float(row[0]), 1),
-        heat_stress_days=int(row[1]),
-        heat_stress_threshold_c=expectation.HEAT_STRESS_THRESHOLD_C,
-        provenance=SnapshotProvenance(**_provenance()),
+        **summary, provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
 @_confirmation_guarded
 def get_field_soil(field_name: str) -> dict:
-    """Static soil available-water-capacity (AWC), inches, for one field.
-    AWC doesn't change season to season, so unlike every other tool in this
-    system there's no season argument here.
+    """Static soil available-water-capacity (AWC), inches, for one field,
+    with the lowest and highest AWC among the farm's current fields. AWC
+    doesn't change season to season, so there's no season argument here.
 
     Args:
         field_name: The field name, current or from any past season -- drift
             is resolved the same way report-export resolves field names.
 
     Returns:
-        {"field_name": "...", "awc_in": ..., "provenance": {...}} on
-        success, or {"error": "...", "code": "not_found"} if the name
-        doesn't resolve to a known field with recorded soil data.
+        {"field_name": "...", "awc_in": ..., "farm_min_awc_in": ...,
+        "provenance": {...}} on success, or {"error": "...", "code":
+        "not_found"} if the name doesn't resolve to a known field with
+        recorded soil data.
     """
-    snap = _snapshot()
-
-    row = snap.con.execute(
-        "SELECT field_name, awc_in FROM soil_awc WHERE field_name = ?", [field_name]
-    ).fetchone()
-    if row is None:
-        canonical_id = snap.canonical_id_for_name(field_name)
-        if canonical_id is not None:
-            lineage = snap.identity.lineages[canonical_id]
-            current_name = lineage.display_name_by_season[max(lineage.active_seasons)]
-            row = snap.con.execute(
-                "SELECT field_name, awc_in FROM soil_awc WHERE field_name = ?", [current_name]
-            ).fetchone()
-
-    if row is None:
-        return {
-            "error": f"{field_name!r} does not resolve to a field with recorded soil data",
-            "code": "not_found",
-        }
-
+    try:
+        summary = field_conditions.field_soil_summary(_snapshot(), field_name)
+    except field_conditions.LookupRefused as e:
+        return {"error": e.reason, "code": e.code}
     _audit_log().log("tool_executed", tool="get_field_soil", field_name=field_name)
     return GetFieldSoilResult(
-        field_name=row[0], awc_in=float(row[1]), provenance=SnapshotProvenance(**_provenance())
+        **summary, provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
 
 

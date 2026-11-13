@@ -54,6 +54,12 @@ DETERMINISTIC_STRING_FIELDS = frozenset(
         "pending_key",
         "exported_to",
         "unavailable_reason",
+        "asked_name",
+        "min_field_name",
+        "max_field_name",
+        "input",
+        "unit",
+        "as_logged_unit",
     }
 )
 
