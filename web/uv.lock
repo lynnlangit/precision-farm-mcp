@@ -422,7 +422,7 @@ wheels = [
 
 [[package]]
 name = "farm-core"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "../core" }
 dependencies = [
     { name = "duckdb" },
@@ -442,7 +442,7 @@ dev = [{ name = "pytest", specifier = ">=8.0" }]
 
 [[package]]
 name = "farm-host"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "../host" }
 dependencies = [
     { name = "farm-core" },
@@ -465,7 +465,7 @@ dev = [
 
 [[package]]
 name = "farm-model"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "../model" }
 dependencies = [
     { name = "ollama" },
@@ -486,7 +486,7 @@ dev = [
 
 [[package]]
 name = "farm-web"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "farm-host" },

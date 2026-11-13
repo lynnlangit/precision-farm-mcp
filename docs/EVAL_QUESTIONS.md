@@ -1,8 +1,8 @@
-# Precision Farm MCP v1 -- Evaluation Questions
+# Precision Farm MCP -- Evaluation Questions
 
-Independent, read-only questions for the CLI, in the style of the precision-medicine-mcp evals: each requires at least one real MCP tool call (several route through reconciliation across two independent sources), and each has a single answer that's verifiable directly against `data/synthetic/ground_truth.json` (seed 42). No question depends on the answer to another. Generated fresh from `ground_truth.json` on every `generator` run -- never hand-edited.
+Independent, read-only questions for the web app or the CLI, in the style of the precision-medicine-mcp evals: each requires at least one real MCP tool call (several route through reconciliation across two independent sources), and each has a single answer that's verifiable directly against `data/synthetic/ground_truth.json` (seed 42). No question depends on the answer to another. Generated fresh from `ground_truth.json` on every `generator` run -- never hand-edited.
 
-Run any of them with:
+Type any of them into the web app (`uv run --project web farm-web`), or run them in the terminal:
 
 ```bash
 uv run --project host farm-cli "<question>"
@@ -72,6 +72,6 @@ uv run --project host farm-cli "<question>"
 - **1-3** exercise the classifier's two failure-mode-vs-normal-case split -- chronic pattern, one-off outlier, and neither.
 - **4-5** exercise the deterministic relative-vs-explicit season resolution -- the model extracts a count or explicit years; a plain Python function resolves either into concrete seasons, never the model's own arithmetic.
 - **6, 10** exercise field-identity resolution at its two extremes: a name that resolves through drift, and a name that correctly resolves to nothing at all.
-- **7-9** exercise all three reconciliation defects Phase 2 was built to catch, including the one (#8) specifically designed so a naive totals-only check would pass it silently.
+- **7-9** exercise all three reconciliation defects, including the one (#8) specifically designed so a naive totals-only check would pass it silently.
 - **11** exercises Phase D's zone-level profitability -- a shortfall that's genuinely invisible at the field level, only visible once yield_monitor_points are gridded into zones.
 

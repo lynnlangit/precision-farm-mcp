@@ -1,6 +1,6 @@
 [project]
 name = "farm-data-gen"
-version = "1.0.0"
+version = "0.1.1"
 description = "Deterministic synthetic data generator for Precision Farm MCP"
 requires-python = ">=3.11"
 dependencies = [

@@ -63,27 +63,26 @@ proven against an injected-prompt defect.
 |---|---|---|
 | Ingest/query confirmation split, `ConfirmationGate` | Built | |
 | 6 MCP servers, `farm-cli`, `farm-ingest` | Built | |
-| Grower web app (`farm-web`, `web/`) | Built | A thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or the evals. Next to each answer it shows the template sentence, the AI's checked sentence (or the blocked attempt and the check it failed), the figures, and the server and tool that answered. Binds to `127.0.0.1` unless `--lan`; no share link, analytics or web fonts. Developers keep `farm-cli` |
-| Template-first narration (`narrate_verified`) | Built | A deterministic lead sentence always comes first. The model may add one sentence, kept only if its numbers are grounded, it doesn't contradict the verdict, and it passes the sign, zone premise, reconciliation, attribution and unsupported-cause checks; one retry names the failed check |
-| Hash-chained, concurrency-safe audit log | Built | Fixed in Phase A — the host process and every spawned server write to it |
-| Provenance (`modeled` subtree), grounding split | Built | Populated by Phase C's weather/soil attribution on `bad_year` verdicts (`report-export.bad_field_or_bad_year`) — everywhere else it's still `null`, honestly, not a gap |
+| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals; shows the template sentence, the checked AI sentence (or the blocked one), figures and source. Local only unless `--lan` |
+| Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if grounded and it passes all checks, with one retry naming the failed check |
+| Hash-chained, concurrency-safe audit log | Built | Host and every server write to it (fixed in Phase A) |
+| Provenance (`modeled` subtree), grounding split | Built | `modeled` is filled by weather attribution on `bad_year` verdicts, `null` elsewhere by design |
 | Untrusted-text handling, payload capping | Built | |
-| Governance metrics harness (`farm-metrics`) | Built | Phase B; gained an `attribution_backtest` section in Phase C |
-| **Diverged:** confirmation resolved inline at query time | — | The original shape assumed a server could ask when unsure. Phase 0's audit found MCP servers are non-interactive stdio subprocesses that can never prompt a human, forcing the ingest/query split instead — a structural fix, not a config option |
-| Weather ingestion, attribution model | Built | Phase C — synthetic daily weather + static soil AWC (`mcp-weather-history`), a *relative* expectation model (`core/expectation.py`) decomposing a shortfall into a weather-driven `season_effect` and an unexplained `residual`, and `QueryIntent.EXPLAIN_SHORTFALL` for "why" questions |
-| Zone-level (sub-field) profitability | Built | Phase D — `core/zone_profitability.py` grids each field into a 2x2 set of zones and computes per-zone profit for the seasons with as-applied coverage; `report-export.zone_profitability` (per field) and `.unprofitable_zones_in_profitable_fields` (farm-wide headline figure) |
-| CI (`.github/workflows/tests.yml`) | Built | Split by design: `generator`+`core` (no Ollama dependency) run on both `ubuntu-latest` and `windows-latest` — this is what backs the Windows-tested claim in `docs/FARMER_GUIDE.md`. `host`+`model` (real, unmocked Ollama calls, same convention as their own test suites) run on `ubuntu-latest` only, nightly and on demand rather than on every PR; driving an unattended Ollama install on a Windows runner is untested from this environment, so it isn't claimed. Pull requests run only the deterministic job, and docs-only changes skip CI. `web` tests are model-free and run locally |
-| Readiness check (`farm-preflight`) | Built | Checks `uv`, Ollama reachability, the model being pulled, synthetic data, and `farm-ingest` having run, then a live end-to-end query — one command instead of five separately confusing failures |
-| Non-interactive ingest (`farm-ingest --auto-approve-synthetic-only`) | Built | Reuses the existing `confirm.auto_approve` (no new confirm function), structurally refused outside `data/synthetic/` — DEF-ALIASTIE is the proof that auto-approval gives a confidently wrong answer on real data, so this must never reach a farmer's own records; `core/tests/test_confirmation_gate.py` allowlists exactly this one reference and fails on any other |
-| Model-unreachable vs. out-of-scope distinction (`ParseFailure.kind`) | Built | `query_parser.py` classifies a dead Ollama or unpulled model separately from a genuinely out-of-scope question; `farm-cli` gives each a different, correctly-targeted message. `narrator.py`'s two `ollama.chat` calls are guarded the same way, falling back to the deterministic template rather than raising |
-| Non-zero exit codes (`farm-cli`, `farm-ingest`) | Built | `answer_question` returns an `AnswerResult(text, ok)` (plus optional structured fields the web app reads: parsed query, server, tool, payload, narration outcome); `main()` exits 1 on any refusal (parse failure, tool refusal) or `ConfirmationRejected`/`SyntheticDataRequired`, not just 0 always |
-| Deterministic "therefore" line (`host/src/farm_host/therefore.py`) | Built | One template-built sentence appended after a successful answer, keyed on payload shape (`verdict`, `zones`, the farm-wide summary, or a ranking) — never model-generated, and omitted (not invented) for shapes with no verdict to restate (reconciliations, `resolve_field_name`, `no_data`) |
-| Model-free query path (`farm-cli --intent`) | Built | Bypasses `parse_question` and `narrate_verified` entirely — no `ollama.chat` call anywhere in this path (`test_structured_path_never_calls_ollama`) — reusing the same `_INTENT_TO_SERVER`/`_INTENT_TO_TOOL`/`_tool_args` routing as the natural-language path; `--list-intents` prints every intent and its required flags from `query_schema.REQUIRED_FIELDS` |
-| **Diverged:** zone cost is field-uniform, not spatially resolved | — | The Phase D spec called for joining yield points to as-applied events spatially. Checked against the actual generated data: `as_applied_events` has exactly 5 rows per field/season (one per product), each a single decorative lat/lon with an already field-wide rate — nothing to join per zone. Cost genuinely has no spatial resolution in this data model (ledger rows are `cost_basis: "per_acre"`, uniform by construction), so zone cost reuses the field's own authoritative `total_cost/acres` uniformly; only yield is actually zone-resolved, from `yield_monitor_points`' hundreds of real per-point readings |
-| Remote sensing | Deferred | No phase yet — out of v1 scope by design |
-| Agronomy reference data (cultivar calibration, etc.) | Deferred | `core/expectation.py` is deliberately a *relative* expectation model, which turned out not to need this after all |
-| Prescriptive crop model / recommendations | Deferred | No phase yet — explicitly out of v1 scope (see the README) |
-| Live weather / any sync boundary | Deferred | See known future tension below |
+| Governance metrics (`farm-metrics`) | Built | Includes an `attribution_backtest` section |
+| Weather ingestion, attribution model | Built | Synthetic weather + soil AWC (`weather-history`); `core/expectation.py` splits a shortfall into `season_effect` and `residual`; `EXPLAIN_SHORTFALL` intent |
+| Zone-level (sub-field) profitability | Built | `core/zone_profitability.py`, 2x2 zones per field, as-applied seasons only |
+| Readiness check (`farm-preflight`) | Built | Checks uv, Ollama, model, data and ingest, then runs a live query |
+| Non-interactive ingest (`--auto-approve-synthetic-only`) | Built | Refused outside `data/synthetic/`; DEF-ALIASTIE shows why it must never touch real records |
+| Model-free query path (`farm-cli --intent`) | Built | No `ollama.chat` call anywhere on this path (`test_structured_path_never_calls_ollama`) |
+| Deterministic "therefore" line (`therefore.py`) | Built | Template-built, omitted where there is no verdict to restate |
+| Clear failures (`ParseFailure.kind`, exit codes) | Built | A dead model and an out-of-scope question get different messages; CLIs exit 1 on any refusal |
+| CI (`.github/workflows/tests.yml`) | Built | PRs: `generator`+`core` on Ubuntu and Windows. Nightly/manual: `host`+`model` with real Ollama on Ubuntu. Docs-only changes skip CI; `web` and the docs test run locally |
+| **Diverged:** confirmation at query time | — | MCP servers can't prompt a human, so confirmation moved to ingest |
+| **Diverged:** zone cost is field-uniform | — | The data has no per-zone cost (ledger is per acre), so only yield is zone-resolved |
+| Remote sensing | Deferred | Out of scope by design |
+| Agronomy reference data | Deferred | Not needed by the relative expectation model |
+| Prescriptive crop model / recommendations | Deferred | Out of scope (see README) |
+| Live weather / any sync boundary | Deferred | See known future tensions |
 
 ## Roadmap
 

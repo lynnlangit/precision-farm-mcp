@@ -1,6 +1,6 @@
 [project]
 name = "farm-host"
-version = "0.1.0"
+version = "0.1.1"
 description = "Precision Farm MCP: host application (MCP client/router, query planner)"
 requires-python = ">=3.11"
 dependencies = [

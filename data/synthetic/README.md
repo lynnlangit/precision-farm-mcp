@@ -5,7 +5,7 @@
 - Seed: `42`
 - Root fields: 12
 - Seasons: 2016-2025 (10 seasons)
-- Generator version: 1.0.0
+- Generator version: 0.1.1
 
 Regenerate identically with:
 

@@ -1,6 +1,6 @@
 # Precision Farm MCP
 
-**Version 0.1.0** (`uv run --project host farm-cli --version`)
+**Version 0.1.1** (`uv run --project host farm-cli --version`)
 
 A local-first, offline decision-support tool for one farmer's laptop. Ask a
 plain-English question about your own farm's ten-season record — costs,

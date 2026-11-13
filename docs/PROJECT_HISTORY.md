@@ -1,11 +1,9 @@
 # Precision Farm MCP — Project History
 
-**All phases (A, B, C, and D) are complete** (see status below); no phase
-is currently active or queued. This file is a historical record, not a
-live plan — it preserves the full B/C/D spec verbatim from the original
-design review, plus the full status history and post-phase work, so a
-future session can understand why things are built the way they are
-without re-deriving context.
+Phases A–D are complete, and the v0.1.x work below (eval fixes and the
+grower web app) is merged. This file is a historical record, not a live
+plan: it keeps the status history and the original B/C/D spec (collapsed
+below) so a future session can see why things are built the way they are.
 
 ## Status as of this writing
 
@@ -240,6 +238,28 @@ before the day, not during it:
 - 193 tests green across 4 packages (generator 16, core 72 + 1 skipped,
   host 81, model 24).
 
+## v0.1.0–v0.1.1 (November 2026): eval fixes and the grower web app
+
+One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
+
+| PR | Change |
+|---|---|
+| #2 (P1) | Fixed the deterministic answer text for evals 3, 4, 5 and 7 |
+| #3 (P2) | Cost questions route correctly; numeric field names are refused |
+| #4 (P0) | Generator rounds prices and $/ac first, so the answer key matches the raw files |
+| #5 (P3) | Semantic narration checks: sign, zone premise, reconciliation, attribution |
+| #6 (P3b) | Template-first narration: a verified sentence always leads |
+| #7 (P3c) | Unsupported-cause check rejects invented causes |
+| #8 (P4) | `farm-cli` and server startup cleaned up for live demos |
+| #9 | CI: deterministic jobs on PRs, real-model suite nightly and on demand |
+| #10 (P5) | Tests for all 11 eval questions, opt-in `eval_nl` runner, single version 0.1.0, tag `v0.1.0` |
+| #11 | Grower web app (`farm-web`, Gradio), local only unless `--lan` |
+| #12 | Unsupported-cause check matches word forms (planted, flooded) |
+| #13 | README leads with the web app; `docs/VERIFICATION.md` added |
+| #14 (v0.1.1) | Docs reviewed against the code; all packages, generator included, on one version |
+
+About 300 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
+
 ---
 
 ## Working agreement (unchanged, applies to B/C/D)
@@ -266,6 +286,9 @@ before the day, not during it:
 - The Phase B metrics command runs end to end and emits a report.
 
 ---
+
+<details>
+<summary><strong>Phase B spec (original)</strong></summary>
 
 ## PHASE B — Metrics and one canonical architecture document
 
@@ -312,7 +335,12 @@ the README mermaid diagram is the sole architecture diagram.
 
 **Stop. Wait for approval before Phase C.**
 
+</details>
+
 ---
+
+<details>
+<summary><strong>Phase C spec (original)</strong></summary>
 
 ## PHASE C — The world model, aimed backwards
 
@@ -397,7 +425,12 @@ on it.
 
 **Stop. Wait for approval before Phase D.**
 
+</details>
+
 ---
+
+<details>
+<summary><strong>Phase D spec (original)</strong></summary>
 
 ## PHASE D — Zone-level profitability
 
@@ -425,16 +458,14 @@ This is derived arithmetic, not modeled, and should be tagged accordingly
 Deliberately last: highest farmer-perceived value, lowest technical risk,
 no trust-contract change, and needs nothing from B or C.
 
+</details>
+
 ---
 
 ## Where to resume
 
-All planned phases (A, B, C, D) are complete. There is no next phase
-queued — the roadmap table above lists what's still deferred
-(zone-level profitability's own remaining edges aside, mainly live
-weather/sync boundary, remote sensing, a prescriptive crop model, and
-absolute agronomy calibration), none of it scheduled. A future session
-picking any of these back up should read this file in full first, then
-follow the same discipline every phase here did: plan first, `ExitPlan
-Mode` for approval, implement, verify, stop and report before scope
-creeps into the next thing.
+Nothing is queued. Deferred work (live weather and a sync boundary, remote
+sensing, a prescriptive crop model, absolute agronomy calibration) is in
+the [roadmap in ARCHITECTURE.md](ARCHITECTURE.md#roadmap). Before picking
+any of it up, read this file first, then plan, get approval, implement,
+verify, and stop to report before the scope grows.

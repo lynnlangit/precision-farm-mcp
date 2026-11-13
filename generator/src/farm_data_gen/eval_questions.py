@@ -158,9 +158,9 @@ def render_eval_questions(ground_truth: dict) -> str:
     ]
 
     lines = [
-        "# Precision Farm MCP v1 -- Evaluation Questions",
+        "# Precision Farm MCP -- Evaluation Questions",
         "",
-        "Independent, read-only questions for the CLI, in the style of the "
+        "Independent, read-only questions for the web app or the CLI, in the style of the "
         "precision-medicine-mcp evals: each requires at least one real MCP tool call "
         "(several route through reconciliation across two independent sources), and "
         "each has a single answer that's verifiable directly against "
@@ -168,7 +168,8 @@ def render_eval_questions(ground_truth: dict) -> str:
         "question depends on the answer to another. Generated fresh from "
         "`ground_truth.json` on every `generator` run -- never hand-edited.",
         "",
-        "Run any of them with:",
+        "Type any of them into the web app (`uv run --project web farm-web`), "
+        "or run them in the terminal:",
         "",
         "```bash",
         'uv run --project host farm-cli "<question>"',
@@ -313,7 +314,7 @@ def render_eval_questions(ground_truth: dict) -> str:
         "into concrete seasons, never the model's own arithmetic.",
         "- **6, 10** exercise field-identity resolution at its two extremes: a name that "
         "resolves through drift, and a name that correctly resolves to nothing at all.",
-        "- **7-9** exercise all three reconciliation defects Phase 2 was built to catch, "
+        "- **7-9** exercise all three reconciliation defects, "
         "including the one (#8) specifically designed so a naive totals-only check would "
         "pass it silently.",
     ]

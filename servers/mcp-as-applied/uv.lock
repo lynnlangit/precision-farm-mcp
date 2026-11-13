@@ -405,7 +405,7 @@ wheels = [
 
 [[package]]
 name = "farm-core"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "../../core" }
 dependencies = [
     { name = "duckdb" },
@@ -736,7 +736,7 @@ wheels = [
 
 [[package]]
 name = "mcp-as-applied"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "duckdb" },
