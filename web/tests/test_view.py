@@ -8,9 +8,7 @@ from farm_model.narrator import NarrationOutcome
 from farm_model.query_schema import QueryIntent, QueryObject
 from farm_model.verification import SEMANTIC_CHECKS, GroundingResult
 
-from farm_model.query_schema import FollowUpContext
-
-from farm_web.view import CHECKS, build_view, context_html, empty_view, format_value
+from farm_web.view import CHECKS, build_view, empty_view, format_value
 
 EAST_80 = {
     "canonical_id": "resolved_0002",
@@ -101,18 +99,47 @@ def test_shown_sentence_lists_all_checks_as_passed():
     assert view.checks_html.count('class="pass"') == len(CHECKS)
 
 
-def test_rejected_sentence_is_shown_struck_with_failed_check():
+def test_withheld_sentence_is_flagged_in_the_answer_and_its_failed_check_is_open():
     view = build_view(
         _result(
             narration=_outcome(
-                failed=[("unsupported_cause",)], rejected=["It lost money because of hail."]
+                failed=[("unsupported_cause",), ("unsupported_cause", "verdict")],
+                rejected=["It lost money because of hail.", "Weather caused it."],
             )
         )
     )
-    assert "Added by the AI" not in view.answer_html  # never shown as part of the answer
-    assert "failed a check" in view.checks_html
+    # The answer card says a sentence was withheld, but never shows it.
+    assert "Added by the AI" not in view.answer_html
+    assert "AI sentence withheld" in view.answer_html
+    assert "hail" not in view.answer_html
+    # The checks panel shows both tries, open, each with the full checklist.
+    assert "withheld: it failed a check on all 2 tries" in view.checks_html
+    assert view.checks_html.count('<details class="pf-rejected" open>') == 2
     assert "It lost money because of hail." in view.checks_html
+    assert view.checks_html.count('class="fail"') == 3
+    assert view.checks_html.count('class="pass"') == 2 * len(CHECKS) - 3
     assert "name a cause your records don" in view.checks_html
+
+
+def test_rejected_try_before_a_passing_one_stays_folded():
+    view = build_view(
+        _result(
+            narration=_outcome(
+                context="Weather explains only part of it.",
+                failed=[("unsupported_cause",)],
+                rejected=["It lost money because of hail."],
+            )
+        )
+    )
+    assert "AI sentence withheld" not in view.answer_html
+    assert "passed all 8 checks on try 2" in view.checks_html
+    assert '<details class="pf-rejected">' in view.checks_html
+
+
+def test_nothing_to_add_is_not_called_withheld():
+    view = build_view(_result())
+    assert "AI sentence withheld" not in view.answer_html
+    assert "nothing to add" in view.checks_html
 
 
 def test_therefore_line_is_sentence_cased_without_prefix():
@@ -194,16 +221,6 @@ def test_unresolved_follow_up_refusal_has_a_plain_title():
     )
     assert "wasn&#x27;t sure which field or season you meant" in view.answer_html
     assert "pf-resolved" not in view.answer_html
-
-
-def test_context_hint_names_what_follow_ups_carry():
-    assert context_html(None) == ""
-    html = context_html(
-        FollowUpContext(field_name="<b>Sheyenne Bottom</b>", season=2022,
-                        intent=QueryIntent.COST_RECONCILIATION)
-    )
-    assert "&lt;b&gt;Sheyenne Bottom&lt;/b&gt; \u00b7 2022 \u00b7 ledger costs vs as-applied" in html
-    assert "Clear" in html
 
 
 NITROGEN = {

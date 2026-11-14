@@ -1,4 +1,4 @@
-"""The 15 evaluation questions from docs/EVAL_QUESTIONS.md, asked in plain
+"""The 16 evaluation questions from docs/EVAL_QUESTIONS.md, asked in plain
 English through the real path: Gemma parses the question, the host routes it
 to an MCP tool, and the narrator answers. test_eval_questions.py calls the
 tools directly, so it can't catch a parser misroute (eval 9 once went
@@ -13,6 +13,11 @@ For each question this checks, from the audit log: (i) the parsed intent and
 the server/tool it routed to, (ii) the tool's arguments (field, season or
 seasons), and (iii) the answer -- its verified lead figures, its Therefore
 line, or its refusal code.
+
+Eval 16 also checks the AI sentence itself: it must be written and then
+withheld (the web app's "When the AI is stopped" example). Just that one:
+
+    uv run --project host pytest -m eval_nl host/tests -k withheld
 """
 
 from __future__ import annotations
@@ -132,6 +137,11 @@ EVALS = [
          {"field_name": "Section Corner"},
          contains=("2023 corn 160.6", "from 141.3 (2025) to 160.6 (2023)",
                    "no as-applied log before 2022")),
+    Eval(16, "What caused East 80's bad year?",
+         "explain_shortfall", "report-export", "bad_field_or_bad_year",
+         {"field_name": "East 80"},
+         contains=("bad year, not a bad field", "2020", "$68.19/ac"),
+         therefore="the loss was isolated to 2020"),
 ]
 
 
@@ -199,6 +209,37 @@ async def test_eval_question_end_to_end(ev: Eval, tmp_path):
     # The server side of the call landed in the same audit file (P5 --audit-log fix).
     assert "tool_executed" in by_event
     assert AuditLog(audit_path).verify() is True
+
+
+# --- Eval 16: the AI sentence is written, then withheld ----------------------
+#
+# The question asks for a cause; the records don't hold one (the 2020 loss
+# was hail, which no record names). Whatever cause the model offers fails the
+# "doesn't name a cause your records don't show" check, so the grower sees
+# the verified answer alone, plus the blocked sentence and the failed check.
+# The narrator samples with a fixed seed, so once this passes on a machine it
+# keeps passing there -- the web app's example is a reliable demo.
+
+
+@pytest.mark.parametrize("farm", ["farm1", "farm2"])
+async def test_withheld_sentence_demo(farm: str, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    env = {"FARM_AUDIT_LOG": str(audit_path), **FARMS[farm].server_env()}
+    result = await answer_question(
+        "What caused East 80's bad year?", AuditLog(audit_path), env_overrides=env
+    )
+    assert result.ok, result.text
+    n = result.narration
+    assert n is not None
+    # A sentence was written and blocked -- not "nothing to add".
+    assert n.rejected_texts, "the model added nothing, so there was nothing to withhold"
+    assert n.context is None, f"a sentence passed every check: {n.context!r}"
+    assert result.text.startswith(n.lead)  # the grower sees the verified answer alone
+    failed = {name for attempt in n.failed_checks for name in attempt}
+    assert failed, n.failed_checks
+    print(f"\n{farm}: withheld after {len(n.rejected_texts)} tries; failed {sorted(failed)}")
+    for text in n.rejected_texts:
+        print(f"  blocked: {text}")
 
 
 # --- Multi-turn evals: follow-up questions (grower web app) ---------------

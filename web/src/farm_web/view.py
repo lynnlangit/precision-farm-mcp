@@ -15,8 +15,7 @@ from html import escape
 
 from farm_host.cli import AnswerResult
 from farm_host.farms import Farm
-from farm_host.followups import TOPIC_LABELS, resolved_label
-from farm_model.query_schema import FollowUpContext
+from farm_host.followups import resolved_label
 
 # The checks a model-written sentence must pass before a grower sees it, in
 # the order the narrator runs them. Labels are plain language on purpose:
@@ -339,6 +338,15 @@ def _answer_html(result: AnswerResult) -> str:
             f"<p>{escape(n.context)}</p>",
             "</div>",
         ]
+    elif n.rejected_texts:
+        # The sentence itself is never shown here: only that one was blocked.
+        parts += [
+            '<div class="pf-line pf-line-withheld">',
+            '<span class="pf-tag pf-tag-withheld">AI sentence withheld</span>',
+            "<p>The AI wrote a sentence, but it failed a check, so it isn't part of your "
+            "answer. <em>How we checked it</em> shows what it wrote and why it was stopped.</p>",
+            "</div>",
+        ]
     if result.therefore:
         parts += [
             '<div class="pf-line pf-line-therefore">',
@@ -348,6 +356,25 @@ def _answer_html(result: AnswerResult) -> str:
         ]
     parts.append("</div>")
     return "".join(parts)
+
+
+def _check_list(failed: tuple[str, ...] | list[str]) -> str:
+    """Every check in order, marked passed or failed; any failed check the
+    labels don't know yet is listed too, never dropped."""
+    failed = tuple(failed)
+    items = [
+        f'<li class="{"fail" if name in failed else "pass"}">'
+        f'<span class="pf-mark" aria-hidden="true">{"&#10007;" if name in failed else "&#10003;"}'
+        f"</span>{escape(label)}</li>"
+        for name, label in CHECKS
+    ]
+    items += [
+        f'<li class="fail"><span class="pf-mark" aria-hidden="true">&#10007;</span>'
+        f"{escape(name)}</li>"
+        for name in failed
+        if name not in _CHECK_LABELS
+    ]
+    return '<ul class="pf-checks">' + "".join(items) + "</ul>"
 
 
 def _checks_html(result: AnswerResult) -> str:
@@ -369,17 +396,13 @@ def _checks_html(result: AnswerResult) -> str:
             + (f" on try {len(n.rejected_texts) + 1}" if n.rejected_texts else "")
             + ", so it's shown.</p>"
         )
-        out.append('<ul class="pf-checks">')
-        out += [
-            f'<li class="pass"><span class="pf-mark" aria-hidden="true">&#10003;</span>'
-            f"{escape(label)}</li>"
-            for _, label in CHECKS
-        ]
-        out.append("</ul>")
+        out.append(_check_list(()))
     elif n.rejected_texts:
+        tries = len(n.rejected_texts)
         out.append(
-            '<p class="pf-verdict pf-warn">The AI tried to add a sentence, but it failed a '
-            "check, so you only see the answer calculated from your records.</p>"
+            '<p class="pf-verdict pf-warn">The AI\'s sentence was withheld: it failed '
+            + ("a check" if tries == 1 else f"a check on all {tries} tries")
+            + ", so you only see the answer calculated from your records.</p>"
         )
     else:
         out.append(
@@ -387,16 +410,15 @@ def _checks_html(result: AnswerResult) -> str:
             "answer calculated from your records.</p>"
         )
 
+    # When the sentence was withheld, every rejected attempt is open, with the
+    # full checklist, so the failed check is visible without a click. When a
+    # later try passed, the rejected ones stay folded away.
+    withheld = n.context is None
     for i, (failed, text) in enumerate(zip(n.failed_checks, n.rejected_texts), start=1):
-        failed_labels = "".join(
-            f'<li class="fail"><span class="pf-mark" aria-hidden="true">&#10007;</span>'
-            f"{escape(_CHECK_LABELS.get(name, name))}</li>"
-            for name in failed
-        )
         out.append(
-            '<details class="pf-rejected">'
-            f"<summary>Rejected attempt {i}: what the AI wrote, and why it was blocked</summary>"
-            f'<blockquote>{escape(text)}</blockquote><ul class="pf-checks">{failed_labels}</ul>'
+            f'<details class="pf-rejected"{" open" if withheld else ""}>'
+            f"<summary>Try {i}: what the AI wrote, and why it was blocked</summary>"
+            f"<blockquote>{escape(text)}</blockquote>{_check_list(failed)}"
             "</details>"
         )
     return "".join(out)
@@ -473,20 +495,6 @@ def _source_html(result: AnswerResult) -> str:
         f'<dl class="pf-figures pf-source">{body}</dl>'
         '<p class="pf-muted">Nothing left this computer. Every question is also written to '
         "<code>data/audit.jsonl</code>.</p>"
-    )
-
-
-def context_html(context: FollowUpContext | None) -> str:
-    """The hint under the question box: what a follow-up will carry over."""
-    if context is None or context.is_empty():
-        return ""
-    parts = [context.field_name, str(context.season) if context.season else None]
-    if context.intent is not None:
-        parts.append(TOPIC_LABELS.get(context.intent))
-    carried = " \u00b7 ".join(escape(p) for p in parts if p)
-    return (
-        f'<p class="pf-context">Follow-up questions build on: <strong>{carried}</strong>. '
-        "Name a different field or year to change it, or press Clear to start over.</p>"
     )
 
 

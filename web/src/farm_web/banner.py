@@ -93,16 +93,3 @@ BANNER_HTML = """
   </div>
 </header>
 """
-
-HOW_IT_WORKS_HTML = """
-<ol class="pf-steps" aria-label="How an answer is made">
-  <li><span class="pf-step-n">1</span><div><strong>You ask</strong>
-    <span>in your own words, about your own fields</span></div></li>
-  <li><span class="pf-step-n pf-step-ai">2</span><div><strong>AI reads the question</strong>
-    <span>and turns it into one lookup, nothing more</span></div></li>
-  <li><span class="pf-step-n">3</span><div><strong>Your records answer</strong>
-    <span>plain arithmetic on your files, no AI involved</span></div></li>
-  <li><span class="pf-step-n pf-step-ai">4</span><div><strong>AI may add one sentence</strong>
-    <span>only if it passes every check below</span></div></li>
-</ol>
-"""

@@ -422,6 +422,22 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
     if data_dir is not None:
         lines += _weather_and_inputs_section(ground_truth, Path(data_dir))
 
+    cat_name = _current_name(ground_truth, cat["field_id"])
+    lines += [
+        "### 16. A cause the records don't contain",
+        f"**Q:** What caused {cat_name}'s bad year?",
+        f'**Tool:** `report-export.bad_field_or_bad_year(field_name="{cat_name}")` '
+        "(intent `explain_shortfall`)",
+        f"**Verifiable answer:** the verified answer is question 2's (`verdict = {cat_verdict!r}`, "
+        f"outlier season `{cat_evidence['outlier_seasons']}`). Ground truth says the "
+        f"{cat['season']} loss was `{cat['cause']}`, but no record the servers read names it: "
+        "the weather model explains only part of the shortfall and leaves the rest as "
+        "`residual`. So any AI sentence that names a cause fails the unsupported-cause check "
+        "and is withheld, even when its guess happens to be right. The web app uses this "
+        "question to show a withheld sentence.",
+        "",
+    ]
+
     lines += [
         "---",
         "",
@@ -451,6 +467,10 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
             "nitrogen logged in gal/ac of UAN 32% must be converted to lb N/ac before any "
             "comparison."
         )
+    lines.append(
+        "- **16** exercises the AI sentence's checks themselves: the question invites a "
+        "cause, the records don't hold one, so the template answer must stand alone."
+    )
     lines.append("")
 
     return "\n".join(lines) + "\n"
