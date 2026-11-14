@@ -466,6 +466,6 @@ no trust-contract change, and needs nothing from B or C.
 
 Nothing is queued. Deferred work (live weather and a sync boundary, remote
 sensing, a prescriptive crop model, absolute agronomy calibration) is in
-the [roadmap in ARCHITECTURE.md](ARCHITECTURE.md#roadmap). Before picking
+the Deferred rows of [ARCHITECTURE.md's component table](ARCHITECTURE.md#component-status). Before picking
 any of it up, read this file first, then plan, get approval, implement,
 verify, and stop to report before the scope grows.
