@@ -38,13 +38,12 @@ from farm_host.preflight_cli import (  # noqa: E402
 )
 
 from . import __version__  # noqa: E402
-from .banner import BANNER_HTML, HOW_IT_WORKS_HTML  # noqa: E402
+from .banner import BANNER_HTML  # noqa: E402
 from farm_model.query_schema import FollowUpContext  # noqa: E402
 
 from .view import (  # noqa: E402
     AnswerView,
     build_view,
-    context_html,
     empty_view,
     farm_note_html,
     with_farm,
@@ -91,6 +90,14 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "What did I put on Coulee Field in 2023?",
             "Did I put the same nitrogen on Section Corner every year?",
         ),
+    ),
+    (
+        # Eval 16: asks for a cause the records don't hold (East 80's 2020
+        # loss was hail, but no record says so). The AI's sentence names a
+        # cause, fails the "doesn't name a cause" check, and is withheld --
+        # so growers see a blocked sentence, not only ones that pass.
+        "When the AI is stopped",
+        ("What caused East 80's bad year?",),
     ),
 )
 
@@ -226,7 +233,6 @@ def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
             return (
                 *_panels(empty_view()),
                 _context_dump(context),
-                context_html(context),
                 *_followup_updates([]),
             )
         try:
@@ -252,7 +258,6 @@ def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
         return (
             *_panels(with_farm(build_view(result), farm)),
             _context_dump(new_context),
-            context_html(new_context),
             *_followup_updates(suggest_followups(result)),
         )
 
@@ -270,7 +275,6 @@ def build_app(
         gr.HTML(BANNER_HTML)
         top_status, bottom_html = status_panels()
         status_top = gr.HTML(top_status)
-        gr.HTML(HOW_IT_WORKS_HTML)
 
         with gr.Row(equal_height=False):
             with gr.Column(scale=5, min_width=320):
@@ -295,7 +299,6 @@ def build_app(
                 with gr.Row():
                     ask_btn = gr.Button("Ask my records", variant="primary", scale=3)
                     clear_btn = gr.Button("Clear", variant="secondary", scale=1)
-                context_hint = gr.HTML("")
                 example_buttons: list[tuple[gr.Button, str]] = []
                 gr.HTML('<p class="pf-eyebrow" style="margin-top:14px">Example questions</p>')
                 for heading, qs in EXAMPLES:
@@ -311,7 +314,8 @@ def build_app(
                 followup_heading = gr.HTML(
                     '<p class="pf-eyebrow" style="margin-top:12px">Ask next</p>'
                     '<p class="pf-muted">Each one is a full question, looked up and checked '
-                    "from scratch.</p>",
+                    "from scratch. Questions that leave out the field or year use the ones "
+                    "shown above; press Clear to start over.</p>",
                     visible=False,
                 )
                 with gr.Column(elem_classes="pf-followups-group"):
@@ -337,7 +341,7 @@ def build_app(
         # question type. Per browser tab; Clear resets it.
         context_state = gr.State(None)
         panels = [answer, checks, figures, source]
-        outputs = [*panels, context_state, context_hint, followup_heading, *followup_buttons]
+        outputs = [*panels, context_state, followup_heading, *followup_buttons]
         inputs = [question, context_state, farm_picker]
         ask_btn.click(ask, inputs=inputs, outputs=outputs)
 
@@ -345,19 +349,19 @@ def build_app(
             # Start the other farm's servers now, and drop the follow-up
             # context: it described an answer from the other farm's records.
             pools.warm(_farm_key(farm_key))
-            return farm_note_html(FARMS[_farm_key(farm_key)]), None, ""
+            return farm_note_html(FARMS[_farm_key(farm_key)]), None
 
         # Then ask the same question again, so the two farms' answers can be
         # compared directly; with an empty box, just reset the panels.
         farm_picker.change(
             switch_farm,
             inputs=[farm_picker, question],
-            outputs=[farm_note, context_state, context_hint],
+            outputs=[farm_note, context_state],
             queue=False,
         ).then(ask, inputs=inputs, outputs=outputs)
         question.submit(ask, inputs=inputs, outputs=outputs)
         clear_btn.click(
-            lambda: ("", *_panels(empty_view()), None, "", *_followup_updates([])),
+            lambda: ("", *_panels(empty_view()), None, *_followup_updates([])),
             outputs=[question, *outputs],
             queue=False,
         )

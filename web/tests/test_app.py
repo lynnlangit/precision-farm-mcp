@@ -18,7 +18,7 @@ def test_localhost_only_by_default():
 
 
 def test_examples_are_the_eval_questions():
-    assert sum(len(qs) for _, qs in EXAMPLES) == 14  # eval 10 is a refusal, left out
+    assert sum(len(qs) for _, qs in EXAMPLES) == 15  # eval 10 is a refusal, left out
     from pathlib import Path
 
     doc = (Path(__file__).resolve().parents[2] / "docs" / "EVAL_QUESTIONS.md").read_text()
@@ -70,10 +70,11 @@ def test_ask_carries_context_and_offers_follow_ups(monkeypatch, tmp_path):
     ask = make_ask(tmp_path / "audit.jsonl", _fake_pools(tmp_path))
 
     out = ask("Was east 80 a bad field or just a bad year?", None)
-    answer_html, _, _, _, state, hint, heading, *buttons = out
+    answer_html, _, _, _, state, heading, *buttons = out
     assert seen == [None]  # a first question has no context
     assert state == {"field_name": "East 80", "season": None, "intent": "bad_field_or_bad_year"}
-    assert "East 80" in hint and "Showing:" in answer_html
+    # What a follow-up builds on is shown once, in the answer card's Showing line.
+    assert "Showing:" in answer_html and "East 80" in answer_html
     assert heading["visible"] is True
     assert buttons[0]["value"] == "Why was East 80 a bad year?"
     assert all(b["visible"] for b in buttons)
@@ -82,7 +83,7 @@ def test_ask_carries_context_and_offers_follow_ups(monkeypatch, tmp_path):
     out = ask("nonsense", state)
     assert seen[-1].field_name == "East 80"
     assert out[4] == state
-    assert out[6]["visible"] is False and not any(b["visible"] for b in out[7:])
+    assert out[5]["visible"] is False and not any(b["visible"] for b in out[6:])
 
 
 def _check(name, ok):
@@ -150,3 +151,17 @@ def test_status_checks_both_farms(monkeypatch):
     html = web_app.status_html()
     assert "Farm 1 data generated" in html and "Farm 2 data generated" in html
     assert "--clean --out data/synthetic-clean" in html  # the fix names Farm 1's command
+
+
+def test_how_it_works_strip_is_gone(tmp_path):
+    # Removed to declutter the page: the answer card and "How we checked it"
+    # already show which part came from the records and which from the AI.
+    import farm_web.banner as banner
+
+    assert not hasattr(banner, "HOW_IT_WORKS_HTML")
+    assert "pf-steps" not in build_app(tmp_path / "audit.jsonl").config.__repr__()
+
+
+def test_one_example_shows_a_withheld_sentence():
+    groups = dict(EXAMPLES)
+    assert groups["When the AI is stopped"] == ("What caused East 80's bad year?",)

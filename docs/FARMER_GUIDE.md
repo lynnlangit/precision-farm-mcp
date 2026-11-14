@@ -198,7 +198,14 @@ plain arithmetic on your files. **Added by the AI, then checked** is the
 one sentence the AI wrote, shown only because it passed every check.
 Below the answer you can see those checks, the exact figures the answer
 came from, and which records were read. If the AI's sentence failed a
-check, you'll see what it tried to say and why it was blocked.
+check, the answer card says **AI sentence withheld**, and below it you'll
+see what the AI tried to say and which check stopped it.
+
+To see that happen, open **When the AI is stopped** under the example
+questions and tap "What caused East 80's bad year?". Your records show
+that 2020 was a bad year, but not why, so any cause the AI offers is
+blocked, even a good guess. The answer you get is the part calculated from
+your records, nothing more.
 
 ![Below the answer: the checks, the figures and where they came from](images/farm-web-checks.png)
 

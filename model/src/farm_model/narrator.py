@@ -22,6 +22,13 @@ from .verification import (
 
 DEFAULT_MODEL = "gemma3:4b"
 
+# A fixed sampling seed: the same question on the same data gets the same
+# model sentence every time on a given machine and model version, so a demo
+# shows what the evals saw (including eval 16's withheld sentence) rather
+# than whatever this run's sampling happened to produce.
+NARRATION_SEED = 42
+_NARRATION_OPTIONS = {"temperature": 0.2, "seed": NARRATION_SEED}
+
 _NARRATION_PROMPT_TEMPLATE = """The farmer asked: "{question}"
 
 Here is the exact computed answer, already produced by deterministic code. \
@@ -269,7 +276,7 @@ def narrate(
     response = ollama.chat(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        options={"temperature": 0.2},
+        options=dict(_NARRATION_OPTIONS),
     )
     return response.message.content or ""
 
@@ -712,7 +719,7 @@ def narrate_verified(
             response = ollama.chat(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                options={"temperature": 0.2},
+                options=dict(_NARRATION_OPTIONS),
             )
         except (ConnectionError, ollama.ResponseError):
             break  # a dead connection won't recover on retry -- template alone

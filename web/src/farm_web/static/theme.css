@@ -115,26 +115,7 @@ footer { opacity: 0.6; }
 .pf-chip.bad::before { background: var(--pf-loss); }
 .pf-fixes { margin: 8px 0 0; padding-left: 18px; font-size: 0.86rem; color: var(--pf-ink-soft); }
 
-/* ---------- how it works ---------- */
-.pf-steps {
-  list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
-}
-.pf-steps li {
-  display: flex; gap: 10px; align-items: flex-start;
-  background: var(--pf-card); border: 1px solid var(--pf-card-edge);
-  border-radius: 12px; padding: 10px 12px; font-size: 0.86rem; line-height: 1.35;
-}
-.pf-steps strong { display: block; font-size: 0.92rem; }
-.pf-steps span:not(.pf-step-n) { color: var(--pf-ink-soft); }
-.pf-step-n {
-  flex: none; width: 26px; height: 26px; border-radius: 50%;
-  display: grid; place-items: center; font-weight: 700; font-size: 0.85rem;
-  background: var(--pf-verified-bg); color: var(--pf-verified);
-}
-.pf-step-n.pf-step-ai { background: var(--pf-model-bg); color: var(--pf-model); }
 @media (max-width: 760px) {
-  .pf-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pf-banner-text { padding: 22px 20px 90px; }
 }
 
@@ -185,8 +166,6 @@ button.pf-example:hover { border-color: var(--pf-wheat) !important; background: 
 }
 .pf-resolved span { font-weight: 700; color: var(--pf-wheat-deep); margin-right: 4px; }
 .dark .pf-resolved span { color: var(--pf-wheat); }
-.pf-context { margin: 6px 0 0; font-size: 0.88rem; color: var(--pf-ink-soft); }
-.pf-context strong { color: var(--pf-ink); font-weight: 600; }
 .pf-followups-group { gap: 6px !important; margin-top: 10px; }
 .pf-answer-refused .pf-eyebrow { color: var(--pf-loss); }
 .pf-line { padding: 10px 0 10px 14px; border-left: 3px solid var(--pf-verified); margin: 8px 0; }
@@ -276,3 +255,8 @@ code { font-size: 0.85em; }
   background: var(--pf-verified-bg); border: 1px solid var(--pf-verified);
 }
 .pf-farm-badge.pf-farm-farm2 { background: var(--pf-warn-bg); border-color: var(--pf-warn); }
+
+/* ---------- a withheld AI sentence ---------- */
+.pf-line-withheld { border-left-color: var(--pf-warn); }
+.pf-line-withheld p { color: var(--pf-ink-soft); font-size: 0.95rem; }
+.pf-tag-withheld { background: var(--pf-warn-bg); color: var(--pf-warn); }
