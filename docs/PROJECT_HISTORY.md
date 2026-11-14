@@ -257,8 +257,16 @@ One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 | #12 | Unsupported-cause check matches word forms (planted, flooded) |
 | #13 | README leads with the web app; `docs/VERIFICATION.md` added |
 | #14 (v0.1.1) | Docs reviewed against the code; all packages, generator included, on one version |
+| #15 | Follow-up questions in the web app ("Showing:" line, "Ask next" buttons) |
+| #16 | MCP servers kept running between questions (~4 s to ~0.2 s per lookup); tidier page |
+| #17 | Farm 1 / Farm 2 picker (clean vs. messy records); Riverside renamed Sheyenne Bottom |
+| #18 | All six MCP servers used: weather, soil and as-applied questions (evals 12-15), `units` check |
+| #19 | Decluttered web app; the answer card shows a withheld AI sentence |
+| #20 | Question-flow diagram added to ARCHITECTURE.md |
+| #21 | One AI try by default, so the withheld-sentence demo (eval 2) works with real Gemma |
+| #22 | Each question sent exactly once (Enter to send, locked while answering); browser tests |
 
-About 300 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
+About 400 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
 
 ---
 

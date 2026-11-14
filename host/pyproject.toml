@@ -36,7 +36,7 @@ asyncio_default_fixture_loop_scope = "session"
 # opt in with `pytest -m eval_nl`. A later -m on the command line wins.
 addopts = "-m 'not eval_nl'"
 markers = [
-    "eval_nl: the 11 eval questions through Gemma end to end (slow; needs Ollama)",
+    "eval_nl: the 15 eval questions, follow-ups and the withheld-sentence demo through Gemma end to end (slow; needs Ollama)",
 ]
 
 [tool.ruff]
