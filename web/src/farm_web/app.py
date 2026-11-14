@@ -92,12 +92,12 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        # Eval 16: asks for a cause the records don't hold (East 80's 2020
-        # loss was hail, but no record says so). The AI's sentence names a
-        # cause, fails the "doesn't name a cause" check, and is withheld --
-        # so growers see a blocked sentence, not only ones that pass.
+        # Eval 2 again, filed where a grower looking for it will find it: with
+        # gemma3:4b the AI's sentence blames "an unusual weather pattern",
+        # which no record shows, so it fails the "doesn't name a cause" check
+        # and is withheld (host/tests/test_eval_nl.py -k withheld).
         "When the AI is stopped",
-        ("What caused East 80's bad year?",),
+        ("Was East 80 a bad field or just a bad year?",),
     ),
 )
 

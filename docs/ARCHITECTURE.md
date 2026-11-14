@@ -36,7 +36,7 @@ flowchart TD
 
     Router --> Template["Template answer<br/>deterministic lead sentence + 'therefore' line"]
     Router --> Narrator["Gemma 3:4b<br/>may add one sentence of context. Farmer free text<br/>is delimited as untrusted data first"]
-    Narrator --> Checks["Verifier — 8 checks<br/>grounded numbers, verdict, 6 meaning checks —<br/>fails twice ⇒ sentence withheld"]
+    Narrator --> Checks["Verifier — 8 checks<br/>grounded numbers, verdict, 6 meaning checks —<br/>one try — fails ⇒ sentence withheld"]
     Template --> Answer(["Answer<br/>the web app also shows the checks, figures and source"])
     Checks -->|"only if every check passes"| Answer
 ```
@@ -110,10 +110,7 @@ sequenceDiagram
     alt All 8 pass
         C-->>H: Passed — sentence is SHOWN, tagged "Added by the AI, then checked"
     else Any check fails
-        H->>AI: Try once more, naming the check that failed
-        AI-->>H: A new sentence
-        H->>C: Run the 8 checks again
-        C-->>H: Still failing — sentence is WITHHELD, the verified answer stands alone
+        C-->>H: Failed — sentence is WITHHELD (no second try), the verified answer stands alone
     end
     H->>H: Add the "therefore" line and write every step to the audit log
     H-->>W: Answer + checks + numbers + source
@@ -134,11 +131,11 @@ sequenceDiagram
 | Ingest/query confirmation split, `ConfirmationGate` | Built | |
 | 6 MCP servers, `farm-cli`, `farm-ingest` | Built | Every server has at least one question type routed to it |
 | Weather, soil and as-applied questions | Built | `SEASON_WEATHER`, `FIELD_SOIL` (`weather-history`) and `APPLIED_INPUTS`, `NITROGEN_HISTORY` (`as-applied`), computed in `core/field_conditions.py`. Nitrogen is always reported in lb N/ac, converting gal/ac of UAN 32%; corn and soybean N are never compared. A `units` check rejects a sentence that puts the wrong unit on a number. These are records, not causes: none of them says why a season went badly |
-| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Shows the template sentence, the checked AI sentence or a "withheld" note, the checks, figures and source. Example "What caused East 80's bad year?" (eval 16) shows a withheld sentence; `NARRATION_SEED` makes it repeatable on a given machine. Local only unless `--lan` |
+| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Shows the template sentence, the checked AI sentence or a "withheld" note, the checks, figures and source. The "When the AI is stopped" example, "Was East 80 a bad field or just a bad year?" (eval 2), shows a withheld sentence: gemma3:4b blames the weather, which no record supports. `NARRATION_SEED` makes it repeatable on a given machine; `scripts/probe_narration.py` re-checks it against the real model. Local only unless `--lan` |
 | Persistent servers (`farm_host.server_pool`) | Built | All six servers start once in the background (~7 s) and stay up, so a lookup takes ~0.2 s instead of ~4 s. Restart the app after regenerating data |
 | Farm picker (`farm_host.farms`) | Built | Farm 1: clean records (`data/synthetic-clean`, generator `--clean`). Farm 2: messy records (`data/synthetic`). Same fields and true profits. One server pool per farm via `FARM_DATA_DIR`/`FARM_CONFIRM_STORE`; Farm 1 starts at app open, Farm 2 on first pick. Switching clears follow-ups and re-asks the question; every answer carries a farm badge |
 | Follow-ups (`farm_host.followups`) | Built | Only the last verified answer's field, season and question type carry over; the parser refuses a follow-up whose field or season came from nowhere. A "Showing:" line names what was answered, plus up to 3 "Ask next" buttons |
-| Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if it passes all 8 checks (grounded, verdict, sign, zone premise, reconciliation, attribution, unsupported cause, units), with one retry naming the failed check |
+| Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if it passes all 8 checks (grounded, verdict, sign, zone premise, reconciliation, attribution, unsupported cause, units). One try by default (`max_attempts=1`), so a failing sentence is withheld, not rewritten |
 | Hash-chained, concurrency-safe audit log | Built | Host and every server write to it (fixed in Phase A) |
 | Provenance (`modeled` subtree), grounding split | Built | `modeled` is filled by weather attribution on `bad_year` verdicts, `null` elsewhere by design |
 | Untrusted-text handling, payload capping | Built | |
@@ -176,5 +173,5 @@ this section first.
 - [README](../README.md) — the simple picture, quick start, and repository layout
 - [FARMER_GUIDE.md](FARMER_GUIDE.md) — plain-language setup and usage guide
 - [VERIFICATION.md](VERIFICATION.md) — how to run the tests and what they prove
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — sixteen independent evaluation questions
+- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — fifteen independent evaluation questions
 - [PROJECT_HISTORY.md](PROJECT_HISTORY.md) — the phase history

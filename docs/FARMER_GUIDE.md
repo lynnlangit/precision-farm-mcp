@@ -202,10 +202,11 @@ check, the answer card says **AI sentence withheld**, and below it you'll
 see what the AI tried to say and which check stopped it.
 
 To see that happen, open **When the AI is stopped** under the example
-questions and tap "What caused East 80's bad year?". Your records show
-that 2020 was a bad year, but not why, so any cause the AI offers is
-blocked, even a good guess. The answer you get is the part calculated from
-your records, nothing more.
+questions and tap "Was East 80 a bad field or just a bad year?". The AI
+tries to add that the 2020 loss was due to an unusual weather pattern. Your
+records show that 2020 was a bad year, but not why, so the sentence is
+blocked. The AI gets one try, so the answer you see is the part calculated
+from your records, nothing more.
 
 ![Below the answer: the checks, the figures and where they came from](images/farm-web-checks.png)
 

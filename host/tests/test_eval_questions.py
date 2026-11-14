@@ -1,4 +1,4 @@
-"""Automated version of docs/EVAL_QUESTIONS.md's 16 evaluation questions
+"""Automated version of docs/EVAL_QUESTIONS.md's 15 evaluation questions
 (tool level -- test_eval_nl.py runs the same questions through the parser).
 Each is independent, read-only, and checked against a single verifiable
 figure from data/synthetic/ground_truth.json (seed 42) -- see that doc for
@@ -257,12 +257,13 @@ async def test_q15_nitrogen_history_by_crop():
     assert r["logs_start_season"] == 2022
 
 
-async def test_q16_the_records_never_name_the_true_cause():
-    """Eval 16's premise, at tool level: East 80's 2020 loss was hail in the
-    ground truth, but no fact the tool returns names hail (the glossary's
-    "e.g. hail" is vocabulary, not evidence). So a sentence giving hail --
-    the right guess -- as the cause still fails the unsupported-cause check
-    and is withheld. On both farms: the profit records are identical."""
+async def test_q2_the_records_never_name_a_cause():
+    """The web app's withheld-sentence example (eval 2), at tool level: East
+    80's 2020 loss was hail in the ground truth, but no fact the tool returns
+    names hail or the weather (the glossary's "e.g. hail" is vocabulary, not
+    evidence). So the sentence gemma3:4b writes ("... due to an unusual
+    weather pattern ...") fails the unsupported-cause check, and so does
+    hail -- the right guess. On both farms: the profit records are identical."""
     from farm_host.farms import FARMS
     from farm_model.verification import check_no_unsupported_cause, failed_semantic_checks
 
@@ -272,9 +273,13 @@ async def test_q16_the_records_never_name_the_true_cause():
             continue  # Farm 1 not generated here; Farm 2 always is
         async with MCPFleet(["report-export"], env_overrides=FARMS[key].server_env()) as fleet:
             r = (await fleet.call("report-export", "bad_field_or_bad_year", field_name="East 80")).data
-        guess = "East 80's 2020 loss was most likely due to hail damage."
-        assert not check_no_unsupported_cause(guess, r), key
-        assert "unsupported_cause" in failed_semantic_checks(guess, r)
+        gemma = (
+            "East 80\u2019s lower-than-usual profit in 2020 was primarily due to an unusual "
+            "weather pattern that deviated from the farm's historical averages."
+        )
+        for guess in (gemma, "East 80's 2020 loss was most likely due to hail damage."):
+            assert not check_no_unsupported_cause(guess, r), (key, guess)
+            assert "unsupported_cause" in failed_semantic_checks(guess, r)
         # ...while a sentence that names no cause is not over-rejected.
         assert failed_semantic_checks("Weather explains only 5.16 bu/ac of the 2020 shortfall.", r) == []
 

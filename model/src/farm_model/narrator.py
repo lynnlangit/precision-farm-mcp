@@ -24,8 +24,9 @@ DEFAULT_MODEL = "gemma3:4b"
 
 # A fixed sampling seed: the same question on the same data gets the same
 # model sentence every time on a given machine and model version, so a demo
-# shows what the evals saw (including eval 16's withheld sentence) rather
-# than whatever this run's sampling happened to produce.
+# shows what the evals saw rather than whatever this run's sampling happened
+# to produce. (Measured on a Mac with gemma3:4b: most answers repeat exactly;
+# a few can still differ between runs.)
 NARRATION_SEED = 42
 _NARRATION_OPTIONS = {"temperature": 0.2, "seed": NARRATION_SEED}
 
@@ -686,14 +687,16 @@ def narrate_verified(
     question: str,
     result_payload: dict,
     model: str = DEFAULT_MODEL,
-    max_attempts: int = 2,
+    max_attempts: int = 1,
     untrusted_paths: frozenset[str] = frozenset(),
 ) -> NarrationOutcome:
     """Template-first answer: a deterministic lead sentence (template_answer),
     plus at most one model-written sentence of context that must pass every
     check -- grounded, not contradicting the verdict, and every semantic
-    check -- or it is dropped. Retries the context sentence once, naming the
-    failed check.
+    check -- or it is withheld. One try by default: a sentence that fails a
+    check is not rewritten until it passes, so a grower sees the failure (and
+    the web app shows the blocked sentence). max_attempts > 1 retries, naming
+    the failed check in the next prompt.
 
     untrusted_paths (from MCPFleet.call()'s ToolResult) names which strings
     in result_payload are raw farmer-authored free text. The prompt sent to
