@@ -89,9 +89,10 @@ code. It answers through exactly the same path as `farm-cli`, and next to
 every answer it shows the lesson behind it: which sentence was calculated
 from the records, which sentence the AI added, every check that sentence had
 to pass (or the attempt it blocked), the figures it came from, and which MCP
-server answered. One example question ("What caused East 80's bad year?",
-eval 16) asks for a cause the records don't hold, so it always shows a
-blocked sentence and the check that stopped it.
+server answered. The AI gets one try at its sentence: if it fails a check,
+it is withheld. Under **When the AI is stopped**, "Was East 80 a bad field or
+just a bad year?" shows that: the AI blames the weather, no record says so,
+and the sentence is blocked.
 
 ```bash
 # After the Quick start steps above (data generated, farm-ingest run, Ollama up):

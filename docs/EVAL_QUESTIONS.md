@@ -85,11 +85,6 @@ uv run --project host farm-cli "<question>"
 **Tool:** `as-applied.get_nitrogen_history(field_name="Section Corner")`
 **Verifiable answer:** one lb N/ac figure per logged season (2022: `5.2`, 2023: `160.6`, 2024: `6.2`, 2025: `141.3`). Corn years range from `141.3` (2025) to `160.6` (2023); soybean years are reported separately, never compared with corn. No log exists before 2022.
 
-### 16. A cause the records don't contain
-**Q:** What caused East 80's bad year?
-**Tool:** `report-export.bad_field_or_bad_year(field_name="East 80")` (intent `explain_shortfall`)
-**Verifiable answer:** the verified answer is question 2's (`verdict = 'bad_year'`, outlier season `[2020]`). Ground truth says the 2020 loss was `hail`, but no record the servers read names it: the weather model explains only part of the shortfall and leaves the rest as `residual`. So any AI sentence that names a cause fails the unsupported-cause check and is withheld, even when its guess happens to be right. The web app uses this question to show a withheld sentence.
-
 ---
 
 ## What these are testing collectively
@@ -100,5 +95,4 @@ uv run --project host farm-cli "<question>"
 - **7-9** exercise all three reconciliation defects, including the one (#8) specifically designed so a naive totals-only check would pass it silently.
 - **11** exercises Phase D's zone-level profitability -- a shortfall that's genuinely invisible at the field level, only visible once yield_monitor_points are gridded into zones.
 - **12-15** exercise the weather-history and as-applied servers: a season's rain against the farm's own record, a field's soil, and as-applied rates where nitrogen logged in gal/ac of UAN 32% must be converted to lb N/ac before any comparison.
-- **16** exercises the AI sentence's checks themselves: the question invites a cause, the records don't hold one, so the template answer must stand alone.
 

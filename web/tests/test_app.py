@@ -164,4 +164,4 @@ def test_how_it_works_strip_is_gone(tmp_path):
 
 def test_one_example_shows_a_withheld_sentence():
     groups = dict(EXAMPLES)
-    assert groups["When the AI is stopped"] == ("What caused East 80's bad year?",)
+    assert groups["When the AI is stopped"] == ("Was East 80 a bad field or just a bad year?",)

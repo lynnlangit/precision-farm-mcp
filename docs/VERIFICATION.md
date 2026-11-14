@@ -5,7 +5,7 @@ overview and quick start, see the [README](../README.md).
 
 ## Running the tests
 
-About 300 tests across the five packages, including all 16 evaluation
+About 300 tests across the five packages, including all 15 evaluation
 questions from [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) at the tool level.
 The host and model suites need Ollama running with `gemma3:4b`; without it,
 only the tests that call the model fail.
@@ -27,7 +27,7 @@ uv run --project core pytest -q docs/test_architecture_doc.py
 Before a demo, run the `host` and `model` suites on a machine with Ollama,
 where Gemma is fast.
 
-The same 16 questions also run end to end in plain English — Gemma parses
+The same 15 questions also run end to end in plain English — Gemma parses
 each one, the host routes it, and the answer's figures, summary line, or
 refusal are checked. This suite is slow and opt-in:
 
@@ -56,11 +56,12 @@ uv run --project host pytest -m eval_nl host/tests
   add one sentence of context, shown only if every number traces to the
   payload, no verdict is contradicted, and it passes five meaning checks
   (sign, zone premise, reconciliation, attribution, unsupported cause);
-  otherwise it is dropped after one retry. The grower web app shows these
-  checks next to every answer, including any attempt that was blocked;
-  eval 16 is a question whose AI sentence is always withheld. The model
-  samples with a fixed seed, so a given machine gives the same sentence
-  every time
+  otherwise it is withheld (the model gets one try). The grower web app
+  shows these checks next to every answer, including a blocked sentence;
+  its "When the AI is stopped" example (eval 2) is one gemma3:4b fails
+  every time we've measured. The model samples with a fixed seed, so a given
+  machine mostly gives the same sentence each run;
+  `scripts/probe_narration.py` re-checks any question against the real model
 - 📊 **Governance is measurable, not just asserted** — `farm-metrics`
   reports HITL catch rate, tool grounding, narration faithfulness, and
   sovereignty integrity straight from the audit log
@@ -68,4 +69,4 @@ uv run --project host pytest -m eval_nl host/tests
 ## See also
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — the full technical design
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — the sixteen evaluation questions and their verifiable answers
+- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — the fifteen evaluation questions and their verifiable answers

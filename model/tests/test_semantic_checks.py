@@ -241,7 +241,9 @@ def test_retry_names_the_failed_check_and_records_the_rejected_text(monkeypatch)
 
     good = "Home Quarter lost $5,796.77 over the same seasons."
     prompts = _stub_narrations(monkeypatch, [EVAL5_WRONG, good])
-    outcome = narrate_verified("Which fields made money in 2019 and 2020?", EVAL5_RANKING)
+    outcome = narrate_verified(
+        "Which fields made money in 2019 and 2020?", EVAL5_RANKING, max_attempts=2
+    )
     assert outcome.text == f"{EVAL5_LEAD} {good}"
     assert outcome.attempts_used == 2
     assert outcome.failed_checks == (("sign",),)
@@ -259,7 +261,8 @@ def test_two_rejected_context_sentences_leave_the_template_alone(monkeypatch):
 
     _stub_narrations(monkeypatch, [EVAL11_WRONG, EVAL11_WRONG])
     outcome = narrate_verified(
-        "Is any part of Section Corner losing money in 2024?", EVAL11_SECTION_CORNER
+        "Is any part of Section Corner losing money in 2024?", EVAL11_SECTION_CORNER,
+        max_attempts=2,
     )
     assert outcome.used_fallback
     assert outcome.context is None
