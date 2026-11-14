@@ -18,6 +18,7 @@ os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 import argparse  # noqa: E402
 import dataclasses  # noqa: E402
 import threading  # noqa: E402
+import time  # noqa: E402
 from html import escape  # noqa: E402
 from importlib.resources import files  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -213,6 +214,84 @@ def _farm_key(value: str | None) -> str:
     return value if value in FARMS else DEFAULT_FARM
 
 
+def context_for(
+    question: str | None, context_state: dict | None, last_ask: dict | None
+) -> dict | None:
+    """The follow-up context a question is asked with.
+
+    Pressing "Ask my records" again on the question that is already
+    answered asks it again exactly as before -- with the context that
+    question was first asked with, not as a follow-up to its own answer.
+    Without this, the second press sent the parser a different prompt (the
+    question plus "the last answer was about East 80 ..."), so the same
+    words could come back as a different answer."""
+    q = (question or "").strip()
+    if last_ask and q and q == last_ask.get("question"):
+        return last_ask.get("context")
+    return context_state
+
+
+class SessionTickets:
+    """A counter per browser tab, bumped by Clear.
+
+    An answer still being looked up when Clear is pressed can't be stopped
+    (Gradio lets a running function finish), so it checks its ticket when it
+    comes back and is dropped if Clear was pressed meanwhile -- otherwise it
+    would land on a page the grower just cleared, with an empty box."""
+
+    def __init__(self):
+        self._tickets: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    def current(self, session: str) -> int:
+        with self._lock:
+            return self._tickets.get(session, 0)
+
+    def bump(self, session: str) -> None:
+        with self._lock:
+            self._tickets[session] = self._tickets.get(session, 0) + 1
+
+
+class BusyTabs:
+    """Which browser tabs have a question being answered right now.
+
+    Every way of asking first claims its tab here, on the server; a second
+    claim while the first question is still being answered is refused, so
+    Enter followed by a quick click (two different events, which Gradio
+    doesn't stop on its own) sends the question once, not twice. A claim
+    older than STALE_AFTER seconds is ignored, so a tab can never stay
+    locked for good."""
+
+    STALE_AFTER = 600.0
+
+    def __init__(self):
+        self._since: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def claim(self, session: str) -> bool:
+        now = time.monotonic()
+        with self._lock:
+            since = self._since.get(session)
+            if since is not None and now - since < self.STALE_AFTER:
+                return False
+            self._since[session] = now
+            return True
+
+    def release(self, session: str) -> None:
+        with self._lock:
+            self._since.pop(session, None)
+
+
+ASK_LABEL = "Ask my records"
+LOCK_NOW_JS = """() => {
+  document.querySelectorAll('#pf-ask, #pf-question textarea').forEach((el) => {
+    el.disabled = true;
+  });
+  return [];
+}"""
+BUSY_LABEL = "Looking it up..."
+
+
 def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
     """The handler for one question. Gradio state holds only the follow-up
     context (field, season, question type) and the picked farm -- never the
@@ -289,16 +368,22 @@ def build_app(
                 farm_note = gr.HTML(farm_note_html(FARMS[DEFAULT_FARM]))
                 gr.HTML('<p class="pf-h" style="margin-top:14px">Ask a question</p>'
                         '<p class="pf-h-sub">About one of the fields and seasons.</p>')
+                # One line that grows to four: Enter asks, Shift+Enter starts a
+                # new line. (With lines=2, Gradio made Enter a new line and
+                # Shift+Enter send -- the opposite of every chat box.)
                 question = gr.Textbox(
                     show_label=False,
                     placeholder="e.g. Was East 80 a bad field or just a bad year?",
-                    lines=2,
+                    lines=1,
                     max_lines=4,
                     autofocus=True,
+                    elem_id="pf-question",
                 )
                 with gr.Row():
-                    ask_btn = gr.Button("Ask my records", variant="primary", scale=3)
-                    clear_btn = gr.Button("Clear", variant="secondary", scale=1)
+                    ask_btn = gr.Button(
+                        ASK_LABEL, variant="primary", scale=3, elem_id="pf-ask"
+                    )
+                    clear_btn = gr.Button("Clear", variant="secondary", scale=1, elem_id="pf-clear")
                 example_buttons: list[tuple[gr.Button, str]] = []
                 gr.HTML('<p class="pf-eyebrow" style="margin-top:14px">Example questions</p>')
                 for heading, qs in EXAMPLES:
@@ -310,7 +395,7 @@ def build_app(
                                 b = gr.Button(q, size="sm", elem_classes="pf-example")
                                 example_buttons.append((b, q))
             with gr.Column(scale=7, min_width=340):
-                answer = gr.HTML(empty.answer_html)
+                answer = gr.HTML(empty.answer_html, elem_id="pf-answer")
                 followup_heading = gr.HTML(
                     '<p class="pf-eyebrow" style="margin-top:12px">Ask next</p>'
                     '<p class="pf-muted">Each one is a full question, looked up and checked '
@@ -329,7 +414,7 @@ def build_app(
                 gr.HTML('<p class="pf-h">How we checked it</p>'
                         "<p class=\"pf-h-sub\">The AI's sentence is shown only if it passes "
                         "every one of these.</p>")
-                checks = gr.HTML(empty.checks_html)
+                checks = gr.HTML(empty.checks_html, elem_id="pf-checks")
             with gr.Column(scale=6, min_width=320, elem_classes="pf-panel"):
                 gr.HTML('<p class="pf-h">The numbers behind it</p>'
                         '<p class="pf-h-sub">Straight from your records, no AI involved.</p>')
@@ -340,40 +425,124 @@ def build_app(
         # Follow-up context: the last verified answer's field, season and
         # question type. Per browser tab; Clear resets it.
         context_state = gr.State(None)
+        # The question last sent and the context it was sent with, so asking
+        # the same question again repeats it exactly (see context_for).
+        last_ask = gr.State(None)
         panels = [answer, checks, figures, source]
-        outputs = [*panels, context_state, followup_heading, *followup_buttons]
-        inputs = [question, context_state, farm_picker]
-        ask_btn.click(ask, inputs=inputs, outputs=outputs)
+        outputs = [*panels, context_state, followup_heading, *followup_buttons, last_ask]
+        inputs = [question, context_state, farm_picker, last_ask]
+        tickets = SessionTickets()
+
+        def ask_in_tab(q, ctx, farm_key, last, request: gr.Request):
+            session = request.session_hash or ""
+            ticket = tickets.current(session)
+            used = context_for(q, ctx, last)
+            result = ask(q, used, farm_key)
+            if tickets.current(session) != ticket:  # Clear was pressed meanwhile
+                return [gr.skip()] * len(outputs)
+            asked = (q or "").strip()
+            new_last = {"question": asked, "context": used} if asked else None
+            return [*result, new_last]
+
+        # While a question is being answered, the box and every control
+        # that would ask another question are locked, and the button says
+        # so. Before this, a second click was silently dropped (Gradio ignores a click while
+        # that button's last one is still running), and an example or a new
+        # question typed meanwhile left the box showing one question and the
+        # answer panel another.
+        ask_controls = [
+            ask_btn,
+            question,
+            farm_picker,
+            *(b for b, _ in example_buttons),
+            *followup_buttons,
+        ]
+
+        def lock():
+            return [gr.update(value=BUSY_LABEL, interactive=False)] + [
+                gr.update(interactive=False) for _ in ask_controls[1:]
+            ]
+
+        def unlock():
+            return [gr.update(value=ASK_LABEL, interactive=True)] + [
+                gr.update(interactive=True) for _ in ask_controls[1:]
+            ]
+
+        ask_events = []
+        busy = BusyTabs()
+
+        def claim(request: gr.Request):
+            # Raising stops the rest of this event's chain; invisible, because
+            # the grower already sees "Looking it up..." for the first one.
+            if not busy.claim(request.session_hash or ""):
+                raise gr.Error("Already answering a question", visible=False,
+                               print_exception=False)
+
+        def release(request: gr.Request):
+            busy.release(request.session_hash or "")
+            return unlock()
+
+        def ask_chain(trigger, fill=None, fill_inputs=None, fill_outputs=None, js=None):
+            """claim -> (put the question in the box) -> lock -> ask -> unlock."""
+            event = trigger(claim, queue=False, js=js)
+            if fill is not None:
+                event = event.success(fill, inputs=fill_inputs, outputs=fill_outputs, queue=False)
+            asked = event.success(lock, outputs=ask_controls, queue=False).success(
+                ask_in_tab, inputs=inputs, outputs=outputs
+            )
+            ask_events.append(asked)
+            asked.then(release, outputs=ask_controls, queue=False)
+
+        # The two ways a typed question is sent, exactly once each: the
+        # button, and Enter in the box. Typing, clicking away or pasting
+        # sends nothing. LOCK_NOW_JS greys both out in the browser at once,
+        # before the server's lock arrives.
+        ask_chain(ask_btn.click, js=LOCK_NOW_JS)
+        ask_chain(question.submit, js=LOCK_NOW_JS)
 
         def switch_farm(farm_key: str, current_question: str):
             # Start the other farm's servers now, and drop the follow-up
             # context: it described an answer from the other farm's records.
             pools.warm(_farm_key(farm_key))
-            return farm_note_html(FARMS[_farm_key(farm_key)]), None
+            return farm_note_html(FARMS[_farm_key(farm_key)]), None, None
 
         # Then ask the same question again, so the two farms' answers can be
         # compared directly; with an empty box, just reset the panels.
-        farm_picker.change(
-            switch_farm,
-            inputs=[farm_picker, question],
-            outputs=[farm_note, context_state],
-            queue=False,
-        ).then(ask, inputs=inputs, outputs=outputs)
-        question.submit(ask, inputs=inputs, outputs=outputs)
-        clear_btn.click(
-            lambda: ("", *_panels(empty_view()), None, *_followup_updates([])),
-            outputs=[question, *outputs],
-            queue=False,
+        # .input, not .change: only a grower's own pick asks again.
+        ask_chain(
+            farm_picker.input,
+            fill=switch_farm,
+            fill_inputs=[farm_picker, question],
+            fill_outputs=[farm_note, context_state, last_ask],
         )
         for b, q in example_buttons:
-            b.click(lambda q=q: q, outputs=question, queue=False).then(
-                ask, inputs=inputs, outputs=outputs
-            )
+            ask_chain(b.click, fill=lambda q=q: q, fill_outputs=question)
         for b in followup_buttons:
             # The button's own label is the question it asks.
-            b.click(lambda label: label, inputs=b, outputs=question, queue=False).then(
-                ask, inputs=inputs, outputs=outputs
+            ask_chain(b.click, fill=lambda label: label, fill_inputs=b, fill_outputs=question)
+
+        # Registered after every ask above, so it cancels all of them.
+        others = [c for c in ask_controls if c is not question]
+
+        def clear(request: gr.Request):
+            tickets.bump(request.session_hash or "")
+            busy.release(request.session_hash or "")
+            unlocked = dict(zip(map(id, ask_controls), unlock()))
+            return (
+                gr.update(value="", interactive=True),
+                *_panels(empty_view()),
+                None,
+                *_followup_updates([]),
+                None,
+                *(unlocked[id(c)] for c in others),
             )
+
+        clear_btn.click(
+            clear,
+            outputs=[question, *outputs, *others],
+            cancels=ask_events,
+            queue=False,
+        )
         status_bottom = gr.HTML(bottom_html)
         app.load(status_panels, outputs=[status_top, status_bottom])
 

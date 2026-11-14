@@ -111,6 +111,14 @@ the first time someone picks it.
 
 ![Below the answer: the checks the AI's sentence passed, the figures behind it, and where it came from](docs/images/farm-web-checks.png)
 
+**Asking.** Type a question and press **Enter** or **Ask my records**
+(Shift+Enter starts a new line). Each question is sent once; while it is
+being answered the box and buttons are locked and the button reads
+"Looking it up...". The example and "Ask next" buttons fill the box and ask
+straight away. **Clear** empties the box and the answer and starts over.
+`uv run --project web pytest -m ui web/tests` drives all of this in a real
+browser (see `web/tests/test_ui_flow.py`).
+
 It only listens on this computer unless you pass `--lan`, never creates a
 public share link, sends no usage analytics, and writes every question to
 `data/audit.jsonl` like the CLI.
