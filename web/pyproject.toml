@@ -27,7 +27,18 @@ farm-core = { path = "../core", editable = true }
 farm-model = { path = "../model", editable = true }
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "playwright>=1.65.2",
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+# The browser tests (test_ui_flow.py) start the app and a headless Chromium:
+# opt in with `pytest -m ui`. A later -m on the command line wins.
+addopts = "-m 'not ui'"
+markers = [
+    "ui: the question box and buttons driven in a real browser (needs Playwright's Chromium)",
+]
 
 [tool.ruff]
 line-length = 100

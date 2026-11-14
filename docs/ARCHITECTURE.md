@@ -89,7 +89,8 @@ sequenceDiagram
     end
 
     Note over G,C: Asking a question
-    G->>W: Type a question, or tap an example or an "Ask next" button
+    G->>W: Type a question and press Enter or "Ask my records",<br/>or tap an example or an "Ask next" button
+    W->>W: Send it once, then lock the box and buttons ("Looking it up...") until the answer is shown
     W->>H: The question + which farm + follow-up context<br/>(last field, season, question type)
     H->>AI: Turn this question into ONE lookup
     AI-->>H: Question type + field + season (structured JSON)
@@ -120,7 +121,8 @@ sequenceDiagram
     Note over G,W: Follow-ups
     W->>W: Remember field, season and question type (only from a verified answer)
     W-->>G: Up to 3 "Ask next" buttons — each is a full new question, checked from scratch
-    G->>W: "Clear" forgets the context and starts over
+    G->>W: "Clear" forgets the context and starts over<br/>(an answer still on its way is dropped)
+    Note over G,W: Asking the same question again repeats it exactly,<br/>not as a follow-up to its own answer
     end
 ```
 

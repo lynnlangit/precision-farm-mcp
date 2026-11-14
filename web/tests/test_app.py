@@ -165,3 +165,56 @@ def test_how_it_works_strip_is_gone(tmp_path):
 def test_one_example_shows_a_withheld_sentence():
     groups = dict(EXAMPLES)
     assert groups["When the AI is stopped"] == ("Was East 80 a bad field or just a bad year?",)
+
+
+def test_asking_the_same_question_again_reuses_its_first_context():
+    from farm_web.app import context_for
+
+    east = {"field_name": "East 80", "season": None, "intent": "bad_field_or_bad_year"}
+    first = {"question": "Was East 80 a bad field or just a bad year?", "context": None}
+    # The same words again: asked exactly as the first time, not as a follow-up.
+    assert context_for(" Was East 80 a bad field or just a bad year? ", east, first) is None
+    # A new question builds on the last answer.
+    assert context_for("What about 2021?", east, first) == east
+    # A repeated follow-up keeps the context it was first asked with.
+    follow = {"question": "What about 2021?", "context": east}
+    assert context_for("What about 2021?", {"field_name": "x"}, follow) == east
+    assert context_for("", east, first) == east
+    assert context_for("anything", None, None) is None
+
+
+def test_clear_bumps_only_its_own_tab():
+    from farm_web.app import SessionTickets
+
+    t = SessionTickets()
+    assert t.current("a") == t.current("b") == 0
+    t.bump("a")
+    assert t.current("a") == 1 and t.current("b") == 0
+
+
+def test_enter_sends_and_every_way_of_asking_locks_the_controls(tmp_path):
+    app = build_app(tmp_path / "audit.jsonl", _fake_pools(tmp_path))
+    box = next(b for b in app.blocks.values() if getattr(b, "elem_id", None) == "pf-question")
+    # lines=1: Gradio sends on Enter (Shift+Enter is a new line). With lines=2
+    # it was the other way round.
+    assert box.lines == 1 and box.max_lines == 4
+    fns = [d.fn.__name__ for d in app.fns.values() if d.fn is not None]
+    # button, Enter, farm switch, 15 examples, 3 "Ask next" buttons
+    assert fns.count("ask_in_tab") == 2 + 1 + 15 + 3
+    # each one claims its tab first, locks the controls, and releases them after
+    n = fns.count("ask_in_tab")
+    assert fns.count("claim") == fns.count("lock") == fns.count("release") == n
+
+
+def test_a_tab_answers_one_question_at_a_time(monkeypatch):
+    from farm_web.app import BusyTabs
+
+    busy = BusyTabs()
+    assert busy.claim("a") is True
+    assert busy.claim("a") is False  # Enter then a quick click: the click is refused
+    assert busy.claim("b") is True  # another tab isn't held up
+    busy.release("a")
+    assert busy.claim("a") is True
+    # A claim never released (a tab closed mid-answer) doesn't lock forever.
+    monkeypatch.setattr(BusyTabs, "STALE_AFTER", 0.0)
+    assert busy.claim("a") is True
