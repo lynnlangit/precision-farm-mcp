@@ -8,6 +8,12 @@ No prior programming experience is assumed, but you will be typing
 commands into a terminal window. If you get stuck, the [Troubleshooting](#troubleshooting)
 section at the end covers the most common snags.
 
+**In this guide:** [What is this?](#what-is-this) ·
+[What you'll need](#what-youll-need) ·
+[Step 1: Try it with example data](#step-1-try-it-with-example-data-first) ·
+[Step 2: Load your own farm's data](#step-2-load-your-own-farms-data) ·
+[Troubleshooting](#troubleshooting)
+
 ## What is this?
 
 Precision Farm MCP answers plain-English questions about your own farm's
@@ -15,13 +21,18 @@ record — costs, yields, profit — by looking at your own files and doing
 the arithmetic, never by guessing or predicting. For example:
 
 > **You ask:** "Was the north eighty a bad field or just a bad year?"
-> **It answers:** "The North Eighty had one clear outlier season over the
-> past ten years — 2018 — well below its typical $62.81/acre median
-> profit. Every other season was unremarkable, so this reads as a bad
-> year, not a chronically bad field.
+> **It answers:** "N 80 had a bad year, not a bad field: 2018 was a clear
+> outlier, and its median profit across 10 recorded seasons was $62.81/ac."
 >
-> Therefore: the loss was isolated to 2018 — every other recorded season
-> was unremarkable, not a sign of a chronic problem."
+> **The AI adds, after its sentence passes every check:** "The data
+> indicates that 2018 was an unusually poor year for profit on N 80
+> compared to other seasons."
+>
+> **What that means:** "The loss was isolated to 2018 -- every other
+> recorded season was unremarkable, not a sign of a chronic problem."
+
+The tool knew that "north eighty" is the field your maps call "N 80"
+because you confirmed it once, in Step 1.
 
 Everything happens on your own laptop. Your farm data is never sent
 anywhere — not to a server, not to the internet, not anywhere outside your
@@ -29,13 +40,13 @@ machine. A small local AI model only ever does two things: turns your
 question into a lookup, and may add one sentence to an answer the tool has
 already calculated, which you only see if it passes every check. It
 never touches your numbers directly and it never sees the internet — see
-[README.md](../README.md) and [docs/ARCHITECTURE.md](ARCHITECTURE.md) for
-how that's actually enforced and tested, if you're curious.
+[ARCHITECTURE.md](ARCHITECTURE.md) and [VERIFICATION.md](VERIFICATION.md)
+for how that's enforced and tested, if you're curious.
 
 **This is v1, and it only answers questions about what already happened.**
 It does not predict next year's yield, does not recommend what to plant,
 and does not process satellite or drone imagery. Those are explicitly out
-of scope for now — see the README for why.
+of scope for now.
 
 ## What you'll need
 
@@ -67,9 +78,9 @@ Three pieces of free software, installed once:
      ```
 
    (Installers for every OS are on [astral.sh/uv](https://astral.sh/uv).
-   CI tests the data-handling code on Windows and Linux; the parts that use
-   Ollama are tested on Linux and a Mac only, so `farm-preflight`, below, is
-   the quickest way to spot a Windows rough edge.)
+   The parts that use Ollama are tested on Linux and a Mac, not Windows
+   (see [VERIFICATION.md](VERIFICATION.md)), so on Windows `farm-preflight`,
+   below, is the quickest way to spot a rough edge.)
 
 3. **Ollama**, running a small local AI model — this is what turns your
    question into a lookup and the answer into a sentence. Download it from
@@ -123,12 +134,12 @@ spreadsheet, once, so it never has to guess later:
 uv run --project host farm-ingest
 ```
 
-You'll see about 20 prompts like:
+You'll see 14 prompts like:
 
 ```
 [confirm] naming_drift_alias: Cost ledger name 'north eighty' in season 2017
   proposal: {'canonical_boundary_name': 'N 80'}
-  confidence: high
+  confidence: low
   approve? [y/N]:
 ```
 
@@ -140,6 +151,9 @@ purpose, to prove the tool catches it rather than guessing:
 [confirm] naming_drift_alias: Cost ledger name 'Hom Corner' in season 2023 has 2 acreage candidates, not exactly 1
   proposal: {'canonical_boundary_name': 'Section Corner'}
   confidence: low
+  approve? [y/N]: N
+  candidates: ['Section Corner', 'Home Quarter', 'South 160 North']
+  correct canonical_boundary_name (blank to reject): Home Quarter
 ```
 
 That proposal is wrong — the ledger entry actually means "Home Quarter,"
@@ -147,9 +161,10 @@ not "Section Corner" (two unrelated fields happen to be the same size that
 year, so acreage alone can't tell them apart, and the name similarity
 happens to point the wrong way too). Type `N` and Enter to reject it, then
 type `Home Quarter` when it asks for the correct name. For every other
-prompt, `y` is correct. Notice the pattern for your own data too: a `low`
-confidence is the tool's own signal to slow down and actually check,
-rather than a formality.
+prompt, `y` is correct. On your own data, every name prompt shows
+`confidence: low`, so don't rely on that word: the warning sign is a line
+like "has 2 acreage candidates", which means the tool genuinely can't tell
+two fields apart and needs you to say which one it is.
 
 The app can also show a second example farm, **Farm 1**: the same fields
 with clean records, so you can compare a tidy set of records with a messy
@@ -185,13 +200,19 @@ names the farm it came from. Farm 1 says the costs are in line; Farm 2
 catches the mistyped seed cost. The first switch to Farm 2 takes a few
 seconds while its lookup servers start.
 
+Type a question and press **Enter** or **Ask my records** (Shift+Enter
+starts a new line). While it's being looked up, the box and buttons are
+locked and the button reads "Looking it up...", so a question is never
+sent twice. Tapping an example or an **Ask next** button asks straight
+away. **Clear** empties the box and the answer and starts over.
+
 After an answer you can ask a follow-up such as "What about East 80?" or
 "And in 2023?". The line **Showing:** above each answer says which field,
 season and question it actually answered, and **Ask next** offers a few
 full questions to tap. Each follow-up is looked up and checked from
 scratch.
 
-![The web app answering "Was East 80 a bad field or just a bad year?"](images/farm-web-answer.png)
+![The web app answering "Was the Marginal Eighty a bad field or just a bad year?" for Farm 1](images/farm-web-answer.png)
 
 Each part of the answer is labelled. **Calculated from your records** is
 plain arithmetic on your files. **Added by the AI, then checked** is the
@@ -208,12 +229,13 @@ records show that 2020 was a bad year, but not why, so the sentence is
 blocked. The AI gets one try, so the answer you see is the part calculated
 from your records, nothing more.
 
-![Below the answer: the checks, the figures and where they came from](images/farm-web-checks.png)
+![Below the answer: the 8 checks, the figures and where they came from](images/farm-web-checks.png)
 
-The app only works on this laptop. To let others in the room use it from
-their own laptops on the same Wi-Fi, start it with
-`uv run --project web farm-web --lan` instead, and only on a network you
-trust.
+The app only works on this laptop. It never creates a public link and
+sends no usage data; every question is written to `data/audit.jsonl` on
+your laptop. To let others in the room use it from their own laptops on
+the same Wi-Fi, start it with `uv run --project web farm-web --lan`
+instead, and only on a network you trust.
 
 If you prefer the terminal, the same question works there too:
 
@@ -221,7 +243,7 @@ If you prefer the terminal, the same question works there too:
 uv run --project host farm-cli "was the north eighty a bad field or a bad year"
 ```
 
-[docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists fifteen more example
+[docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists fifteen example
 questions you can try, each with the verifiable correct answer written
 out, so you can check the tool's answer against the known-right one — a
 good way to build trust in it before moving to Step 2.
@@ -285,15 +307,16 @@ filename itself, not as columns), one row per monitor reading:
 
 `timestamp`, `lat`, `lon`, `wet_bu_ac`, `dry_bu_ac`, `moisture_pct`
 
-**As-applied input logs** *(optional — only needed for recent seasons if
-you want the sub-field "which part of this field is losing money"
-questions to work)* — `as_applied/as_applied_YYYY.csv`, one row per
+**As-applied input logs** *(optional — only needed for the seasons you
+want to ask about: "What did I put on Coulee Field in 2023?", nitrogen
+across seasons, and "which part of this field is losing money")* — `as_applied/as_applied_YYYY.csv`, one row per
 product application, columns:
 
 `timestamp`, `field_name`, `product`, `rate`, `rate_unit`, `lat`, `lon`
 
-**Weather** *(optional, only needed for "why was this a bad year — weather
-or management" questions)* — `weather/weather_YYYY.csv` (`season`, `date`,
+**Weather** *(optional — only needed for weather and soil questions such
+as "How dry was 2018?" and "How much water does Coulee Field's soil hold?",
+and for the weather estimate shown with a bad year)* — `weather/weather_YYYY.csv` (`season`, `date`,
 `precip_mm`, `temp_min_c`, `temp_max_c`) and one shared
 `weather/soil_awc.csv` (`field_name`, `awc_in` — the soil's water-holding
 capacity, in inches, a number your agronomist or soil survey can supply).
