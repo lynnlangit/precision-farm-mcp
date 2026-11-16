@@ -12,7 +12,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import replace as dataclass_replace
 from html import escape
+from pathlib import Path
 
+from farm_host.cli import REPO_ROOT as _REPO_ROOT
 from farm_host.cli import AnswerResult
 from farm_host.farms import Farm
 from farm_host.followups import TOPIC_LABELS, resolved_label
@@ -537,8 +539,20 @@ def _source_html(result: AnswerResult) -> str:
         args = ", ".join(f"{k} = {v}" for k, v in result.tool_args.items())
         rows.append(("With", escape(args)))
     prov = (result.payload or {}).get("provenance") or {}
+    if prov.get("data_dir"):
+        rows.append(("Farm folder", f"<code>{escape(_folder_label(prov['data_dir']))}</code>"))
+    if result.records:
+        n_files = len(result.records)
+        rows.append(
+            ("Records behind this answer", f"{n_files:,} file{'s' if n_files != 1 else ''} and tabs")
+        )
     if prov.get("source_file_count") is not None:
-        rows.append(("Records read", f"{prov['source_file_count']:,} of your files"))
+        rows.append(
+            (
+                "Whole farm loaded",
+                f"{prov['source_file_count']:,} files and tabs, every field and season",
+            )
+        )
     if prov.get("built_at"):
         built = escape(str(prov["built_at"])[:19].replace("T", " "))
         rows.append(("Snapshot built", f"{built} UTC"))
@@ -547,8 +561,45 @@ def _source_html(result: AnswerResult) -> str:
     body = "".join(f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in rows)
     return (
         f'<dl class="pf-figures pf-source">{body}</dl>'
-        '<p class="pf-muted">Nothing left this computer. Every question is also written to '
+        + _records_html(result.records)
+        + '<p class="pf-muted">Nothing left this computer. Every question is also written to '
         "<code>data/audit.jsonl</code>.</p>"
+    )
+
+
+def _folder_label(data_dir: str) -> str:
+    """The farm's folder as a grower would find it: relative to the project
+    folder when it's inside it, with a trailing slash."""
+    path = Path(data_dir)
+    try:
+        path = path.relative_to(_REPO_ROOT)
+    except ValueError:
+        pass
+    return f"{path.as_posix()}/"
+
+
+def _records_html(records: list[dict] | None) -> str:
+    """ "Show the records": every file and spreadsheet tab the lookup read,
+    so a grower can open it and check the answer by hand."""
+    if not records:
+        return ""
+    body = "".join(
+        "<tr>"
+        f"<td><code>{escape(r['path'])}</code>"
+        + (f" &middot; tab <strong>{escape(r['tab'])}</strong>" if r.get("tab") else "")
+        + "</td>"
+        f'<td class="num">{escape(r["count_text"])}</td>'
+        f"<td>{escape(r.get('which') or 'all of it')}</td>"
+        "</tr>"
+        for r in records
+    )
+    return (
+        '<details class="pf-records"><summary>Show the records</summary>'
+        '<p class="pf-muted">Open these in the farm folder above to check the answer by hand. '
+        "They're your own files, unchanged.</p>"
+        '<div class="pf-table-wrap"><table class="pf-table">'
+        "<thead><tr><th>File</th><th>Rows used</th><th>Which ones</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></div></details>"
     )
 
 

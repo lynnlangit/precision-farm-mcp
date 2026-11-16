@@ -222,7 +222,11 @@ one sentence the AI wrote, shown only because it passed every check.
 Below the answer, **How we checked it** and **The numbers behind it** are
 folded to one line each, with a short summary such as "All 8 passed".
 Click either to open it: the checks, the exact figures the answer came
-from, and which records were read. If the AI's sentence failed a check,
+from, and which records were read. Under **Where it came from**, **Show
+the records** lists every file, spreadsheet tab and row the answer used,
+so you can open them and check the answer by hand
+([YOUR_RECORDS.md](YOUR_RECORDS.md#show-the-records-behind-an-answer)
+shows how). If the AI's sentence failed a check,
 the answer card says **AI sentence withheld**; click **See what it wrote**
 to see what the AI tried to say and which check stopped it. How we checked
 it opens by itself then, so the failed check is easy to find.
@@ -263,74 +267,14 @@ layout is the fiddliest part of using this tool today. If you have a
 tech-savvy friend, agronomist, or ag-tech consultant, this is the step
 where it's worth asking for a hand the first time.
 
-The tool expects a folder (`data/synthetic/` by default — you can literally
-replace what's in there) containing the pieces below. Column names need to
-match **exactly** (spelling, capitalization, punctuation).
-
-Two different things happen if a column doesn't match. Your cost ledger's
-column headers go through the same confirm-once step as field names — the
-tool proposes a mapping and a human checks it, same as Step 1. Everything
-else (scale tickets, yield monitor, as-applied logs, weather, the Unit
-Prices tab) is read directly by column name with no confirmation step: a
-mismatch there fails loudly rather than silently misreading your data, but
-today that failure is a technical error message (a database or Python
-error), not yet a plain-language one. That's exactly why getting the
-column names right matters, and why it's worth doing your first real load
-next to someone who won't be thrown by an error message that looks
-technical.
-
-**Field boundaries** — `boundaries/field_boundaries_YYYY.geojson`, one file
-per season. A standard GIS "GeoJSON" file (the format most farm-mapping
-software can export to), one feature per field, each carrying these
-properties: `field_name`, `acres`, `crop`, `season`.
-
-**Your cost ledger** — `cost_ledger.xlsx`, a single spreadsheet. One tab
-per season, the tab named just the year (`2024`, not "Season 2024"),
-with these columns in this order:
-
-`Field`, `Crop`, `Acres`, `Seed ($/ac)`, `Fertilizer ($/ac)`, `Chemical ($/ac)`, `Fuel ($/ac)`, `Cash Rent ($/ac)`, `Notes`
-
-(If your ledger records total dollars for the field rather than a
-per-acre rate, name the columns `Seed (Total $)` etc. instead — the tool
-asks you at confirm time which basis a season uses, and remembers your
-answer.)
-
-Plus one shared tab, named exactly `Unit Prices`, one row per season, with
-this exact header (this one has no confirmation step — it's read literally,
-so the header must match precisely):
-
-`Season`, `Seed Corn ($/unit)`, `Seed Soybean ($/unit)`, `N ($/lb)`, `P ($/lb)`, `K ($/lb)`, `Chemical ($/ac)`, `Fuel ($/gal)`
-
-**Elevator/scale tickets** — `scale_tickets/scale_tickets_YYYY.csv`, one
-file per season, one row per load, columns:
-
-`season`, `ticket_number`, `date`, `field_name`, `crop`, `load_number`, `moisture_pct`, `gross_bushels`, `net_bushels`, `price_per_bu`, `elevator`
-
-**Yield monitor data** — `yield_monitor/yield_monitor_<field>_YYYY.csv`,
-one file per field per season (the field name and year live in the
-filename itself, not as columns), one row per monitor reading:
-
-`timestamp`, `lat`, `lon`, `wet_bu_ac`, `dry_bu_ac`, `moisture_pct`
-
-**As-applied input logs** *(optional — only needed for the seasons you
-want to ask about: "What did I put on Coulee Field in 2023?", nitrogen
-across seasons, and "which part of this field is losing money")* — `as_applied/as_applied_YYYY.csv`, one row per
-product application, columns:
-
-`timestamp`, `field_name`, `product`, `rate`, `rate_unit`, `lat`, `lon`
-
-**Weather** *(optional — only needed for weather and soil questions such
-as "How dry was 2018?" and "How much water does Coulee Field's soil hold?",
-and for the weather estimate shown with a bad year)* — `weather/weather_YYYY.csv` (`season`, `date`,
-`precip_mm`, `temp_min_c`, `temp_max_c`) and one shared
-`weather/soil_awc.csv` (`field_name`, `awc_in` — the soil's water-holding
-capacity, in inches, a number your agronomist or soil survey can supply).
-
-The example data already generated in Step 1 is a working, complete
-example of every one of these — open the actual files under
-`data/synthetic/` if a written-out column list is ever ambiguous. Field
-names, seasons, and row counts can all differ from the example; file
-naming and column names need to match what's listed above.
+The tool expects a folder (`data/synthetic/` by default: you can replace
+what's in there) holding your boundaries, cost ledger and scale tickets,
+plus yield monitor, as-applied and weather files for the questions that
+need them. Every file name and column heading is listed in
+**[YOUR_RECORDS.md](YOUR_RECORDS.md#the-files-you-need-for-your-own-farm)**,
+with which questions each file answers. Headings need to match exactly.
+The example data generated in Step 1 is a complete working example of
+every file: open `data/synthetic-clean/` whenever a heading is unclear.
 
 Once your files are in place:
 

@@ -32,6 +32,7 @@ from farm_model.query_schema import (
 
 from . import __version__
 from .mcp_client import MCPFleet, ServerStartTimeout
+from .records import records_request
 from .therefore import build_therefore_line
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -117,6 +118,23 @@ class AnswerResult:
     # "model_unreachable", "unparseable", "unresolved_followup" or "tool_refused"
     # when ok is False.
     refusal_kind: str | None = None
+    # The raw files, spreadsheet tabs and rows the lookup read (web app only,
+    # "Show the records"); see farm_host.records. Never seen by the narrator.
+    records: list[dict] | None = None
+
+
+async def _fetch_records(fleet: MCPFleet, tool: str, args: dict, payload: dict) -> list[dict] | None:
+    """Best effort: an answer is still shown if the list can't be fetched."""
+    request = records_request(tool, args, payload)
+    if request is None or "field-registry" not in getattr(fleet, "sessions", {}):
+        return None
+    try:
+        data = (await fleet.call("field-registry", "records_behind", **request)).data
+    except Exception:  # noqa: BLE001 -- the list is extra; the answer stands without it
+        return None
+    if "error" in data:
+        return None
+    return data.get("records")
 
 
 async def answer_question(
@@ -241,6 +259,7 @@ async def answer_question(
     )
     therefore = build_therefore_line(result)
     text = f"{outcome.text}\n\n{therefore}" if therefore else outcome.text
+    records = await _fetch_records(fleet, tool, args, result) if fleet is not None else None
     return AnswerResult(
         text=text,
         ok=True,
@@ -251,6 +270,7 @@ async def answer_question(
         payload=result,
         narration=outcome,
         therefore=therefore,
+        records=records,
     )
 
 

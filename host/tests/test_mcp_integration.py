@@ -117,6 +117,22 @@ async def test_field_registry_resolution_matches_direct():
     assert mcp_result["canonical_boundary_name"] == expected
 
 
+async def test_records_behind_lists_the_files_through_mcp():
+    async with MCPFleet(["field-registry"]) as fleet:
+        ok = (await fleet.call(
+            "field-registry", "records_behind",
+            kinds=["cost_ledger", "scale_tickets"], field_name="Marginal Eighty", seasons=[2025],
+        )).data
+        unknown = (await fleet.call(
+            "field-registry", "records_behind", kinds=["cost_ledger"], field_name="Back Forty"
+        )).data
+    assert [(r["path"], r["tab"]) for r in ok["records"]] == [
+        ("cost_ledger.xlsx", "2025"),
+        ("scale_tickets/scale_tickets_2025.csv", None),
+    ]
+    assert unknown["code"] == "not_found"
+
+
 async def test_yield_reconciliation_matches_direct():
     direct = reconcile_yield_vs_scale(DIRECT_SNAPSHOT.con)
     match = next(r for r in direct if r.field_name == "Coulee Field" and r.season == 2021)

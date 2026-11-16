@@ -269,8 +269,9 @@ One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 | #24 | Multi-turn follow-up pairs in EVAL_QUESTIONS.md; East 80 example moved third |
 | #25 | Clearer web app: Clear renamed "↺ New subject" on the "Talking about:" line, slim banner, checks and numbers folded to one line each, bigger text |
 | #26 | Docs brought up to date; README screenshots retaken with real Gemma |
+| #27 | "Show the records" lists the files, tabs and rows behind each answer (`records_behind` tool); `docs/YOUR_RECORDS.md`; question-flow diagram renders on GitHub again |
 
-About 430 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
+About 450 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
 
 ---
 

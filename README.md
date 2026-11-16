@@ -20,6 +20,9 @@ on your own laptop. Never a prediction, never a guess, never sent anywhere.
   check, the answer says so, and **See what it wrote** opens what it tried
   to say and which check stopped it. The
   example under **When the AI is stopped** shows this happening.
+- **Show the records.** Under **The numbers behind it**, every file,
+  spreadsheet tab and row the answer used is listed, so you can open them
+  and check it by hand ([docs/YOUR_RECORDS.md](docs/YOUR_RECORDS.md)).
 
 The AI only turns your question into a lookup and offers that one
 sentence. It never touches the data or does the arithmetic.
@@ -38,6 +41,7 @@ on the Talking about line forgets them and starts over.
 | You are | Read |
 |---|---|
 | A grower trying it out | [docs/FARMER_GUIDE.md](docs/FARMER_GUIDE.md): setup, the example farms, loading your own records |
+| A grower who wants to check the answers | [docs/YOUR_RECORDS.md](docs/YOUR_RECORDS.md): where the files are, the records behind each answer, the files your own farm needs |
 | Leading a session | [docs/EVAL_QUESTIONS.md](docs/EVAL_QUESTIONS.md): 15 demo questions plus follow-up pairs, each with its known-correct answer |
 | A developer | [Quick start](#quick-start), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/VERIFICATION.md](docs/VERIFICATION.md) |
 
@@ -101,7 +105,7 @@ only.
 | `host/` (`farm_host`) | MCP client and router, `farm-ingest` (human confirmation), `farm-cli`, `farm-preflight` |
 | `web/` (`farm_web`) | `farm-web`, the local Gradio app for growers, a thin layer over `farm_host` |
 | `model/` (`farm_model`) | The bounded Gemma layer: question to lookup, the one added sentence, and the 8 checks |
-| `docs/` | [FARMER_GUIDE](docs/FARMER_GUIDE.md), [ARCHITECTURE](docs/ARCHITECTURE.md), [VERIFICATION](docs/VERIFICATION.md), [EVAL_QUESTIONS](docs/EVAL_QUESTIONS.md), [PROJECT_HISTORY](docs/PROJECT_HISTORY.md) |
+| `docs/` | [FARMER_GUIDE](docs/FARMER_GUIDE.md), [YOUR_RECORDS](docs/YOUR_RECORDS.md), [ARCHITECTURE](docs/ARCHITECTURE.md), [VERIFICATION](docs/VERIFICATION.md), [EVAL_QUESTIONS](docs/EVAL_QUESTIONS.md), [PROJECT_HISTORY](docs/PROJECT_HISTORY.md) |
 
 The MCP design is adapted from
 [precision-medicine-mcp](https://github.com/lynnlangit/precision-medicine-mcp).
