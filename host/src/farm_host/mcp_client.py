@@ -60,6 +60,15 @@ DETERMINISTIC_STRING_FIELDS = frozenset(
         "input",
         "unit",
         "as_logged_unit",
+        # field-registry.records_behind: file paths, tab names and
+        # code-built row/ticket/product lists, the same kind of structured
+        # value as field_name and product. Never shown to the narrator.
+        "kind",
+        "label",
+        "path",
+        "tab",
+        "count_text",
+        "which",
     }
 )
 
