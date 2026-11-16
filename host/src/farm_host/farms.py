@@ -54,7 +54,7 @@ FARMS: dict[str, Farm] = {
         key="farm1",
         name="Farm 1",
         records="clean records",
-        blurb="Every record agrees with every other, so the checks pass quietly.",
+        blurb="Every record agrees with every other.",
         data_dir=REPO_ROOT / "data" / "synthetic-clean",
         confirm_store=REPO_ROOT / "data" / "confirmed_mappings_clean.json",
         generate_cmd=(
@@ -70,10 +70,7 @@ FARMS: dict[str, Farm] = {
         key="farm2",
         name="Farm 2",
         records="messy records",
-        blurb=(
-            "The same fields, with the mistakes real records have: a mistyped seed cost, "
-            "a yield monitor out of calibration, a field name spelled five ways."
-        ),
+        blurb="The same fields, with the mistakes real records have.",
         data_dir=REPO_ROOT / "data" / "synthetic",
         confirm_store=REPO_ROOT / "data" / "confirmed_mappings.json",
         generate_cmd="uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic",

@@ -15,7 +15,8 @@ from html import escape
 
 from farm_host.cli import AnswerResult
 from farm_host.farms import Farm
-from farm_host.followups import resolved_label
+from farm_host.followups import TOPIC_LABELS, resolved_label
+from farm_model.query_schema import FollowUpContext
 
 # The checks a model-written sentence must pass before a grower sees it, in
 # the order the narrator runs them. Labels are plain language on purpose:
@@ -259,6 +260,14 @@ class AnswerView:
     checks_html: str
     figures_html: str
     source_html: str
+    # The one-line summaries shown on the folded "How we checked it" and
+    # "The numbers behind it" panels, and whether the checks open by
+    # themselves (they do when the AI's sentence was withheld).
+    checks_summary: str = ""
+    checks_tone: str = "ok"
+    checks_open: bool = False
+    figures_summary: str = ""
+    figures_tone: str = "ok"
 
 
 _EMPTY_CHECKS = (
@@ -289,14 +298,50 @@ def _sentence_case(text: str) -> str:
     return text[:1].upper() + text[1:]
 
 
+NEW_SUBJECT_LABEL = "\u21ba New subject"
+
+
+def subject_html(label: str) -> str:
+    """The "Talking about:" line at the top of the answer card, with the
+    "New subject" button that forgets it. The button is plain HTML; the page
+    script (app.NEW_SUBJECT_JS) passes its click on to the app's hidden
+    Clear button, so there is one way to start over, not two."""
+    return (
+        '<div class="pf-resolved"><p><span>Talking about:</span> '
+        f"{escape(label)}</p>"
+        f'<button type="button" class="pf-newsub" title="Forget this field and year, '
+        f'and start a new subject">{NEW_SUBJECT_LABEL}</button></div>'
+    )
+
+
 def _resolved_html(result: AnswerResult) -> str:
     """Which question was actually answered -- most useful for a follow-up
     like "what about East 80?", where a wrong guess would otherwise look
     exactly like a right answer."""
     label = resolved_label(result)
-    if not label:
-        return ""
-    return f'<p class="pf-resolved"><span>Showing:</span> {escape(label)}</p>'
+    return subject_html(label) if label else ""
+
+
+def context_label(context: FollowUpContext) -> str | None:
+    """What a follow-up would build on, as a "Talking about:" label."""
+    parts = [p for p in (context.field_name, context.season) if p is not None]
+    if context.intent is not None:
+        parts.append(TOPIC_LABELS.get(context.intent, context.intent.value.replace("_", " ")))
+    return " \u00b7 ".join(str(p) for p in parts) or None
+
+
+def with_subject(view: AnswerView, context: FollowUpContext | None) -> AnswerView:
+    """An answer card with no "Talking about:" line of its own (a refusal,
+    say) still shows what the next question builds on, if anything, so
+    "New subject" is there whenever there is a subject to forget."""
+    if context is None or "pf-resolved" in view.answer_html:
+        return view
+    label = context_label(context)
+    html = view.answer_html
+    if not label or not html.startswith("<div"):
+        return view
+    end = html.index(">") + 1
+    return dataclass_replace(view, answer_html=html[:end] + subject_html(label) + html[end:])
 
 
 def _answer_html(result: AnswerResult) -> str:
@@ -339,13 +384,22 @@ def _answer_html(result: AnswerResult) -> str:
             "</div>",
         ]
     elif n.rejected_texts:
-        # The sentence itself is never shown here: only that one was blocked.
+        # Folded: the blocked sentence is never part of the answer, and is
+        # shown only to someone who opens "See what it wrote".
+        failed = n.failed_checks[-1] if n.failed_checks else ()
+        reasons = "".join(
+            f'<li><span class="pf-mark" aria-hidden="true">&#10007;</span>'
+            f"{escape(_CHECK_LABELS.get(name, name))}</li>"
+            for name in failed
+        )
         parts += [
-            '<div class="pf-line pf-line-withheld">',
-            '<span class="pf-tag pf-tag-withheld">AI sentence withheld</span>',
-            "<p>The AI wrote a sentence, but it failed a check, so it isn't part of your "
-            "answer. <em>How we checked it</em> shows what it wrote and why it was stopped.</p>",
-            "</div>",
+            '<details class="pf-line pf-line-withheld">',
+            '<summary><span class="pf-tag pf-tag-withheld">AI sentence withheld</span> '
+            "<span>It failed a check, so it isn't part of your answer.</span> "
+            '<span class="pf-see">See what it wrote</span></summary>',
+            f"<blockquote>{escape(n.rejected_texts[-1])}</blockquote>",
+            f'<p class="pf-muted">Stopped because:</p><ul class="pf-checks fail">{reasons}</ul>',
+            "</details>",
         ]
     if result.therefore:
         parts += [
@@ -498,12 +552,107 @@ def _source_html(result: AnswerResult) -> str:
     )
 
 
+def _checks_summary(result: AnswerResult) -> tuple[str, str, bool]:
+    """(summary, tone, open) for the folded "How we checked it" panel."""
+    n = result.narration
+    if not result.ok or n is None:
+        return "Nothing to check", "muted", False
+    if n.context:
+        tries = len(n.rejected_texts) + 1
+        on_try = f" on try {tries}" if tries > 1 else ""
+        return f"All {len(CHECKS)} passed{on_try} \u00b7 AI sentence shown", "ok", False
+    if n.rejected_texts:
+        failed = len(set(n.failed_checks[-1])) if n.failed_checks else 1
+        return f"{failed} of {len(CHECKS)} failed \u00b7 AI sentence withheld", "warn", True
+    return "The AI added nothing", "muted", False
+
+
+def _figures_summary(result: AnswerResult) -> tuple[str, str]:
+    """(summary, tone) for the folded "The numbers behind it" panel."""
+    payload = result.payload
+    if not payload or "error" in payload:
+        return "No figures looked up", "muted"
+    figures = len(_scalar_rows(payload))
+    tables = sum(
+        1
+        for k, v in payload.items()
+        if k not in _HIDDEN_KEYS
+        and (
+            (isinstance(v, list) and v and isinstance(v[0], dict))
+            or (isinstance(v, dict) and v and all(isinstance(x, dict) for x in v.values()))
+        )
+    )
+    parts = []
+    if figures:
+        parts.append(f"{figures} figure{'s' if figures != 1 else ''}")
+    if tables:
+        parts.append(f"{tables} table{'s' if tables != 1 else ''}")
+    modeled = payload.get("modeled") or {}
+    if isinstance(modeled, dict) and modeled.get("attribution"):
+        parts.append("1 modeled estimate")
+    flagged = _is_flagged(payload) or any(
+        isinstance(v, list) and any(isinstance(r, dict) and _is_flagged(r) for r in v)
+        for v in payload.values()
+    )
+    if flagged:
+        parts.append("something flagged")
+    return " \u00b7 ".join(parts) or "No figures looked up", "warn" if flagged else "ok"
+
+
 def build_view(result: AnswerResult) -> AnswerView:
+    checks_summary, checks_tone, checks_open = _checks_summary(result)
+    figures_summary, figures_tone = _figures_summary(result)
     return AnswerView(
         answer_html=_answer_html(result),
         checks_html=_checks_html(result),
         figures_html=_figures_html(result),
         source_html=_source_html(result),
+        checks_summary=checks_summary,
+        checks_tone=checks_tone,
+        checks_open=checks_open,
+        figures_summary=figures_summary,
+        figures_tone=figures_tone,
+    )
+
+
+def _fold(title: str, sub: str, summary: str, tone: str, body: str, open_: bool) -> str:
+    return (
+        f'<details class="pf-fold"{" open" if open_ else ""}>'
+        f'<summary><span class="pf-fold-title">{escape(title)}</span>'
+        f'<span class="pf-fold-chip pf-tone-{escape(tone)}">{escape(summary)}</span></summary>'
+        + (f'<p class="pf-h-sub">{escape(sub)}</p>' if sub else "")
+        + f"{body}</details>"
+    )
+
+
+def checks_panel_html(view: AnswerView) -> str:
+    """ "How we checked it", folded to one line; open when a check failed."""
+    # The "every one of these" line only where there is a list to point at.
+    has_list = 'class="pf-checks"' in view.checks_html
+    return _fold(
+        "How we checked it",
+        "The AI's sentence is shown only if it passes every one of these." if has_list else "",
+        view.checks_summary,
+        view.checks_tone,
+        view.checks_html,
+        view.checks_open,
+    )
+
+
+def numbers_panel_html(view: AnswerView) -> str:
+    """ "The numbers behind it" with "Where it came from" inside, folded."""
+    body = (
+        view.figures_html
+        + '<p class="pf-h pf-h-small">Where it came from</p>'
+        + view.source_html
+    )
+    return _fold(
+        "The numbers behind it",
+        "Straight from your records, no AI involved.",
+        view.figures_summary,
+        view.figures_tone,
+        body,
+        False,
     )
 
 
