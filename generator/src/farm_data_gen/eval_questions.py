@@ -263,7 +263,7 @@ def _follow_up_section(
         "answers one question at a time). Only the last verified answer's field, season "
         "and question type carry over; the follow-up is still looked up and checked from "
         "scratch, with its own tool call and its own checks, and a follow-up whose field "
-        "or season came from nowhere is refused. Press **Clear** to start over. "
+        "or season came from nowhere is refused. Press **↺ New subject** (on the Talking about line) to start over. "
         "Switching farms also clears it. The app offers its own \"Ask next\" buttons "
         "after each answer; these pairs are the ones `host/tests/test_eval_nl.py -k "
         "follow_up` checks against the real model.",
