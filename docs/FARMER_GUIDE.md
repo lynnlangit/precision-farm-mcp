@@ -186,7 +186,7 @@ A browser tab opens at `http://127.0.0.1:7860`. When everything is set
 up, a small "Prerequisites loaded: 6 of 6" line sits at the bottom of the
 page (click it to see the six checks). If one fails, it moves to the top,
 open, and tells you the command that fixes it. Type a question, or open
-one of the example question groups and tap a question, and you should get
+one of the groups under **Or try an example** and tap a question, and you should get
 back a real, grounded answer in a few seconds. The app starts its lookup
 servers in the background when it opens, so later questions skip that step;
 if you regenerate the data or re-run `farm-ingest`, restart the app.
@@ -234,7 +234,7 @@ records show that 2020 was a bad year, but not why, so the sentence is
 blocked. The AI gets one try, so the answer you see is the part calculated
 from your records, nothing more.
 
-![Below the answer, opened: the 8 checks, the figures and where they came from](images/farm-web-checks.png)
+![Below the answer, opened: How we checked it (all 8 checks passed) and The numbers behind it (the figures and where they came from)](images/farm-web-checks.png)
 
 The app only works on this laptop. It never creates a public link and
 sends no usage data; every question is written to `data/audit.jsonl` on

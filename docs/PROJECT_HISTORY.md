@@ -257,7 +257,7 @@ One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 | #12 | Unsupported-cause check matches word forms (planted, flooded) |
 | #13 | README leads with the web app; `docs/VERIFICATION.md` added |
 | #14 (v0.1.1) | Docs reviewed against the code; all packages, generator included, on one version |
-| #15 | Follow-up questions in the web app ("Showing:" line, "Ask next" buttons) |
+| #15 | Follow-up questions in the web app ("Showing:" line, now "Talking about:"; "Ask next" buttons) |
 | #16 | MCP servers kept running between questions (~4 s to ~0.2 s per lookup); tidier page |
 | #17 | Farm 1 / Farm 2 picker (clean vs. messy records); Riverside renamed Sheyenne Bottom |
 | #18 | All six MCP servers used: weather, soil and as-applied questions (evals 12-15), `units` check |
@@ -265,8 +265,12 @@ One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 | #20 | Question-flow diagram added to ARCHITECTURE.md |
 | #21 | One AI try by default, so the withheld-sentence demo (eval 2) works with real Gemma |
 | #22 | Each question sent exactly once (Enter to send, locked while answering); browser tests |
+| #23 | Second docs review; screenshots retaken on a Mac; three hard problems moved to ARCHITECTURE.md |
+| #24 | Multi-turn follow-up pairs in EVAL_QUESTIONS.md; East 80 example moved third |
+| #25 | Clearer web app: Clear renamed "↺ New subject" on the "Talking about:" line, slim banner, checks and numbers folded to one line each, bigger text |
+| #26 | Docs brought up to date; README screenshots retaken with real Gemma |
 
-About 400 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
+About 430 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
 
 ---
 

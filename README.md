@@ -6,7 +6,7 @@ Ask a plain-English question about ten seasons of your own farm records
 (costs, yields, profit) and get an answer calculated from your own files,
 on your own laptop. Never a prediction, never a guess, never sent anywhere.
 
-![The grower web app answering "Was the Marginal Eighty a bad field or just a bad year?" for Farm 1](docs/images/farm-web-answer.png)
+![The grower web app answering "Was the Marginal Eighty a bad field or just a bad year?" for Farm 1, with the real Gemma sentence shown after passing every check](docs/images/farm-web-answer.png)
 
 ## What you see in every answer
 
@@ -24,12 +24,21 @@ on your own laptop. Never a prediction, never a guess, never sent anywhere.
 The AI only turns your question into a lookup and offers that one
 sentence. It never touches the data or does the arithmetic.
 
+## Ask a follow-up
+
+After an answer, the **Talking about:** line names the field, season and
+question it answered, and **Ask next** offers full questions to tap. You
+can also type a short follow-up such as "What about East 80?" or "And in
+2023?". Only the last answer's field, season and question type carry over,
+and every follow-up is looked up and checked from scratch. **↺ New subject**
+on the Talking about line forgets them and starts over.
+
 ## Start here
 
 | You are | Read |
 |---|---|
 | A grower trying it out | [docs/FARMER_GUIDE.md](docs/FARMER_GUIDE.md): setup, the example farms, loading your own records |
-| Leading a session | [docs/EVAL_QUESTIONS.md](docs/EVAL_QUESTIONS.md): 15 demo questions, each with its known-correct answer |
+| Leading a session | [docs/EVAL_QUESTIONS.md](docs/EVAL_QUESTIONS.md): 15 demo questions plus follow-up pairs, each with its known-correct answer |
 | A developer | [Quick start](#quick-start), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/VERIFICATION.md](docs/VERIFICATION.md) |
 
 ## Two example farms
@@ -41,7 +50,7 @@ mistyped seed cost, a yield monitor out of calibration, a GPS dropout, a
 field name spelled four ways. Ask a question, switch farms, and the app asks
 it again: Farm 1's record checks pass, Farm 2's catch the problem.
 
-![Below the answer, opened: the 8 checks the AI's sentence passed, the figures behind it, and where they came from](docs/images/farm-web-checks.png)
+![Below the answer, opened: How we checked it (all 8 checks passed) and The numbers behind it (the figures and where they came from)](docs/images/farm-web-checks.png)
 
 ## Quick start
 

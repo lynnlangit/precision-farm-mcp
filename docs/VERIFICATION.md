@@ -5,7 +5,7 @@ prove. For the overview, see the [README](../README.md).
 
 ## Running the tests
 
-About 400 tests across five packages, including all 15
+About 430 tests across five packages, including all 15
 [evaluation questions](EVAL_QUESTIONS.md) at the tool level. Tests that
 call the model need Ollama running with `gemma3:4b`; without it, only those
 tests fail.
@@ -14,9 +14,9 @@ tests fail.
 |---|---|---|---|
 | `generator` | 19 | No | Every PR (Ubuntu and Windows) |
 | `core` | 84 | No | Every PR (Ubuntu and Windows) |
-| `host` | 150, of which 27 are the opt-in `eval_nl` suite | Some | Nightly and on demand (Ubuntu) |
+| `host` | 170, of which 27 are the opt-in `eval_nl` suite | Some | Nightly and on demand (Ubuntu) |
 | `model` | 96 | Some | Nightly and on demand (Ubuntu) |
-| `web` | 57, of which 25 are the opt-in `ui` browser suite | No | Locally |
+| `web` | 63, of which 25 are the opt-in `ui` browser suite | No | Locally |
 | `docs/test_architecture_doc.py` | 1 | No | Locally |
 
 ```bash
