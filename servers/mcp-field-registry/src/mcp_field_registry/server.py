@@ -15,6 +15,7 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
 from farm_core import pipeline
+from farm_core import records_behind as _records
 from farm_core.audit import AuditLog
 
 mcp = FastMCP("field-registry")
@@ -152,6 +153,58 @@ def resolve_field_name(raw_name: str, season: int) -> dict:
     _audit_log().log("tool_executed", tool="resolve_field_name", raw_name=raw_name, season=season)
     return ResolveFieldNameResult(
         canonical_boundary_name=resolved, method=method, provenance=SnapshotProvenance(**_provenance())
+    ).model_dump()
+
+
+
+class SourceRecord(BaseModel):
+    kind: str
+    label: str
+    path: str
+    tab: str | None
+    rows: int
+    count_text: str
+    which: str
+
+
+class RecordsBehindResult(BaseModel):
+    records: list[SourceRecord]
+    provenance: SnapshotProvenance
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
+@_confirmation_guarded
+def records_behind(
+    kinds: list[str], field_name: str | None = None, seasons: list[int] | None = None
+) -> dict:
+    """List the raw records a lookup read, so a grower can open them and
+    check the answer by hand: one entry per file or spreadsheet tab, with
+    how many rows matched and which ones (spreadsheet rows, ticket numbers,
+    products). Lists records only; computes nothing.
+
+    Args:
+        kinds: Which kinds of record, from cost_ledger, unit_prices,
+            scale_tickets, yield_monitor, boundaries, as_applied, weather, soil.
+        field_name: One field (any spelling the records used), or omit for every field.
+        seasons: Season years, or omit for every season.
+
+    Returns:
+        {"records": [{"kind", "label", "path", "tab", "rows", "count_text",
+        "which"}, ...], "provenance": {...}}, or {"error": "...", "code":
+        "not_found" | "invalid_input"}.
+    """
+    snap = _snapshot()
+    try:
+        records = _records.records_behind(snap, kinds, field_name=field_name, seasons=seasons)
+    except _records.UnknownField as e:
+        return {"error": str(e), "code": "not_found"}
+    except ValueError as e:
+        return {"error": str(e), "code": "invalid_input"}
+    _audit_log().log(
+        "tool_executed", tool="records_behind", kinds=kinds, field_name=field_name, seasons=seasons
+    )
+    return RecordsBehindResult(
+        records=[SourceRecord(**r) for r in records], provenance=SnapshotProvenance(**_provenance())
     ).model_dump()
 
 

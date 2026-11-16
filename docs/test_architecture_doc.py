@@ -46,3 +46,14 @@ def test_architecture_doc_server_list_matches_servers_directory():
         f"actually has {actual} -- update the diagram (or the servers/ "
         f"directory) to match."
     )
+
+
+def test_no_semicolon_in_sequence_diagram_text():
+    # In a Mermaid sequence diagram a ";" ends the statement, so the rest of
+    # the line is a syntax error and GitHub shows no diagram at all.
+    doc_text = ARCHITECTURE_DOC.read_text(encoding="utf-8")
+    for block in re.findall(r"```mermaid\n(.*?)\n```", doc_text, re.DOTALL):
+        if not block.lstrip().startswith("sequenceDiagram"):
+            continue
+        bad = [line.strip() for line in block.splitlines() if ";" in line]
+        assert not bad, f"';' breaks the GitHub render of this diagram line: {bad}"

@@ -114,8 +114,10 @@ sequenceDiagram
         C-->>H: Failed — sentence is WITHHELD (no second try), the verified answer stands alone
     end
     H->>H: Add the "therefore" line and write every step to the audit log
-    H-->>W: Answer + checks + numbers + source
-    W-->>G: Answer with farm badge; "How we checked it" and<br/>"The numbers behind it" folded to one line each (checks open if one failed)
+    H->>S: Which files, tabs and rows did that lookup read? (field-registry records_behind)
+    S-->>H: One entry per file or spreadsheet tab (never shown to the AI or the checks)
+    H-->>W: Answer + checks + numbers + source + the records list
+    W-->>G: Answer with farm badge, "How we checked it" and<br/>"The numbers behind it" folded to one line each (checks open if one failed)
 
     rect rgb(232, 236, 246)
     Note over G,W: Follow-ups
@@ -155,6 +157,7 @@ sequenceDiagram
 | Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Shows the template sentence, the checked AI sentence or a "withheld" note (its "See what it wrote" opens the blocked sentence), then the checks and the figures and source as two panels folded to a one-line summary each; the checks open by themselves when the AI's sentence was withheld. Its "When the AI is stopped" example (eval 2) shows a withheld sentence; what the grower sees is in [FARMER_GUIDE.md](FARMER_GUIDE.md), how it is tested in [VERIFICATION.md](VERIFICATION.md). Local only unless `--lan` |
 | Persistent servers (`farm_host.server_pool`) | Built | All six servers start once in the background (~7 s) and stay up, so a lookup takes ~0.2 s instead of ~4 s. Restart the app after regenerating data |
 | Farm picker (`farm_host.farms`) | Built | Farm 1: clean records (`data/synthetic-clean`, generator `--clean`). Farm 2: messy records (`data/synthetic`). Same fields and true profits. One server pool per farm via `FARM_DATA_DIR`/`FARM_CONFIRM_STORE`; Farm 1 starts at app open, Farm 2 on first pick. Switching clears follow-ups and re-asks the question; every answer carries a farm badge |
+| "Show the records" (`farm_core.records_behind`, `farm_host.records`) | Built | After a web answer, the host asks `field-registry.records_behind` which files, spreadsheet tabs and rows the lookup read (cost-ledger rows, scale-ticket numbers, yield-monitor files, ...), using a fixed tool-to-records table. Listed under "Where it came from" so a grower can open the raw file and check by hand. Fetched after the checks and never passed to the AI. What each file must contain: [YOUR_RECORDS.md](YOUR_RECORDS.md) |
 | Follow-ups (`farm_host.followups`) | Built | Only the last verified answer's field, season and question type carry over; the parser refuses a follow-up whose field or season came from nowhere. A "Talking about:" line names what was answered, with a "New subject" button that forgets it, plus up to 3 "Ask next" buttons |
 | Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if it passes all 8 checks (grounded, verdict, sign, zone premise, reconciliation, attribution, unsupported cause, units). One try by default (`max_attempts=1`), so a failing sentence is withheld, not rewritten |
 | Hash-chained, concurrency-safe audit log | Built | Host and every server write to it (fixed in Phase A) |

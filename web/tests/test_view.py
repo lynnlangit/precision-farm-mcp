@@ -310,3 +310,24 @@ def test_flagged_figures_say_so_on_the_folded_line():
 def test_refusal_panels_say_nothing_to_check():
     view = build_view(AnswerResult(text="x", ok=False, refusal_kind="model_unreachable"))
     assert view.checks_summary == "Nothing to check" and view.checks_open is False
+
+
+def test_show_the_records_lists_each_file_and_labels_the_whole_farm():
+    payload = {**EAST_80, "provenance": {"data_dir": "/x/data/synthetic", "built_at": "2026-11-16T20:57:07", "source_file_count": 161}}
+    records = [
+        {"kind": "cost_ledger", "label": "Cost ledger", "path": "cost_ledger.xlsx", "tab": "2020",
+         "rows": 1, "count_text": "1 row", "which": "row 3"},
+        {"kind": "yield_monitor", "label": "Yield monitor", "path": "yield_monitor/y.csv", "tab": None,
+         "rows": 250, "count_text": "250 points", "which": ""},
+    ]
+    html = build_view(_result(payload=payload, records=records)).source_html
+    assert "Show the records" in html
+    assert "cost_ledger.xlsx</code> &middot; tab <strong>2020</strong>" in html
+    assert "row 3" in html and "250 points" in html and "all of it" in html
+    assert "Records behind this answer" in html and "2 files and tabs" in html
+    assert "161 files and tabs, every field and season" in html
+    assert "of your files" not in html
+
+
+def test_no_records_list_means_no_show_the_records():
+    assert "Show the records" not in build_view(_result()).source_html

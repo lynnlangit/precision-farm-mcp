@@ -305,3 +305,8 @@ details.pf-line-withheld .pf-checks li { color: var(--pf-loss); border-bottom: 0
 .pf-tone-muted { background: var(--pf-paper); color: var(--pf-ink-soft); }
 .pf-h-small { font-size: 1.1rem; margin-top: 14px; }
 .pf-checks.fail .pf-mark { color: var(--pf-loss); }
+
+/* "Show the records": the raw files behind an answer, under Where it came from */
+.pf-records { margin: 4px 0 10px; }
+.pf-records summary { cursor: pointer; font-weight: 600; color: var(--pf-ink); }
+.pf-records .pf-table td:first-child { overflow-wrap: anywhere; }
