@@ -6,7 +6,7 @@
 :root {
   --pf-paper: #fbf7ee;
   --pf-card: #ffffff;
-  --pf-card-edge: #e8dcc2;
+  --pf-card-edge: #cfbc93;
   --pf-ink: #2e2219;
   --pf-ink-soft: #6a5a48;
   --pf-sky-top: #1f4e7a;
@@ -65,34 +65,25 @@ footer { opacity: 0.6; }
   position: relative;
   border-radius: 18px;
   overflow: hidden;
-  min-height: 250px;
+  min-height: 96px;
   box-shadow: 0 10px 30px -18px rgba(46, 34, 25, 0.6);
 }
 .pf-banner-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .pf-banner-text {
   position: relative;
-  padding: 30px 34px 96px;
+  padding: 24px 30px;
   max-width: 640px;
   color: #fffaf0;
   text-shadow: 0 1px 12px rgba(10, 28, 48, 0.45);
 }
-.pf-kicker {
-  margin: 0 0 6px;
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 600;
-  opacity: 0.92;
-}
 .pf-banner h1 {
-  margin: 0 0 10px;
+  margin: 0;
   font-family: var(--pf-serif);
-  font-size: clamp(1.8rem, 3.6vw, 2.7rem);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
   font-weight: 600;
   line-height: 1.1;
   color: #fffaf0;
 }
-.pf-sub { margin: 0; font-size: 1.02rem; line-height: 1.5; max-width: 34em; }
 
 /* ---------- status chips ---------- */
 .pf-status-wrap > summary {
@@ -116,7 +107,7 @@ footer { opacity: 0.6; }
 .pf-fixes { margin: 8px 0 0; padding-left: 18px; font-size: 0.86rem; color: var(--pf-ink-soft); }
 
 @media (max-width: 760px) {
-  .pf-banner-text { padding: 22px 20px 90px; }
+  .pf-banner-text { padding: 20px; }
 }
 
 /* ---------- section headings ---------- */
@@ -124,13 +115,19 @@ footer { opacity: 0.6; }
   font-family: var(--pf-serif);
   font-size: 1.25rem; font-weight: 600; margin: 4px 0 2px; color: var(--pf-ink);
 }
-.pf-h-sub { margin: 0 0 8px; font-size: 0.86rem; color: var(--pf-ink-soft); }
+.pf-h-sub { margin: 0 0 8px; font-size: 0.95rem; color: var(--pf-ink-soft); }
 .pf-eyebrow {
   margin: 0 0 8px; font-size: 0.74rem; font-weight: 700;
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--pf-wheat-deep);
 }
 .dark .pf-eyebrow { color: var(--pf-wheat); }
-.pf-muted { color: var(--pf-ink-soft); font-size: 0.92rem; margin: 0; }
+.pf-muted { color: var(--pf-ink-soft); font-size: 0.95rem; margin: 0; }
+
+/* ---------- question box and Ask ---------- */
+#pf-question textarea { font-size: 1.15rem !important; padding: 12px 14px !important; }
+#pf-question textarea::placeholder { color: var(--pf-ink-soft) !important; opacity: 1; }
+#pf-ask { font-size: 1.2rem !important; min-height: 52px; margin-top: 4px; }
+.pf-hidden { display: none !important; }
 
 /* ---------- example question chips ---------- */
 .pf-examples-group { gap: 6px !important; }
@@ -139,14 +136,21 @@ footer { opacity: 0.6; }
   border-radius: 12px !important; margin-top: 8px !important;
 }
 .pf-example-group > button, .pf-example-group .label-wrap {
-  font-weight: 600 !important; color: var(--pf-ink) !important;
+  font-weight: 600 !important; color: var(--pf-ink) !important; font-size: 1.05rem !important;
 }
+/* Gradio's accordion arrow points left when closed; point it right (closed)
+   and down (open), the way every other disclosure on the page does. */
+.pf-example-group .label-wrap .icon { transform: rotate(-90deg) !important; }
+.pf-example-group .label-wrap.open .icon { transform: rotate(0deg) !important; }
 .pf-example button, button.pf-example {
   justify-content: flex-start !important; text-align: left !important;
   white-space: normal !important; font-weight: 400 !important;
   background: var(--pf-card) !important; border: 1px solid var(--pf-card-edge) !important;
   color: var(--pf-ink) !important; border-radius: 10px !important;
+  font-size: 1.02rem !important; padding: 10px 14px !important;
 }
+button.pf-next::before { content: "\2192\00a0"; color: var(--pf-wheat-deep); font-weight: 700; }
+.dark button.pf-next::before { color: var(--pf-wheat); }
 button.pf-example:hover { border-color: var(--pf-wheat) !important; background: var(--pf-warn-bg) !important; }
 
 /* ---------- answer card ---------- */
@@ -160,19 +164,27 @@ button.pf-example:hover { border-color: var(--pf-wheat) !important; background: 
 
 /* ---------- follow-ups ---------- */
 .pf-resolved {
-  margin: 0 0 12px; padding: 6px 10px; border-radius: 8px;
-  background: var(--pf-paper); border: 1px dashed var(--pf-card-edge);
-  font-size: 0.92rem; color: var(--pf-ink);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 12px; padding: 8px 10px 8px 12px; border-radius: 10px;
+  background: var(--pf-paper); border: 1px solid var(--pf-card-edge);
+  font-size: 1rem; color: var(--pf-ink);
 }
+.pf-resolved p { margin: 0; flex: 1 1 14em; }
+.pf-newsub {
+  flex: none; cursor: pointer; padding: 5px 14px; border-radius: 999px;
+  border: 1.5px solid var(--pf-ink); background: var(--pf-card); color: var(--pf-ink);
+  font: inherit; font-weight: 600; font-size: 0.95rem;
+}
+.pf-newsub:hover { background: var(--pf-warn-bg); border-color: var(--pf-wheat-deep); }
 .pf-resolved span { font-weight: 700; color: var(--pf-wheat-deep); margin-right: 4px; }
 .dark .pf-resolved span { color: var(--pf-wheat); }
 .pf-followups-group { gap: 6px !important; margin-top: 10px; }
 .pf-answer-refused .pf-eyebrow { color: var(--pf-loss); }
 .pf-line { padding: 10px 0 10px 14px; border-left: 3px solid var(--pf-verified); margin: 8px 0; }
-.pf-line p { margin: 6px 0 0; line-height: 1.5; }
+.pf-line p { margin: 6px 0 0; line-height: 1.5; font-size: 1.05rem; }
 .pf-line-model { border-left-color: var(--pf-model); }
 .pf-line-therefore { border-left-color: var(--pf-wheat); }
-.pf-lead { font-family: var(--pf-serif); font-size: 1.3rem; line-height: 1.4 !important; }
+.pf-lead { font-family: var(--pf-serif); font-size: 1.45rem !important; line-height: 1.4 !important; }
 .pf-tag {
   display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
   padding: 2px 9px; border-radius: 999px;
@@ -189,7 +201,7 @@ button.pf-example:hover { border-color: var(--pf-wheat) !important; background: 
 .pf-ok { background: var(--pf-verified-bg); color: var(--pf-verified); }
 .pf-warn { background: var(--pf-warn-bg); color: var(--pf-warn); }
 .pf-checks { list-style: none; margin: 0; padding: 0; }
-.pf-checks li { display: flex; gap: 10px; padding: 5px 0; font-size: 0.92rem; border-bottom: 1px dashed var(--pf-card-edge); }
+.pf-checks li { display: flex; gap: 10px; padding: 5px 0; font-size: 1rem; border-bottom: 1px dashed var(--pf-card-edge); }
 .pf-checks li:last-child { border-bottom: 0; }
 .pf-mark { width: 1.2em; font-weight: 700; flex: none; text-align: center; }
 .pf-checks .pass .pf-mark { color: var(--pf-verified); }
@@ -235,7 +247,7 @@ code { font-size: 0.85em; }
 .pf-note-ok { background: var(--pf-verified-bg); color: var(--pf-verified); }
 @media (max-width: 760px) {
   .gradio-container { padding: 0 12px !important; }
-  .pf-banner { min-height: 220px; }
+  .pf-banner { min-height: 80px; }
 }
 .pf-banner-text, .pf-banner-text p, .pf-banner-text h1 { color: #fffaf0 !important; }
 @media (max-width: 760px) {
@@ -260,3 +272,36 @@ code { font-size: 0.85em; }
 .pf-line-withheld { border-left-color: var(--pf-warn); }
 .pf-line-withheld p { color: var(--pf-ink-soft); font-size: 0.95rem; }
 .pf-tag-withheld { background: var(--pf-warn-bg); color: var(--pf-warn); }
+
+/* "See what it wrote": the withheld sentence, folded inside the answer card */
+details.pf-line-withheld > summary { cursor: pointer; list-style: none; line-height: 1.6; }
+details.pf-line-withheld > summary::-webkit-details-marker { display: none; }
+details.pf-line-withheld > summary > span:nth-child(2) { color: var(--pf-ink-soft); }
+.pf-see { text-decoration: underline; font-weight: 600; color: var(--pf-warn); white-space: nowrap; }
+.pf-see::after { content: " \25B8"; }
+details[open].pf-line-withheld .pf-see::after { content: " \25BE"; }
+details.pf-line-withheld blockquote {
+  margin: 10px 0 6px; padding: 8px 12px; border-left: 3px solid var(--pf-loss);
+  background: var(--pf-warn-bg); text-decoration: line-through; text-decoration-color: var(--pf-loss);
+}
+details.pf-line-withheld .pf-checks li { color: var(--pf-loss); border-bottom: 0; }
+
+/* ---------- folded panels: one summary line, open to drill in ---------- */
+.pf-fold > summary {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  cursor: pointer; list-style: none; padding: 2px 0;
+}
+.pf-fold > summary::-webkit-details-marker { display: none; }
+.pf-fold > summary::before {
+  content: "\25B8"; color: var(--pf-wheat-deep); font-size: 1.1rem; width: 0.8em;
+}
+.dark .pf-fold > summary::before { color: var(--pf-wheat); }
+.pf-fold[open] > summary::before { content: "\25BE"; }
+.pf-fold[open] > summary { margin-bottom: 6px; }
+.pf-fold-title { font-family: var(--pf-serif); font-size: 1.3rem; font-weight: 600; color: var(--pf-ink); }
+.pf-fold-chip { font-size: 0.92rem; font-weight: 600; padding: 3px 11px; border-radius: 999px; }
+.pf-tone-ok { background: var(--pf-verified-bg); color: var(--pf-verified); }
+.pf-tone-warn { background: var(--pf-warn-bg); color: var(--pf-warn); }
+.pf-tone-muted { background: var(--pf-paper); color: var(--pf-ink-soft); }
+.pf-h-small { font-size: 1.1rem; margin-top: 14px; }
+.pf-checks.fail .pf-mark { color: var(--pf-loss); }

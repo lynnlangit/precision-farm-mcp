@@ -108,10 +108,19 @@ def test_withheld_sentence_is_flagged_in_the_answer_and_its_failed_check_is_open
             )
         )
     )
-    # The answer card says a sentence was withheld, but never shows it.
+    # The answer card says a sentence was withheld; the last try is shown
+    # only inside a folded "See what it wrote", never as part of the answer.
     assert "Added by the AI" not in view.answer_html
     assert "AI sentence withheld" in view.answer_html
-    assert "hail" not in view.answer_html
+    assert '<details class="pf-line pf-line-withheld">' in view.answer_html  # folded
+    assert "See what it wrote" in view.answer_html
+    assert "Weather caused it." in view.answer_html.split("<blockquote>")[1]
+    assert "hail" not in view.answer_html  # only the last try
+    assert "agrees with the verified answer" in view.answer_html  # why it was stopped
+    # Its panel opens by itself, with the failed count on its folded line.
+    assert view.checks_open is True
+    assert view.checks_summary == "2 of 8 failed \u00b7 AI sentence withheld"
+    assert view.checks_tone == "warn"
     # The checks panel shows both tries, open, each with the full checklist.
     assert "withheld: it failed a check on all 2 tries" in view.checks_html
     assert view.checks_html.count('<details class="pf-rejected" open>') == 2
@@ -133,6 +142,8 @@ def test_rejected_try_before_a_passing_one_stays_folded():
     )
     assert "AI sentence withheld" not in view.answer_html
     assert "passed all 8 checks on try 2" in view.checks_html
+    assert view.checks_summary == "All 8 passed on try 2 \u00b7 AI sentence shown"
+    assert view.checks_open is False
     assert '<details class="pf-rejected">' in view.checks_html
 
 
@@ -198,8 +209,11 @@ def test_empty_view_invites_a_question():
 
 def test_answer_shows_which_question_was_answered():
     html = build_view(_result()).answer_html
-    assert '<p class="pf-resolved"><span>Showing:</span> East 80' in html
+    assert '<div class="pf-resolved"><p><span>Talking about:</span> East 80' in html
     assert html.index("pf-resolved") < html.index("Your answer")
+    # "New subject" sits on that line: it's there whenever there is a subject.
+    assert '<button type="button" class="pf-newsub"' in html
+    assert html.index("pf-newsub") < html.index("Your answer")
 
 
 def test_tool_refusal_also_shows_what_was_looked_up():
@@ -212,7 +226,7 @@ def test_tool_refusal_also_shows_what_was_looked_up():
             refusal_kind="tool_refused",
         )
     )
-    assert "Showing:</span> Easy 80" in view.answer_html
+    assert "Talking about:</span> Easy 80" in view.answer_html
 
 
 def test_unresolved_follow_up_refusal_has_a_plain_title():
@@ -251,3 +265,48 @@ def test_nitrogen_figures_show_seasons_crops_and_conversion():
 
 def test_whole_percent_is_signed():
     assert format_value("pct_vs_farm_average", -60) == "-60%"
+
+
+def test_empty_page_has_no_new_subject_button():
+    assert "pf-newsub" not in empty_view().answer_html
+
+
+def test_a_refusal_still_shows_what_the_next_question_builds_on():
+    from farm_model.query_schema import FollowUpContext
+
+    from farm_web.view import with_subject
+
+    refused = build_view(
+        AnswerResult(text="Try naming both.", ok=False, refusal_kind="unresolved_followup")
+    )
+    ctx = FollowUpContext(
+        field_name="East 80", season=2020, intent=QueryIntent.BAD_FIELD_OR_BAD_YEAR
+    )
+    html = with_subject(refused, ctx).answer_html
+    assert "Talking about:</span> East 80 \u00b7 2020" in html and "pf-newsub" in html
+    assert with_subject(refused, None) == refused  # nothing remembered, no button
+    shown = build_view(_result())
+    assert with_subject(shown, ctx) == shown  # its own line wins, never two
+
+
+def test_panels_fold_to_one_summary_line():
+    from farm_web.view import checks_panel_html, numbers_panel_html
+
+    view = build_view(_result(narration=_outcome(context="The weather explains part of it.")))
+    checks = checks_panel_html(view)
+    assert checks.startswith('<details class="pf-fold">')  # closed when all passed
+    assert "All 8 passed \u00b7 AI sentence shown" in checks
+    numbers = numbers_panel_html(view)
+    assert numbers.startswith('<details class="pf-fold">')
+    assert "1 modeled estimate" in numbers and "Where it came from" in numbers
+    assert view.figures_tone == "ok"
+
+
+def test_flagged_figures_say_so_on_the_folded_line():
+    view = build_view(_result(payload=COST))
+    assert "something flagged" in view.figures_summary and view.figures_tone == "warn"
+
+
+def test_refusal_panels_say_nothing_to_check():
+    view = build_view(AnswerResult(text="x", ok=False, refusal_kind="model_unreachable"))
+    assert view.checks_summary == "Nothing to check" and view.checks_open is False

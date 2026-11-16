@@ -1,4 +1,5 @@
-"""Static HTML for the page header and the "how it works" strip.
+"""Static HTML for the page header: a slim strip, so the question box
+stays on screen on a 1280x720 projector.
 
 The banner is an inline SVG of a North Dakota horizon: big sky, a low sun,
 strips of wheat, canola and flax, a shelterbelt, a grain elevator and a few
@@ -7,7 +8,7 @@ sunflowers. Inline so the app stays fully offline (no image or font fetches).
 
 BANNER_HTML = """
 <header class="pf-banner" role="banner">
-  <svg class="pf-banner-art" viewBox="0 0 1200 260" preserveAspectRatio="xMaxYMax slice"
+  <svg class="pf-banner-art" viewBox="0 0 1200 260" preserveAspectRatio="xMaxYMid slice"
        aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="pf-sky" x1="0" y1="0" x2="0" y2="1">
@@ -86,10 +87,7 @@ BANNER_HTML = """
     </g>
   </svg>
   <div class="pf-banner-text">
-    <p class="pf-kicker">Precision Farm &middot; grower preview</p>
     <h1>Ask your own field records.</h1>
-    <p class="pf-sub">Ten seasons of your yields, costs and profit, answered in plain words.
-      Every number is calculated from your files, and anything the AI adds is checked first.</p>
   </div>
 </header>
 """

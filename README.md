@@ -17,7 +17,8 @@ on your own laptop. Never a prediction, never a guess, never sent anywhere.
   passes all 8 checks: every number is in your records, it agrees with the
   answer, it names no cause your records don't show, and more.
 - **AI sentence withheld.** The AI gets one try. If its sentence fails a
-  check, you see what it tried to say and which check stopped it. The
+  check, the answer says so, and **See what it wrote** opens what it tried
+  to say and which check stopped it. The
   example under **When the AI is stopped** shows this happening.
 
 The AI only turns your question into a lookup and offers that one
@@ -40,7 +41,7 @@ mistyped seed cost, a yield monitor out of calibration, a GPS dropout, a
 field name spelled four ways. Ask a question, switch farms, and the app asks
 it again: Farm 1's record checks pass, Farm 2's catch the problem.
 
-![Below the answer: the 8 checks the AI's sentence passed, the figures behind it, and where they came from](docs/images/farm-web-checks.png)
+![Below the answer, opened: the 8 checks the AI's sentence passed, the figures behind it, and where they came from](docs/images/farm-web-checks.png)
 
 ## Quick start
 

@@ -10,7 +10,7 @@ What a grower can do with the box, and how many questions each action sends
     double click / Enter then click     -> once (controls lock while answering)
     empty or blank box                  -> nothing
     the same question again             -> asked again exactly as the first time
-    Clear                               -> empties everything, drops an answer still on its way
+    New subject                         -> empties everything, drops an answer still on its way
     an example or "Ask next" button     -> fills the box and asks it, once
     switching farm                      -> asks the box's question of the other farm, once
 
@@ -127,7 +127,9 @@ class Box:
         self.audit = audit
         self.text = page.locator("#pf-question textarea")
         self.ask = page.locator("#pf-ask")
-        self.clear = page.locator("#pf-clear")
+        # "New subject", on the answer card's "Talking about:" line; it
+        # presses the hidden Clear button (#pf-clear).
+        self.clear = page.locator("#pf-answer .pf-newsub")
         self.answer = page.locator("#pf-answer")
         self.checks = page.locator("#pf-checks")
         self._seen = len(self._queries())
@@ -294,6 +296,9 @@ def test_clear_empties_everything(box):
 
 
 def test_clear_drops_an_answer_still_on_its_way(box):
+    box.type(MARGINAL)  # a first answer, so there is a subject to drop
+    box.ask.click()
+    box.idle()
     box.type(SOUTH_160)
     box.ask.click()
     playwright_api.expect(box.ask).to_have_text(BUSY_LABEL)
@@ -302,7 +307,7 @@ def test_clear_drops_an_answer_still_on_its_way(box):
     box.page.wait_for_timeout(6000 if not REAL_GEMMA else 30000)  # the lookup finishes...
     assert box.text.input_value() == ""
     playwright_api.expect(box.answer).to_contain_text("Ask about one of your fields")
-    playwright_api.expect(box.answer).not_to_contain_text("Showing:")  # ...and is dropped
+    playwright_api.expect(box.answer).not_to_contain_text("Talking about:")  # ...and is dropped
 
 
 def test_example_button_fills_the_box_and_asks_once(box):

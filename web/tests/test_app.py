@@ -73,8 +73,10 @@ def test_ask_carries_context_and_offers_follow_ups(monkeypatch, tmp_path):
     answer_html, _, _, _, state, heading, *buttons = out
     assert seen == [None]  # a first question has no context
     assert state == {"field_name": "East 80", "season": None, "intent": "bad_field_or_bad_year"}
-    # What a follow-up builds on is shown once, in the answer card's Showing line.
-    assert "Showing:" in answer_html and "East 80" in answer_html
+    # What a follow-up builds on is shown once, in the answer card's
+    # "Talking about:" line, with the "New subject" button beside it.
+    assert "Talking about:" in answer_html and "East 80" in answer_html
+    assert "pf-newsub" in answer_html
     assert heading["visible"] is True
     assert buttons[0]["value"] == "Why was East 80 a bad year?"
     assert all(b["visible"] for b in buttons)
@@ -83,6 +85,8 @@ def test_ask_carries_context_and_offers_follow_ups(monkeypatch, tmp_path):
     out = ask("nonsense", state)
     assert seen[-1].field_name == "East 80"
     assert out[4] == state
+    # The refusal card still says what's remembered, so it can be dropped.
+    assert "Talking about:</span> East 80" in out[0] and "pf-newsub" in out[0]
     assert out[5]["visible"] is False and not any(b["visible"] for b in out[6:])
 
 

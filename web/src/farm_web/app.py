@@ -45,9 +45,12 @@ from farm_model.query_schema import FollowUpContext  # noqa: E402
 from .view import (  # noqa: E402
     AnswerView,
     build_view,
+    checks_panel_html,
     empty_view,
     farm_note_html,
+    numbers_panel_html,
     with_farm,
+    with_subject,
 )
 
 # The eval questions (docs/EVAL_QUESTIONS.md), grouped the way a grower thinks.
@@ -165,8 +168,15 @@ def status_panels() -> tuple[str, str]:
     return (html, "") if " open>" in html else ("", html)
 
 
-def _panels(view: AnswerView) -> tuple[str, str, str, str]:
-    return view.answer_html, view.checks_html, view.figures_html, view.source_html
+def _panels(view: AnswerView, answered: bool = True) -> tuple:
+    """The answer card, the two folded panels below it, and whether those
+    panels show at all (not before the first answer: nothing to fold yet)."""
+    return (
+        view.answer_html,
+        checks_panel_html(view),
+        numbers_panel_html(view),
+        gr.update(visible=answered),
+    )
 
 
 def _followup_updates(suggestions: list[str]) -> list:
@@ -286,6 +296,16 @@ class BusyTabs:
 
 
 ASK_LABEL = "Ask my records"
+# The "New subject" button lives in the answer card's "Talking about:" line,
+# which is plain HTML; this passes its click on to the hidden Clear button,
+# so starting over has exactly one handler.
+NEW_SUBJECT_JS = """<script>
+document.addEventListener('click', (e) => {
+  if (e.target.closest && e.target.closest('.pf-newsub')) {
+    document.getElementById('pf-clear')?.click();
+  }
+});
+</script>"""
 LOCK_NOW_JS = """() => {
   document.querySelectorAll('#pf-ask, #pf-question textarea').forEach((el) => {
     el.disabled = true;
@@ -313,7 +333,7 @@ def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
         question = (question or "").strip()
         if not question:
             return (
-                *_panels(empty_view()),
+                *_panels(empty_view(), answered=False),
                 _context_dump(context),
                 *_followup_updates([]),
             )
@@ -337,8 +357,9 @@ def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
                 refusal_kind="error",
             )
         new_context = next_context(result, context)
+        view = with_farm(with_subject(build_view(result), new_context), farm)
         return (
-            *_panels(with_farm(build_view(result), farm)),
+            *_panels(view),
             _context_dump(new_context),
             *_followup_updates(suggest_followups(result)),
         )
@@ -369,8 +390,7 @@ def build_app(
                     elem_classes="pf-farm-picker",
                 )
                 farm_note = gr.HTML(farm_note_html(FARMS[DEFAULT_FARM]))
-                gr.HTML('<p class="pf-h" style="margin-top:14px">Ask a question</p>'
-                        '<p class="pf-h-sub">About one of the fields and seasons.</p>')
+                gr.HTML('<p class="pf-h" style="margin-top:14px">Ask a question</p>')
                 # One line that grows to four: Enter asks, Shift+Enter starts a
                 # new line. (With lines=2, Gradio made Enter a new line and
                 # Shift+Enter send -- the opposite of every chat box.)
@@ -382,13 +402,12 @@ def build_app(
                     autofocus=True,
                     elem_id="pf-question",
                 )
-                with gr.Row():
-                    ask_btn = gr.Button(
-                        ASK_LABEL, variant="primary", scale=3, elem_id="pf-ask"
-                    )
-                    clear_btn = gr.Button("Clear", variant="secondary", scale=1, elem_id="pf-clear")
+                ask_btn = gr.Button(ASK_LABEL, variant="primary", elem_id="pf-ask")
+                # Pressed through "New subject" in the answer card (see
+                # NEW_SUBJECT_JS); never shown itself.
+                clear_btn = gr.Button("Clear", elem_id="pf-clear", elem_classes="pf-hidden")
                 example_buttons: list[tuple[gr.Button, str]] = []
-                gr.HTML('<p class="pf-eyebrow" style="margin-top:14px">Example questions</p>')
+                gr.HTML('<p class="pf-eyebrow" style="margin-top:14px">Or try an example</p>')
                 for heading, qs in EXAMPLES:
                     with gr.Accordion(
                         f"{heading} ({len(qs)})", open=False, elem_classes="pf-example-group"
@@ -401,29 +420,22 @@ def build_app(
                 answer = gr.HTML(empty.answer_html, elem_id="pf-answer")
                 followup_heading = gr.HTML(
                     '<p class="pf-eyebrow" style="margin-top:12px">Ask next</p>'
-                    '<p class="pf-muted">Each one is a full question, looked up and checked '
-                    "from scratch. Questions that leave out the field or year use the ones "
-                    "shown above; press Clear to start over.</p>",
+                    '<p class="pf-muted">About the same field and year, unless you name '
+                    "another.</p>",
                     visible=False,
                 )
                 with gr.Column(elem_classes="pf-followups-group"):
                     followup_buttons = [
-                        gr.Button("", size="sm", elem_classes="pf-example", visible=False)
+                        gr.Button("", elem_classes="pf-example pf-next", visible=False)
                         for _ in range(MAX_SUGGESTIONS)
                     ]
 
-        with gr.Row(equal_height=False):
+        # Folded to one line each, under the answer; hidden until there is one.
+        with gr.Row(equal_height=False, visible=False) as details_row:
             with gr.Column(scale=4, min_width=300, elem_classes="pf-panel"):
-                gr.HTML('<p class="pf-h">How we checked it</p>'
-                        "<p class=\"pf-h-sub\">The AI's sentence is shown only if it passes "
-                        "every one of these.</p>")
-                checks = gr.HTML(empty.checks_html, elem_id="pf-checks")
+                checks = gr.HTML(checks_panel_html(empty), elem_id="pf-checks")
             with gr.Column(scale=6, min_width=320, elem_classes="pf-panel"):
-                gr.HTML('<p class="pf-h">The numbers behind it</p>'
-                        '<p class="pf-h-sub">Straight from your records, no AI involved.</p>')
-                figures = gr.HTML(empty.figures_html)
-                gr.HTML('<p class="pf-h" style="margin-top:12px">Where it came from</p>')
-                source = gr.HTML(empty.source_html)
+                figures = gr.HTML(numbers_panel_html(empty), elem_id="pf-numbers")
 
         # Follow-up context: the last verified answer's field, season and
         # question type. Per browser tab; Clear resets it.
@@ -431,7 +443,7 @@ def build_app(
         # The question last sent and the context it was sent with, so asking
         # the same question again repeats it exactly (see context_for).
         last_ask = gr.State(None)
-        panels = [answer, checks, figures, source]
+        panels = [answer, checks, figures, details_row]
         outputs = [*panels, context_state, followup_heading, *followup_buttons, last_ask]
         inputs = [question, context_state, farm_picker, last_ask]
         tickets = SessionTickets()
@@ -533,7 +545,7 @@ def build_app(
             unlocked = dict(zip(map(id, ask_controls), unlock()))
             return (
                 gr.update(value="", interactive=True),
-                *_panels(empty_view()),
+                *_panels(empty_view(), answered=False),
                 None,
                 *_followup_updates([]),
                 None,
@@ -568,6 +580,9 @@ def theme() -> gr.themes.Base:
     )
     return gr.themes.Base(
         primary_hue=wheat,
+        # One size up from Gradio's default: read from the back of a room,
+        # on a projector, by people who left their reading glasses in the truck.
+        text_size=gr.themes.sizes.text_lg,
         secondary_hue=gr.themes.colors.blue,
         neutral_hue=gr.themes.colors.stone,
         radius_size=gr.themes.sizes.radius_lg,
@@ -626,6 +641,7 @@ def main(argv: list[str] | None = None) -> int:
         share=False,
         inbrowser=not args.no_browser,
         footer_links=[],
+        head=NEW_SUBJECT_JS,
         ssr_mode=False,
         theme=theme(),
         css_paths=[Path(str(files("farm_web") / "static" / "theme.css"))],

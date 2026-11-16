@@ -115,13 +115,13 @@ sequenceDiagram
     end
     H->>H: Add the "therefore" line and write every step to the audit log
     H-->>W: Answer + checks + numbers + source
-    W-->>G: Answer with farm badge, "How we checked it",<br/>"The numbers behind it", "Where it came from"
+    W-->>G: Answer with farm badge; "How we checked it" and<br/>"The numbers behind it" folded to one line each (checks open if one failed)
 
     rect rgb(232, 236, 246)
     Note over G,W: Follow-ups
     W->>W: Remember field, season and question type (only from a verified answer)
     W-->>G: Up to 3 "Ask next" buttons — each is a full new question, checked from scratch
-    G->>W: "Clear" forgets the context and starts over<br/>(an answer still on its way is dropped)
+    G->>W: "New subject" (on the "Talking about:" line) forgets the context<br/>and starts over (an answer still on its way is dropped)
     Note over G,W: Asking the same question again repeats it exactly,<br/>not as a follow-up to its own answer
     end
 ```
@@ -152,10 +152,10 @@ sequenceDiagram
 | Ingest/query confirmation split, `ConfirmationGate` | Built | |
 | 6 MCP servers, `farm-cli`, `farm-ingest` | Built | Every server has at least one question type routed to it |
 | Weather, soil and as-applied questions | Built | `SEASON_WEATHER`, `FIELD_SOIL` (`weather-history`) and `APPLIED_INPUTS`, `NITROGEN_HISTORY` (`as-applied`), computed in `core/field_conditions.py`. Nitrogen is always reported in lb N/ac, converting gal/ac of UAN 32%; corn and soybean N are never compared. A `units` check rejects a sentence that puts the wrong unit on a number. These are records, not causes: none of them says why a season went badly |
-| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Shows the template sentence, the checked AI sentence or a "withheld" note, the checks, figures and source. Its "When the AI is stopped" example (eval 2) shows a withheld sentence; what the grower sees is in [FARMER_GUIDE.md](FARMER_GUIDE.md), how it is tested in [VERIFICATION.md](VERIFICATION.md). Local only unless `--lan` |
+| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Shows the template sentence, the checked AI sentence or a "withheld" note (its "See what it wrote" opens the blocked sentence), then the checks and the figures and source as two panels folded to a one-line summary each; the checks open by themselves when the AI's sentence was withheld. Its "When the AI is stopped" example (eval 2) shows a withheld sentence; what the grower sees is in [FARMER_GUIDE.md](FARMER_GUIDE.md), how it is tested in [VERIFICATION.md](VERIFICATION.md). Local only unless `--lan` |
 | Persistent servers (`farm_host.server_pool`) | Built | All six servers start once in the background (~7 s) and stay up, so a lookup takes ~0.2 s instead of ~4 s. Restart the app after regenerating data |
 | Farm picker (`farm_host.farms`) | Built | Farm 1: clean records (`data/synthetic-clean`, generator `--clean`). Farm 2: messy records (`data/synthetic`). Same fields and true profits. One server pool per farm via `FARM_DATA_DIR`/`FARM_CONFIRM_STORE`; Farm 1 starts at app open, Farm 2 on first pick. Switching clears follow-ups and re-asks the question; every answer carries a farm badge |
-| Follow-ups (`farm_host.followups`) | Built | Only the last verified answer's field, season and question type carry over; the parser refuses a follow-up whose field or season came from nowhere. A "Showing:" line names what was answered, plus up to 3 "Ask next" buttons |
+| Follow-ups (`farm_host.followups`) | Built | Only the last verified answer's field, season and question type carry over; the parser refuses a follow-up whose field or season came from nowhere. A "Talking about:" line names what was answered, with a "New subject" button that forgets it, plus up to 3 "Ask next" buttons |
 | Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if it passes all 8 checks (grounded, verdict, sign, zone premise, reconciliation, attribution, unsupported cause, units). One try by default (`max_attempts=1`), so a failing sentence is withheld, not rewritten |
 | Hash-chained, concurrency-safe audit log | Built | Host and every server write to it (fixed in Phase A) |
 | Provenance (`modeled` subtree), grounding split | Built | `modeled` is filled by weather attribution on `bad_year` verdicts, `null` elsewhere by design |

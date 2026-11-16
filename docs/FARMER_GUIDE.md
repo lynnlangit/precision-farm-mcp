@@ -204,23 +204,28 @@ Type a question and press **Enter** or **Ask my records** (Shift+Enter
 starts a new line). While it's being looked up, the box and buttons are
 locked and the button reads "Looking it up...", so a question is never
 sent twice. Tapping an example or an **Ask next** button asks straight
-away. **Clear** empties the box and the answer and starts over.
+away.
 
 After an answer you can ask a follow-up such as "What about East 80?" or
-"And in 2023?". The line **Showing:** above each answer says which field,
-season and question it actually answered, and **Ask next** offers a few
-full questions to tap. Each follow-up is looked up and checked from
-scratch.
+"And in 2023?". The line **Talking about:** at the top of each answer says
+which field, season and question it actually answered, and **Ask next**
+offers a few full questions to tap. Each follow-up is looked up and checked
+from scratch. When you move on to something else, press **↺ New subject**
+on the Talking about line: it forgets the field and year, empties the box
+and the answer, and starts over.
 
 ![The web app answering "Was the Marginal Eighty a bad field or just a bad year?" for Farm 1](images/farm-web-answer.png)
 
 Each part of the answer is labelled. **Calculated from your records** is
 plain arithmetic on your files. **Added by the AI, then checked** is the
 one sentence the AI wrote, shown only because it passed every check.
-Below the answer you can see those checks, the exact figures the answer
-came from, and which records were read. If the AI's sentence failed a
-check, the answer card says **AI sentence withheld**, and below it you'll
-see what the AI tried to say and which check stopped it.
+Below the answer, **How we checked it** and **The numbers behind it** are
+folded to one line each, with a short summary such as "All 8 passed".
+Click either to open it: the checks, the exact figures the answer came
+from, and which records were read. If the AI's sentence failed a check,
+the answer card says **AI sentence withheld**; click **See what it wrote**
+to see what the AI tried to say and which check stopped it. How we checked
+it opens by itself then, so the failed check is easy to find.
 
 To see that happen, open **When the AI is stopped** under the example
 questions and tap "Was East 80 a bad field or just a bad year?". The AI
@@ -229,7 +234,7 @@ records show that 2020 was a bad year, but not why, so the sentence is
 blocked. The AI gets one try, so the answer you see is the part calculated
 from your records, nothing more.
 
-![Below the answer: the 8 checks, the figures and where they came from](images/farm-web-checks.png)
+![Below the answer, opened: the 8 checks, the figures and where they came from](images/farm-web-checks.png)
 
 The app only works on this laptop. It never creates a public link and
 sends no usage data; every question is written to `data/audit.jsonl` on
