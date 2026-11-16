@@ -55,9 +55,12 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "Bad field or bad year?",
         (
-            "Was East 80 a bad field or just a bad year?",
             "Was the Marginal Eighty a bad field or just a bad year?",
             "Was South 160 South a bad field or just a bad year?",
+            # Third, not first: this is the one gemma3:4b fails the checks on
+            # (see "When the AI is stopped" below), so the group opens on two
+            # answers that pass.
+            "Was East 80 a bad field or just a bad year?",
         ),
     ),
     (

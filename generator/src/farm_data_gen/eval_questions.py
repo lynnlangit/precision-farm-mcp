@@ -211,6 +211,138 @@ def _weather_and_inputs_section(ground_truth: dict, data_dir: Path) -> list[str]
     return lines
 
 
+def _has_defect(ground_truth: dict, defect_type: str, field_id: str, season: int) -> bool:
+    return any(
+        d["type"] == defect_type and d.get("field_id") == field_id and d.get("season") == season
+        for d in ground_truth["defects"]
+    )
+
+
+def _follow_up_section(
+    ground_truth: dict,
+    data_dir: Path | None,
+    *,
+    marginal_id: str,
+    cat: dict,
+    cal: dict,
+    cal_name: str,
+    digit: dict,
+    digit_name: str,
+) -> list[str]:
+    """The multi-turn evals: the web app's follow-up questions, mirroring
+    host/tests/test_eval_nl.py's FOLLOW_UP_EVALS (kept in sync by hand, like
+    questions 1-5 and the classifier). Each pair starts from a numbered
+    question; only that answer's field, season and question type carry over
+    (farm_host.followups.next_context).
+    """
+    cat_name = _current_name(ground_truth, cat["field_id"])
+    marginal = _profits_by_season(ground_truth, marginal_id)
+    losses = sum(1 for p in marginal.values() if p < 0)
+    first_q = {
+        "q2": f"Was {cat_name} a bad field or just a bad year?",
+        "q7": f"Do the yield monitor and scale tickets agree on {cal_name} in {cal['season']}?",
+        "q9": f"Does the seed cost on {digit_name} in {digit['season']} look right?",
+    }
+
+    def pair(title: str, first: str, n: str, follow: str, tool: str, answer: str) -> list[str]:
+        return [
+            f"### {title}",
+            f"**First:** {first} (question {n})",
+            f"**Then:** {follow}",
+            f"**Tool:** {tool}",
+            f"**Verifiable answer:** {answer}",
+            "",
+        ]
+
+    lines = [
+        "---",
+        "",
+        "## Follow-up questions (multi-turn)",
+        "",
+        "Ask the first question, then the follow-up, in the same web app tab (the CLI "
+        "answers one question at a time). Only the last verified answer's field, season "
+        "and question type carry over; the follow-up is still looked up and checked from "
+        "scratch, with its own tool call and its own checks, and a follow-up whose field "
+        "or season came from nowhere is refused. Press **Clear** to start over. "
+        "Switching farms also clears it. The app offers its own \"Ask next\" buttons "
+        "after each answer; these pairs are the ones `host/tests/test_eval_nl.py -k "
+        "follow_up` checks against the real model.",
+        "",
+    ]
+    lines += pair(
+        "F1. Swap the field, keep the question",
+        first_q["q2"], "2", f"What about {_current_name(ground_truth, marginal_id)}?",
+        f'`report-export.bad_field_or_bad_year(field_name="'
+        f'{_current_name(ground_truth, marginal_id)}")`',
+        f"`verdict = 'bad_field'`, loss in `{losses}/{len(marginal)}` seasons: the same "
+        "answer as question 1.",
+    )
+    next_season = digit["season"] + 1
+    if next_season in ground_truth["generator"]["seasons"] and not _has_defect(
+        ground_truth, "transposed_digit", digit["field_id"], next_season
+    ):
+        lines += pair(
+            "F2. Swap the year, keep the field",
+            first_q["q9"], "9", f"And in {next_season}?",
+            f'`cost-ledger.get_cost_reconciliation(field_name="{digit_name}", '
+            f"season={next_season})`",
+            "no line item is `outlier_flagged`: the transposed digit is only in "
+            f"{digit['season']}.",
+        )
+    if not _has_defect(
+        ground_truth, "yield_monitor_calibration_error", cat["field_id"], cal["season"]
+    ):
+        lines += pair(
+            "F3. Swap the field, keep the year",
+            first_q["q7"], "7", f"What about {cat_name}?",
+            f'`yield-history.get_yield_reconciliation(field_name="{cat_name}", '
+            f"season={cal['season']})`",
+            f"`totals_discrepancy = false`: {cat_name}'s monitor and scale tickets agree "
+            f"in {cal['season']}. The season comes from the first answer.",
+        )
+    if data_dir is not None:
+        ws_season = ground_truth["weathershortfall"]["season"]
+        precip = _season_precip(data_dir)
+        if ws_season + 1 in precip:
+            lines += pair(
+                "F4. Swap the year on a weather question",
+                f"How dry was {ws_season}?", "12", f"And {ws_season + 1}?",
+                f"`weather-history.get_season_weather(season={ws_season + 1})`",
+                f"`total_precip_mm = {precip[ws_season + 1]}`.",
+            )
+        n_field = _current_name(ground_truth, ground_truth["mgmtshortfall"]["field_id"])
+        n_rows = _nitrogen_by_season(data_dir, n_field)
+        uan_seasons = [s for s, (_, _, unit) in sorted(n_rows.items()) if unit == "gal/ac"]
+        if uan_seasons and len(n_rows) >= 2:
+            lo = min(n_rows, key=lambda s: n_rows[s][0])
+            hi = max(n_rows, key=lambda s: n_rows[s][0])
+            lines += pair(
+                "F5. Keep the field, switch to another question",
+                f"What did I put on {n_field} in {uan_seasons[0]}?", "14",
+                "Was the nitrogen the same every year?",
+                f'`as-applied.get_nitrogen_history(field_name="{n_field}")`',
+                "one lb N/ac figure per logged season ("
+                + ", ".join(f"{s}: `{v[0]}`" for s, v in sorted(n_rows.items()))
+                + f"), from `{n_rows[lo][0]}` ({lo}) to `{n_rows[hi][0]}` ({hi}). The field "
+                "comes from the first answer; the season is dropped because the question "
+                "asks about every year.",
+            )
+    lines += pair(
+        "F6. A follow-up that is still out of scope",
+        first_q["q2"], "2", "What should I plant there next year?",
+        "none",
+        "a refusal (`out_of_scope`) with no tool call. Carrying over the field never "
+        "turns an advice question into a lookup.",
+    )
+    lines += [
+        "**What these test:** F1-F5 check that a short follow-up resolves to the right "
+        "lookup using only what the last answer showed, and is then verified like any "
+        "first question. F6 checks that context can't widen what the tool will answer.",
+        "",
+    ]
+    return lines
+
+
 def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> str:
     seasons = ground_truth["generator"]["seasons"]
     marginal_id = ground_truth["marginal_field_id"]
@@ -282,7 +414,9 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
         "(several route through reconciliation across two independent sources), and "
         "each has a single answer that's verifiable directly against "
         f"`data/synthetic/ground_truth.json` (seed {ground_truth['generator']['seed']}). No "
-        "question depends on the answer to another. Generated fresh from "
+        "numbered question depends on the answer to another; the "
+        "[follow-up questions](#follow-up-questions-multi-turn) at the end are the "
+        "exception, by design. Generated fresh from "
         "`ground_truth.json` on every `generator` run -- never hand-edited.",
         "",
         "Type any of them into the web app (`uv run --project web farm-web`), "
@@ -291,6 +425,13 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
         "```bash",
         'uv run --project host farm-cli "<question>"',
         "```",
+        "",
+        "In the web app, every numbered question except 10 is also an example button. "
+        "**Pick Farm 2 (messy records)** to get the answers below: they come from "
+        "`data/synthetic`. Farm 1 (clean records, `data/synthetic-clean`) has the same "
+        "fields, seasons and true profits but none of the record-keeping mistakes, so "
+        "questions 6-9 and 14, which are about those mistakes, come back clean there. "
+        "The terminal CLI uses Farm 2's records.",
         "",
         "---",
         "",
@@ -452,5 +593,16 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
             "comparison."
         )
     lines.append("")
+
+    lines += _follow_up_section(
+        ground_truth,
+        Path(data_dir) if data_dir is not None else None,
+        marginal_id=marginal_id,
+        cat=cat,
+        cal=cal,
+        cal_name=cal_name,
+        digit=digit,
+        digit_name=digit_name,
+    )
 
     return "\n".join(lines) + "\n"

@@ -167,6 +167,11 @@ def test_one_example_shows_a_withheld_sentence():
     assert groups["When the AI is stopped"] == ("Was East 80 a bad field or just a bad year?",)
 
 
+def test_the_withheld_example_is_third_in_its_group():
+    groups = dict(EXAMPLES)
+    assert groups["Bad field or bad year?"].index("Was East 80 a bad field or just a bad year?") == 2
+
+
 def test_asking_the_same_question_again_reuses_its_first_context():
     from farm_web.app import context_for
 
