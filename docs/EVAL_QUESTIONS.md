@@ -1,12 +1,14 @@
 # Precision Farm MCP -- Evaluation Questions
 
-Independent, read-only questions for the web app or the CLI, in the style of the precision-medicine-mcp evals: each requires at least one real MCP tool call (several route through reconciliation across two independent sources), and each has a single answer that's verifiable directly against `data/synthetic/ground_truth.json` (seed 42). No question depends on the answer to another. Generated fresh from `ground_truth.json` on every `generator` run -- never hand-edited.
+Independent, read-only questions for the web app or the CLI, in the style of the precision-medicine-mcp evals: each requires at least one real MCP tool call (several route through reconciliation across two independent sources), and each has a single answer that's verifiable directly against `data/synthetic/ground_truth.json` (seed 42). No numbered question depends on the answer to another; the [follow-up questions](#follow-up-questions-multi-turn) at the end are the exception, by design. Generated fresh from `ground_truth.json` on every `generator` run -- never hand-edited.
 
 Type any of them into the web app (`uv run --project web farm-web`), or run them in the terminal:
 
 ```bash
 uv run --project host farm-cli "<question>"
 ```
+
+In the web app, every numbered question except 10 is also an example button. **Pick Farm 2 (messy records)** to get the answers below: they come from `data/synthetic`. Farm 1 (clean records, `data/synthetic-clean`) has the same fields, seasons and true profits but none of the record-keeping mistakes, so questions 6-9 and 14, which are about those mistakes, come back clean there. The terminal CLI uses Farm 2's records.
 
 ---
 
@@ -95,4 +97,48 @@ uv run --project host farm-cli "<question>"
 - **7-9** exercise all three reconciliation defects, including the one (#8) specifically designed so a naive totals-only check would pass it silently.
 - **11** exercises Phase D's zone-level profitability -- a shortfall that's genuinely invisible at the field level, only visible once yield_monitor_points are gridded into zones.
 - **12-15** exercise the weather-history and as-applied servers: a season's rain against the farm's own record, a field's soil, and as-applied rates where nitrogen logged in gal/ac of UAN 32% must be converted to lb N/ac before any comparison.
+
+---
+
+## Follow-up questions (multi-turn)
+
+Ask the first question, then the follow-up, in the same web app tab (the CLI answers one question at a time). Only the last verified answer's field, season and question type carry over; the follow-up is still looked up and checked from scratch, with its own tool call and its own checks, and a follow-up whose field or season came from nowhere is refused. Press **Clear** to start over. Switching farms also clears it. The app offers its own "Ask next" buttons after each answer; these pairs are the ones `host/tests/test_eval_nl.py -k follow_up` checks against the real model.
+
+### F1. Swap the field, keep the question
+**First:** Was East 80 a bad field or just a bad year? (question 2)
+**Then:** What about Marginal Eighty?
+**Tool:** `report-export.bad_field_or_bad_year(field_name="Marginal Eighty")`
+**Verifiable answer:** `verdict = 'bad_field'`, loss in `10/10` seasons: the same answer as question 1.
+
+### F2. Swap the year, keep the field
+**First:** Does the seed cost on Sheyenne Bottom in 2022 look right? (question 9)
+**Then:** And in 2023?
+**Tool:** `cost-ledger.get_cost_reconciliation(field_name="Sheyenne Bottom", season=2023)`
+**Verifiable answer:** no line item is `outlier_flagged`: the transposed digit is only in 2022.
+
+### F3. Swap the field, keep the year
+**First:** Do the yield monitor and scale tickets agree on Home Quarter in 2019? (question 7)
+**Then:** What about East 80?
+**Tool:** `yield-history.get_yield_reconciliation(field_name="East 80", season=2019)`
+**Verifiable answer:** `totals_discrepancy = false`: East 80's monitor and scale tickets agree in 2019. The season comes from the first answer.
+
+### F4. Swap the year on a weather question
+**First:** How dry was 2018? (question 12)
+**Then:** And 2019?
+**Tool:** `weather-history.get_season_weather(season=2019)`
+**Verifiable answer:** `total_precip_mm = 308.6`.
+
+### F5. Keep the field, switch to another question
+**First:** What did I put on Coulee Field in 2023? (question 14)
+**Then:** Was the nitrogen the same every year?
+**Tool:** `as-applied.get_nitrogen_history(field_name="Coulee Field")`
+**Verifiable answer:** one lb N/ac figure per logged season (2022: `179.1`, 2023: `145.9`, 2024: `175.0`, 2025: `174.6`), from `145.9` (2023) to `179.1` (2022). The field comes from the first answer; the season is dropped because the question asks about every year.
+
+### F6. A follow-up that is still out of scope
+**First:** Was East 80 a bad field or just a bad year? (question 2)
+**Then:** What should I plant there next year?
+**Tool:** none
+**Verifiable answer:** a refusal (`out_of_scope`) with no tool call. Carrying over the field never turns an advice question into a lookup.
+
+**What these test:** F1-F5 check that a short follow-up resolves to the right lookup using only what the last answer showed, and is then verified like any first question. F6 checks that context can't widen what the tool will answer.
 
