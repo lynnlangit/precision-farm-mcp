@@ -6,7 +6,6 @@ to prove a season-coverage or point-count refusal); the actual defect
 `farm_snapshot` fixture, since they need genuine yield-monitor point data.
 """
 
-import dataclasses
 from pathlib import Path
 
 import pytest

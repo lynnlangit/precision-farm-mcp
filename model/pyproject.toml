@@ -20,10 +20,3 @@ dev = ["pytest>=8.0", "farm-core"]
 
 [tool.uv.sources]
 farm-core = { path = "../core", editable = true }
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "W"]

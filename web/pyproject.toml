@@ -39,14 +39,3 @@ addopts = "-m 'not ui'"
 markers = [
     "ui: the question box and buttons driven in a real browser (needs Playwright's Chromium)",
 ]
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "W"]
-
-[tool.ruff.lint.per-file-ignores]
-# Inline SVG markup.
-"src/farm_web/banner.py" = ["E501"]

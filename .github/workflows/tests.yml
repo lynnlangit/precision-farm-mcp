@@ -2,6 +2,9 @@ name: tests
 
 # Pull-request check: one Ubuntu job, every test that doesn't call the model.
 #
+# - lint (ruff, settings in ruff.toml) and lock files up to date (uv lock
+#   --check): seconds, and a stale lock would otherwise be rewritten on the
+#   first local `uv run`, leaving a dirty working tree.
 # - generator + core: pure Python/DuckDB/file I/O, no Ollama.
 # - host tests that don't call the model (MCP servers, routing, the records
 #   list, the server pool, the untrusted-field classification):
@@ -19,10 +22,10 @@ name: tests
 # When it runs (kept fast for iterative work on a teaching tool):
 # - Pull requests, and on demand (Actions -> tests -> Run workflow). CI does
 #   not re-run on the merge to main, which doubled every wait.
-# - Docs-only changes (*.md, docs/, images/) skip CI entirely.
+# - Docs-only changes (*.md, docs/) skip CI entirely.
 on:
   pull_request:
-    paths-ignore: ["**/*.md", "docs/**", "images/**"]
+    paths-ignore: ["**/*.md", "docs/**"]
   workflow_dispatch:
 
 # A new push to the same PR cancels the run it supersedes.
@@ -39,6 +42,13 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+      - name: lint
+        run: uvx ruff check .
+      - name: lock files up to date
+        run: |
+          for p in core generator host model web servers/*; do
+            (cd "$p" && uv lock --check) || exit 1
+          done
       - name: generator tests
         run: uv run --project generator pytest -q generator/tests
       - name: generate synthetic data (core tests read it)
@@ -52,3 +62,5 @@ jobs:
           uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
       - name: host tests that don't call the model
         run: uv run --project host pytest -q -n 4 host/tests -m "not eval_nl and not ollama"
+      - name: architecture doc matches servers/
+        run: uv run --project core pytest -q docs/test_architecture_doc.py

@@ -271,7 +271,9 @@ def _negative_payload_magnitudes(payload: object) -> set[float]:
     return out
 
 
-_GAIN_CUES = ("profit of", "a profit", "made money", "made a profit", "gained", "earned", "was profitable", "were profitable")
+_GAIN_CUES = (
+    "profit of", "a profit", "made money", "made a profit", "gained", "earned", "was profitable", "were profitable",
+)
 _LOSS_CUES = ("loss", "lost", "losing", "negative", "in the red", "unprofitable", "deficit")
 _SIGNED_NEGATIVE_RE = re.compile(r"(?<![\w$])-\s?\$?\d")
 
@@ -358,8 +360,13 @@ def check_reconciliation_claim(narration: str, payload: object) -> bool:
     return True
 
 
-_CAUSE_CUES = ("primary reason", "main reason", "primary cause", "main cause", "because of", "due to", "caused by", "the reason")
-_EFFECT_TERMS = ("season effect", "seasonal effect", "season_effect", "field effect", "field_effect", "effect of the field", "effect of the season")
+_CAUSE_CUES = (
+    "primary reason", "main reason", "primary cause", "main cause", "because of", "due to", "caused by", "the reason",
+)
+_EFFECT_TERMS = (
+    "season effect", "seasonal effect", "season_effect", "field effect", "field_effect",
+    "effect of the field", "effect of the season",
+)
 
 
 def check_attribution_not_causal(narration: str, payload: object) -> bool:

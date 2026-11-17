@@ -2,7 +2,6 @@
 defects. Its answer key must match the default (messy) farm exactly -- the
 two farms differ only in what the records say, never in what happened."""
 
-import json
 
 import pytest
 

@@ -313,7 +313,10 @@ def test_refusal_panels_say_nothing_to_check():
 
 
 def test_show_the_records_lists_each_file_and_labels_the_whole_farm():
-    payload = {**EAST_80, "provenance": {"data_dir": "/x/data/synthetic", "built_at": "2026-11-16T20:57:07", "source_file_count": 161}}
+    payload = {
+        **EAST_80,
+        "provenance": {"data_dir": "/x/data/synthetic", "built_at": "2026-11-16T20:57:07", "source_file_count": 161},
+    }
     records = [
         {"kind": "cost_ledger", "label": "Cost ledger", "path": "cost_ledger.xlsx", "tab": "2020",
          "rows": 1, "count_text": "1 row", "which": "row 3"},
