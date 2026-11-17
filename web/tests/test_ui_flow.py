@@ -23,7 +23,7 @@ gemma3:4b (slower; the content checks hold for it too).
     uv run --project web pytest -m ui web/tests -v
     UI_REAL_GEMMA=1 uv run --project web pytest -m ui web/tests -v
 
-Needs both farms' records generated and ingested (see the README); skipped
+Needs both farms' records generated and ingested (see the FARMER_GUIDE); skipped
 otherwise.
 """
 
@@ -73,7 +73,7 @@ def _records_ready() -> bool:
 def app(tmp_path_factory):
     """The web app on a free port, with its own audit log."""
     if not _records_ready():
-        pytest.skip("generate and ingest both farms first (README, 'Two example farms')")
+        pytest.skip("generate and ingest both farms first (README, 'Quick start')")
     audit = tmp_path_factory.mktemp("ui") / "audit.jsonl"
     port = _free_port()
     args = ["--no-browser", "--port", str(port), "--audit-log", str(audit)]
