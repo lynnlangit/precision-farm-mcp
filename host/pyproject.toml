@@ -43,10 +43,3 @@ markers = [
     "eval_nl: the 15 eval questions, follow-ups and the withheld-sentence demo through Gemma end to end (slow; needs Ollama)",
     "ollama: a whole question answered through a running Ollama + gemma3:4b; run by default, left out of PR CI (-m 'not eval_nl and not ollama')",
 ]
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "W"]

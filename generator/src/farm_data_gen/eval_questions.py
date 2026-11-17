@@ -468,7 +468,7 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
         "control: most fields in the record are neither pattern.",
         "",
         "### 4. Ranking over a relative window",
-        f"**Q:** Which fields made money in the last five years?",
+        "**Q:** Which fields made money in the last five years?",
         f"**Tool:** `report-export.which_fields_made_money(seasons=[{last_five[0]}.."
         f"{last_five[-1]}])`",
         f"**Verifiable answer:** Top result is **{top5[0]['display_name']}**, total profit "

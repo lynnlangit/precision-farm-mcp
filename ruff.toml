@@ -1,0 +1,10 @@
+# One lint config for every package (CI: `uvx ruff check .`).
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W"]
+
+[lint.per-file-ignores]
+# Inline SVG markup.
+"web/src/farm_web/banner.py" = ["E501"]

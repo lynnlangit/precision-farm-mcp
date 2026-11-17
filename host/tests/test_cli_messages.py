@@ -6,7 +6,6 @@ not query_parser.py's classification (that's covered live in
 model/tests/test_model_bounded.py).
 """
 
-from pathlib import Path
 
 import pytest
 

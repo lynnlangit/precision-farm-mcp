@@ -18,7 +18,7 @@ first (the [README](../README.md#quick-start) quick start).
 | `host` | Some (the `ollama` tests and the opt-in `eval_nl` suite) | Every PR without the model; all of it on demand |
 | `model` | Some | On demand |
 | `web` | No (the opt-in `ui` suite needs Playwright's Chromium) | Locally |
-| `docs/test_architecture_doc.py` | No | Locally |
+| `docs/test_architecture_doc.py` | No | Every PR |
 
 ```bash
 for pkg in generator core host model web; do (cd $pkg && uv run pytest -q); done
@@ -42,7 +42,9 @@ uv run --project web pytest -m ui web/tests
 Two workflows keep CI fast:
 
 - **Pull requests** (`.github/workflows/tests.yml`) run one Ubuntu check:
-  `generator`, `core`, and every `host` test that doesn't call the model
+  lint (`uvx ruff check .`, settings in `ruff.toml`), a check that every
+  `uv.lock` is up to date, then `generator`, `core`, the architecture-doc
+  test and every `host` test that doesn't call the model
   (`pytest -m "not eval_nl and not ollama"`), 4 tests at a time
   (`-n 4`, about 3 minutes). Docs-only changes skip CI. `-n 4` works
   locally too, for `core` and `host`.
