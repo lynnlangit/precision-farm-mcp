@@ -84,4 +84,5 @@ Two workflows keep CI fast:
 ## See also
 
 - [ARCHITECTURE.md](ARCHITECTURE.md): the technical design
+- [DEVELOPER.md](DEVELOPER.md): farm-cli, quick start notes, and repository layout
 - [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md): the 15 evaluation questions and their verifiable answers

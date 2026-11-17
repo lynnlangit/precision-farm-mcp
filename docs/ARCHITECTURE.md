@@ -194,7 +194,8 @@ this section first.
 
 ## See also
 
-- [README](../README.md) — the simple picture, quick start, and repository layout
+- [README](../README.md) — the simple picture and quick start
+- [DEVELOPER.md](DEVELOPER.md) — farm-cli, quick start notes, and repository layout
 - [FARMER_GUIDE.md](FARMER_GUIDE.md) — plain-language setup and usage guide
 - [VERIFICATION.md](VERIFICATION.md) — how to run the tests and what they prove
 - [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — fifteen independent evaluation questions
