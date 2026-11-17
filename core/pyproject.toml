@@ -19,6 +19,7 @@ where = ["src"]
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-xdist>=3.5",
 ]
 
 [tool.ruff]

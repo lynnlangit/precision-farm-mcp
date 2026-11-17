@@ -12,6 +12,10 @@ name: tests
 # on Lynn's Mac before a demo, where Ollama is fast. Windows is not tested in
 # CI: growers see the app on Lynn's Mac rather than installing it.
 #
+# core and host run 4 tests at a time (pytest-xdist, -n 4; GitHub's runners
+# have 4 CPUs): most of their time is spent starting real MCP servers and
+# building farm snapshots, which overlap well. About 7 min -> about 3 min.
+#
 # When it runs (kept fast for iterative work on a teaching tool):
 # - Pull requests, and on demand (Actions -> tests -> Run workflow). CI does
 #   not re-run on the merge to main, which doubled every wait.
@@ -40,11 +44,11 @@ jobs:
       - name: generate synthetic data (core tests read it)
         run: uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
       - name: core tests
-        run: uv run --project core pytest -q core/tests
+        run: uv run --project core pytest -q -n 4 core/tests
       - name: confirm both example farms
         run: |
           uv run --project host farm-ingest --auto-approve-synthetic-only
           uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
           uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
       - name: host tests that don't call the model
-        run: uv run --project host pytest -q host/tests -m "not eval_nl and not ollama"
+        run: uv run --project host pytest -q -n 4 host/tests -m "not eval_nl and not ollama"

@@ -42,7 +42,9 @@ Two workflows keep CI fast:
 
 - **Pull requests** (`.github/workflows/tests.yml`) run one Ubuntu check:
   `generator`, `core`, and every `host` test that doesn't call the model
-  (`pytest -m "not eval_nl and not ollama"`). Docs-only changes skip CI.
+  (`pytest -m "not eval_nl and not ollama"`), 4 tests at a time
+  (`-n 4`, about 3 minutes). Docs-only changes skip CI. `-n 4` works
+  locally too, for `core` and `host`.
   Windows isn't tested in CI: growers see the app on a Mac rather than
   installing it.
 - **The real-model job** (`.github/workflows/real-model.yml`: all of `host`
