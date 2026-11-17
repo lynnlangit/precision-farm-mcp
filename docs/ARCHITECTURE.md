@@ -156,7 +156,7 @@ What each piece is and where it lives. What growers see is in
 | Component | Status | Where, and what it does |
 |---|---|---|
 | Confirmation at ingest (`ConfirmationGate`, `farm-ingest`) | Built | `core/governance.py`, `host/ingest_cli.py`. Every name, field change and column mapping confirmed once, persisted, versioned |
-| 6 MCP servers | Built | `servers/mcp-*`. Read-only tools over `farm_core`; each has at least one question type routed to it (`_INTENT_TO_SERVER` in `host/cli.py`) |
+| 6 MCP servers | Built | `servers/mcp-*`, sharing `core/server_support.py` (data paths, snapshot, refusals). Read-only tools over `farm_core`; each has at least one question type routed to it (`_INTENT_TO_SERVER` in `host/cli.py`) |
 | Weather, soil and as-applied questions | Built | `core/field_conditions.py`. Nitrogen always in lb N/ac (UAN 32% converted from gal/ac); records, never causes |
 | Grower web app (`farm-web`) | Built | `web/`. Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Local only unless `--lan` |
 | Persistent servers | Built | `host/server_pool.py`. Six servers start once (about 7 s), then about 0.2 s per lookup. Restart the app after regenerating data |
