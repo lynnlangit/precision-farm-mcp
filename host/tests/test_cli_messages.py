@@ -68,6 +68,7 @@ async def test_numeric_name_refusal_gives_a_grower_friendly_hint(tmp_path, monke
     assert "not_found" not in result.text
 
 
+@pytest.mark.ollama
 async def test_successful_query_reports_ok(tmp_path):
     audit_log = AuditLog(tmp_path / "audit.jsonl")
     result = await cli.answer_question("was the north eighty a bad field or a bad year", audit_log)

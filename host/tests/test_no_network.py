@@ -62,6 +62,7 @@ def track_connections(monkeypatch):
     return connections
 
 
+@pytest.mark.ollama
 async def test_no_non_local_connections_during_full_question_cycle(track_connections, tmp_path):
     audit_log = AuditLog(tmp_path / "audit.jsonl")
     result = await answer_question(

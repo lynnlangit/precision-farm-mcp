@@ -171,7 +171,7 @@ sequenceDiagram
 | Model-free query path (`farm-cli --intent`) | Built | No `ollama.chat` call anywhere on this path (`test_structured_path_never_calls_ollama`) |
 | Deterministic "therefore" line (`therefore.py`) | Built | Template-built, omitted where there is no verdict to restate |
 | Clear failures (`ParseFailure.kind`, exit codes) | Built | A dead model and an out-of-scope question get different messages; CLIs exit 1 on any refusal |
-| CI (`.github/workflows/tests.yml`) | Built | PRs run the deterministic packages only; the real-model job is nightly and manual. Details in [VERIFICATION.md](VERIFICATION.md#ci-and-demos) |
+| CI (`.github/workflows/tests.yml`, `real-model.yml`) | Built | PRs run one Ubuntu check: generator, core and the host tests that don't call the model; the real-model job is manual only. Details in [VERIFICATION.md](VERIFICATION.md#ci-and-demos) |
 | **Diverged:** confirmation at query time | — | MCP servers can't prompt a human, so confirmation moved to ingest |
 | **Diverged:** zone cost is field-uniform | — | The data has no per-zone cost (ledger is per acre), so only yield is zone-resolved |
 | Remote sensing | Deferred | Out of scope by design; not scheduled |

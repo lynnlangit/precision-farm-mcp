@@ -5,6 +5,7 @@ synthetic data and a real Ollama -- the same "no mocking the thing that
 actually proves readiness" convention as model/tests/test_model_bounded.py.
 """
 
+import pytest
 from pathlib import Path
 
 from farm_host.preflight_cli import (
@@ -64,11 +65,13 @@ def test_check_confirmed_mappings_passes_against_real_store():
     assert check_confirmed_mappings(CONFIRM_STORE_PATH).ok
 
 
+@pytest.mark.ollama
 def test_live_query_check_succeeds_against_real_data_and_ollama():
     result = check_live_query(DATA_DIR, CONFIRM_STORE_PATH, AUDIT_LOG_PATH, DEFAULT_TEST_QUESTION)
     assert result.ok, result.detail
 
 
+@pytest.mark.ollama
 def test_run_all_reports_ready_against_real_setup():
     results = run_all(DATA_DIR, CONFIRM_STORE_PATH, AUDIT_LOG_PATH, DEFAULT_TEST_QUESTION)
     names = [r.name for r in results]

@@ -7,6 +7,7 @@ for real; isolated to a tmp audit log via the same env_overrides pattern
 as test_audit_multiprocess.py, so it doesn't touch the real data/audit.jsonl.
 """
 
+import pytest
 import json
 from pathlib import Path
 
@@ -19,6 +20,7 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "synthetic"
 CONFIRM_STORE = Path(__file__).resolve().parents[2] / "data" / "confirmed_mappings.json"
 
 
+@pytest.mark.ollama
 async def test_metrics_report_reflects_a_real_answered_question(tmp_path):
     audit_path = tmp_path / "audit.jsonl"
     env = {
@@ -50,6 +52,7 @@ async def test_metrics_report_reflects_a_real_answered_question(tmp_path):
     assert report["sovereignty_integrity"]["network_calls_attempted"] == 0
 
 
+@pytest.mark.ollama
 async def test_metrics_report_reflects_modeled_attribution_for_a_bad_year(tmp_path):
     """Phase C: a bad_year verdict carries modeled.attribution, and a
     faithful narration citing both the evidence figure and the modeled
