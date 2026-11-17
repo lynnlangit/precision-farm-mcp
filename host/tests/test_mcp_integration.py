@@ -24,16 +24,17 @@ from farm_core.zone_profitability import (
     unprofitable_zones_in_profitable_fields,
 )
 from farm_host.mcp_client import MCPFleet
+from farm_host.farms import FARMS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "data" / "synthetic"
-CONFIRM_STORE_PATH = REPO_ROOT / "data" / "confirmed_mappings.json"
+CONFIRM_STORE_PATH = FARMS["farm2"].confirm_store  # conftest: a fresh, auto-approved copy
 # Loaded the same way every MCP server loads its snapshot -- from whatever
 # farm-ingest already persisted -- so "matches direct call" is a genuine
 # apples-to-apples comparison, not one side quietly using a less-confirmed
 # resolution than the other.
 DIRECT_SNAPSHOT = pipeline.load_query_time_snapshot(
-    DATA_DIR, CONFIRM_STORE_PATH, AuditLog(REPO_ROOT / "data" / "audit.jsonl")
+    DATA_DIR, CONFIRM_STORE_PATH, AuditLog(CONFIRM_STORE_PATH.with_name("direct-audit.jsonl"))
 )
 
 

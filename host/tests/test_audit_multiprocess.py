@@ -12,6 +12,7 @@ from pathlib import Path
 
 from farm_core.audit import AuditLog
 from farm_host.mcp_client import MCPFleet
+from farm_host.farms import FARMS
 
 
 async def test_audit_chain_survives_host_plus_two_real_server_subprocesses(tmp_path):
@@ -19,9 +20,7 @@ async def test_audit_chain_survives_host_plus_two_real_server_subprocesses(tmp_p
     env = {
         "FARM_DATA_DIR": str(Path(__file__).resolve().parents[2] / "data" / "synthetic"),
         "FARM_AUDIT_LOG": str(audit_path),
-        "FARM_CONFIRM_STORE": str(
-            Path(__file__).resolve().parents[2] / "data" / "confirmed_mappings.json"
-        ),
+        "FARM_CONFIRM_STORE": str(FARMS["farm2"].confirm_store),
     }
     host_log = AuditLog(audit_path)
 
