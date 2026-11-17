@@ -18,13 +18,11 @@ from farm_core import confirm, governance
 from farm_core.audit import AuditLog
 from farm_core.pipeline import build_farm_snapshot
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DATA_DIR = REPO_ROOT / "data" / "synthetic"
-DEFAULT_CONFIRM_STORE = REPO_ROOT / "data" / "confirmed_mappings.json"
-DEFAULT_AUDIT_LOG = REPO_ROOT / "data" / "audit.jsonl"
+from .farms import DEFAULT_AUDIT_LOG, DEFAULT_CONFIRM_STORE, DEFAULT_DATA_DIR, FARMS
+
 # The two example farms the generator writes (Farm 2 messy, Farm 1 clean):
 # the only places --auto-approve-synthetic-only will run.
-SYNTHETIC_DATA_DIRS = (DEFAULT_DATA_DIR, REPO_ROOT / "data" / "synthetic-clean")
+SYNTHETIC_DATA_DIRS = (DEFAULT_DATA_DIR, FARMS["farm1"].data_dir)
 
 
 def _counting(gate: governance.ConfirmationGate) -> tuple[confirm.ConfirmFn, dict[str, int]]:

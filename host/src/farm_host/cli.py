@@ -31,12 +31,11 @@ from farm_model.query_schema import (
 )
 
 from . import __version__
+from .farms import DEFAULT_AUDIT_LOG, REPO_ROOT  # noqa: F401 -- REPO_ROOT re-exported for farm_web
 from .mcp_client import MCPFleet, ServerStartTimeout
 from .records import records_request
 from .therefore import build_therefore_line
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_AUDIT_LOG = REPO_ROOT / "data" / "audit.jsonl"
 
 _INTENT_TO_SERVER: dict[QueryIntent, str] = {
     QueryIntent.WHICH_FIELDS_MADE_MONEY: "report-export",
@@ -277,7 +276,7 @@ async def answer_question(
 async def answer_question_structured(
     query: QueryObject, audit_log: AuditLog, env_overrides: dict[str, str] | None = None
 ) -> AnswerResult:
-    """The model-free path (item 4): the caller already knows which intent
+    """The model-free path: the caller already knows which intent
     and parameters they want, so there's nothing for Gemma to parse -- and
     nothing to narrate into a sentence either, since a raw structured result
     is exactly what a caller in this position wants back. No ollama.chat

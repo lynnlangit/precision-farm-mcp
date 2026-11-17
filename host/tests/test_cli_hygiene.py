@@ -1,4 +1,4 @@
-"""Eval-fix P4: CLI and demo hygiene. Model-free -- none of these reach Ollama."""
+"""CLI and demo hygiene. Model-free -- none of these reach Ollama."""
 
 from __future__ import annotations
 

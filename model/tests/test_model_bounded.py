@@ -1,4 +1,4 @@
-"""Phase 5 verification: Gemma is bounded to exactly two jobs, enforced
+"""Gemma is bounded to exactly two jobs, enforced
 structurally (this module never imports a database, an MCP client, or any
 tool), and every claim it narrates is traceable to the payload it was given.
 Runs against a real local Ollama + gemma3:4b -- no mocking, since the point
@@ -192,11 +192,10 @@ def test_grounding_check_actually_detects_fabricated_numbers():
     assert 999999.99 in result.ungrounded_numbers
 
 
-# --- A3: grounding split by provenance (measured/derived vs. modeled) ---
-# Phase C hasn't landed yet, so nothing in the real system produces a
-# "modeled" subtree -- this is a hand-built fixture standing in for it, the
-# only way to prove the split branch actually executes before Phase C needs
-# it (per the review: "the modeled branch must actually run").
+# --- Grounding split by provenance (measured/derived vs. modeled) ---
+# A hand-built "modeled" subtree, so the split branch is proven to run
+# without needing a real bad_year answer (the review's rule: "the modeled
+# branch must actually run").
 _FAKE_MODELED_PAYLOAD = {
     "verdict": "bad_year",
     "evidence": {"median_profit_per_acre": 139.24, "outlier_seasons": [2020]},
@@ -206,12 +205,12 @@ _FAKE_MODELED_PAYLOAD = {
 
 def test_narration_grounded_by_provenance_splits_measured_from_modeled():
     """A narration legitimately citing a real number from *each* channel in
-    the same sentence -- Phase C's attribution supplementing a verdict, e.g.
+    the same sentence -- a weather attribution supplementing a verdict, e.g.
     "$139.24/ac median, weather explains 42.5 bu of the gap" -- must not
     fail *both* channels just because each channel only recognizes its own
     numbers. A number grounded in one channel is never counted against the
     other; only a genuine fabrication (grounded in neither) fails a channel.
-    Caught for real once Phase C started populating `modeled` on an actual
+    Caught for real once weather attribution started populating `modeled` on an actual
     query (bad_field_or_bad_year for a field with an outlier season):
     host/tests/test_metrics_cli.py's real-question test tripped this exact
     false negative on both channels at once.
@@ -253,7 +252,7 @@ def test_narration_grounded_by_provenance_reports_no_modeled_data_as_none():
     assert measured_or_derived.is_grounded
 
 
-# --- A4: untrusted-text wrapping can't be escaped by embedding the delimiter ---
+# --- Untrusted-text wrapping can't be escaped by embedding the delimiter ---
 
 
 def test_untrusted_wrapping_escapes_embedded_delimiter_tokens():
@@ -279,7 +278,7 @@ def test_untrusted_wrapping_escapes_embedded_delimiter_tokens():
     assert "\\⟦UNTRUSTED DATA: " in inner
 
 
-# --- A4: payload bounds -- caps free text first, drops whole list entries as
+# --- Payload bounds -- caps free text first, drops whole list entries as
 # a backstop, never truncates the serialized JSON string itself ---
 
 
@@ -366,7 +365,7 @@ def test_narrate_verified_never_returns_a_contradicted_verdict(snapshot):
 
 def test_narrate_verified_falls_back_when_model_unreachable(snapshot):
     """Ollama being unreachable mid-narration must produce the deterministic
-    fallback, not an unhandled exception -- the same symmetry item 1 gives
+    fallback, not an unhandled exception -- the same symmetry ParseFailure.kind gives
     query_parser.parse_question's own model_unreachable classification.
     """
     canonical_id = snapshot.canonical_id_for_name("Marginal Eighty")

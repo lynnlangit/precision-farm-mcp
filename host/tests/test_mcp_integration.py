@@ -1,4 +1,4 @@
-"""Phase 4 verification: wrapping farm_core in the MCP protocol must not
+"""Wrapping farm_core in the MCP protocol must not
 change a single computed number, and malformed input must come back as a
 structured refusal, never a crash or a leaked traceback.
 

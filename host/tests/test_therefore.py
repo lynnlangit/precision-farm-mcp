@@ -1,4 +1,4 @@
-"""The "therefore" line (item 7): deterministic, never model-generated, and
+"""The "therefore" line: deterministic, never model-generated, and
 omitted rather than invented whenever a payload doesn't carry a claim worth
 restating.
 """

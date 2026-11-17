@@ -1,4 +1,4 @@
-"""One app version (eval-fix P5): farm_host.__version__ is the version users
+"""One app version: farm_host.__version__ is the version users
 see (farm-cli --version, farm-preflight). Every package -- generator, core,
 model, host, web and the six MCP servers -- carries the same number, so a
 release bump can't leave one behind. The generator's number is also written

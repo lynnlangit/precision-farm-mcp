@@ -1,7 +1,7 @@
 """Reconcile independent data sources. Where they disagree is a feature, not
 an error to paper over -- every function here returns both figures and a
 neutral flag, never an assertion that one side is wrong. Deciding which
-figure is authoritative for the final profitability number is Phase 3's job,
+figure is authoritative for the final profitability number is the profitability engine's job,
 not this module's.
 """
 

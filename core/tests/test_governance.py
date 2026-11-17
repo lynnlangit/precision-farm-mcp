@@ -1,4 +1,4 @@
-"""Phase 3 verification: the audit log is genuinely tamper-evident, writes
+"""The audit log is genuinely tamper-evident, writes
 are blocked by default, and exports are redacted by default."""
 
 import json

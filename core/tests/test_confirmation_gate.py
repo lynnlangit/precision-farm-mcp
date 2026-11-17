@@ -1,4 +1,4 @@
-"""Phase 1 verification: the confirmation gate isn't decorative. Proves that
+"""The confirmation gate isn't decorative. Proves that
 auto-approving an ambiguous naming-drift alias produces a confidently silent
 error (a dropped profit record, not just a wrong number), that supplying the
 correct confirmed answer fixes it, and that both outcomes are visible in the

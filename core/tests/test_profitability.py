@@ -1,10 +1,10 @@
-"""Phase 3 verification: computed profit matches ground truth for every
+"""Computed profit matches ground truth for every
 field/season not affected by an undetected-by-design defect, and the two
 query functions v1 exists to answer classify the two known cases correctly.
 
 One field/season (the transposed-digit defect) is deliberately excluded from
 the exact-match check: profitability.py uses the farmer's own ledger figures
-as recorded, discrepancies and all -- reconciliation (Phase 2) is what
+as recorded, discrepancies and all -- reconciliation is what
 surfaces that this one is wrong, not silent auto-correction here. Excluding
 known defects, remaining differences are realistic currency-rounding noise
 (prices and per-load bushels round to display precision in the raw files,

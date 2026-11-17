@@ -1,5 +1,5 @@
-"""Model-free tests for query_parser's code-level guards and prompt rules
-(eval-fix P2). ollama.chat is replaced with a stub that returns a fixed
+"""Model-free tests for query_parser's code-level guards and prompt rules.
+ollama.chat is replaced with a stub that returns a fixed
 QueryObject JSON and records the messages it was sent, so these run without
 Ollama. Whether the live model actually follows the prompt rule is covered by
 the live test at the bottom (skipped when Ollama isn't reachable).

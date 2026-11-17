@@ -1,11 +1,11 @@
-"""The deterministic profitability engine: combines Phase 1's resolved field
-identity with Phase 2's reconciled data into one profit-per-lineage-per-season
+"""The deterministic profitability engine: combines the resolved field
+identity with the reconciled data into one profit-per-lineage-per-season
 table, then answers the two questions v1 exists to answer -- "which fields
 made money" and "was this field a bad field or a bad year" -- with plain
 arithmetic and a documented statistical rule, never a guess.
 
 Revenue always comes from scale tickets (the authoritative bushel source per
-Phase 2's reconciliation), never the yield monitor. Costs come from the
+reconciliation), never the yield monitor. Costs come from the
 cost ledger, resolved through the naming-drift alias table first.
 """
 

@@ -1,6 +1,6 @@
 """MCP server: canonical field identity and naming-drift alias resolution.
 Thin transport wrapper around farm_core.field_identity /
-farm_core.alias_resolution -- Phase 1's hardest problem, exposed as tools.
+farm_core.alias_resolution -- the hardest problem, exposed as tools.
 """
 
 from __future__ import annotations

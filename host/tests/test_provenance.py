@@ -1,8 +1,8 @@
-"""Phase A / A2 verification: every tool's successful response carries the
-`modeled` subtree -- the structural boundary that keeps a future Phase C
-model output from ever silently blending into today's measured/derived
-data. Nothing is modeled yet, so `modeled` is always None here; the point is
-that the field exists on every response now, before Phase C needs it.
+"""Every tool's successful response carries the
+`modeled` subtree -- the structural boundary that keeps model output from
+ever silently blending into measured/derived data. Only a bad_year verdict
+fills it (weather attribution); every call below is to a tool that never
+does, so `modeled` is None here and the point is that the field exists.
 """
 
 from farm_host.mcp_client import MCPFleet
@@ -35,4 +35,4 @@ async def test_every_successful_response_carries_the_modeled_field():
             result = (await fleet.call(server, tool, **kwargs)).data
             assert "error" not in result, f"{server}.{tool} unexpectedly refused: {result}"
             assert "modeled" in result, f"{server}.{tool} response is missing the modeled field"
-            assert result["modeled"] is None  # nothing populates it until Phase C
+            assert result["modeled"] is None  # only bad_year verdicts fill it

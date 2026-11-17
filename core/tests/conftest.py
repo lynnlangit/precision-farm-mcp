@@ -31,7 +31,7 @@ def ground_truth() -> dict:
 @pytest.fixture(scope="session")
 def full_ingest():
     """Ingest all five raw sources plus naming-drift alias resolution once per
-    test session -- every Phase 2 test reads from this shared connection.
+    test session -- every ingestion and reconciliation test reads from this shared connection.
     """
     con = db.connect()
     confirm_requests: list = []

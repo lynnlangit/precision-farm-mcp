@@ -97,9 +97,9 @@ def _without_provenance(payload: object) -> object:
 def check_narration_grounded_by_provenance(
     narration: str, payload: object, question: str | None = None
 ) -> tuple[GroundingResult, GroundingResult | None]:
-    """The A3 split: grounds narrated numbers against a payload's "modeled"
-    subtree (Phase C's model output) and everything else (measured/derived)
-    separately, so Phase B can report two rates instead of one that blends
+    """The grounding split: grounds narrated numbers against a payload's "modeled"
+    subtree (the weather attribution model's output) and everything else (measured/derived)
+    separately, so farm-metrics can report two rates instead of one that blends
     fact with simulation. This is purely a reporting split -- the safety gate
     stays check_narration_grounded()'s single union-based check below, which
     already recurses into a "modeled" key like any other, unchanged.
@@ -110,7 +110,7 @@ def check_narration_grounded_by_provenance(
 
     A number grounded in one channel is never counted against the other: a
     narration citing both a real `evidence` figure and a real `modeled`
-    figure in the same sentence (Phase C's attribution supplementing a
+    figure in the same sentence (a weather attribution supplementing a
     verdict) must not fail *both* channels just because each channel only
     recognizes its own numbers. Only a number grounded in *neither* channel
     -- a genuine fabrication -- counts against either one, matching
@@ -237,7 +237,7 @@ def check_narration_grounded(
     return GroundingResult(ungrounded_numbers=ungrounded)
 
 
-# --- Semantic checks (eval-fix P3) -------------------------------------------
+# --- Semantic checks -------------------------------------------
 # Grounding proves every number came from the payload; it can't tell whether
 # the sentence around a number is true. These checks catch the four ways a
 # fully-grounded narration was still wrong in the eval run (docs/

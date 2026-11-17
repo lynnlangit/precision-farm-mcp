@@ -1,5 +1,5 @@
-"""Phase 1 verification: field identity resolved from raw boundary files alone
-must exactly match the generator's ground truth -- the whole point of Phase 1
+"""Field identity resolved from raw boundary files alone
+must exactly match the generator's ground truth -- the whole point of this step
 is that this is provable without any shortcut into the generator's internals.
 """
 

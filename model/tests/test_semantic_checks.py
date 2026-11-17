@@ -1,4 +1,4 @@
-"""Semantic narration checks (eval-fix P3). Model-free: each check is a pure
+"""Semantic narration checks. Model-free: each check is a pure
 function over (narration, payload). Negative fixtures are the four narrations
 from the eval run that passed the old grounding check while being wrong,
 copied verbatim; positive fixtures are correct narrations of the same

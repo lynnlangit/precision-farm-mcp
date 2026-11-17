@@ -2,7 +2,7 @@
 geometry's bounding box to lon/lat regardless of the season's declared CRS.
 
 Deliberately extracts only what field_identity.py needs (name, acres, crop,
-bbox) -- not full geometry -- since Phase 1 exists to prove field-identity
+bbox) -- not full geometry -- since this exists to prove field-identity
 resolution, not to build a spatial engine.
 """
 

@@ -1,4 +1,4 @@
-"""Phase B / B1 verification: each governance metric's math, against
+"""Each governance metric's math, against
 hand-built audit-log-shaped fixtures -- fast, deterministic, no live
 services. `AuditLog.entries()` returns plain dicts with an "event" key plus
 whatever kwargs were logged; these fixtures only need the fields each
@@ -138,7 +138,7 @@ def test_build_report_shape():
     assert report["entries_analyzed"] == 1
 
 
-# --- Phase C: attribution_backtest -- the one metric needing a live snapshot ---
+# --- attribution_backtest -- the one metric needing a live snapshot ---
 
 
 def test_attribution_backtest_reports_a_real_error_measure(farm_snapshot):

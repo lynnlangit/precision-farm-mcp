@@ -18,7 +18,7 @@ from .field_identity import ALIAS_TIE_FIELD_IDS, CORN, SOYBEAN, FarmIdentity
 MARGINAL_YIELD_PENALTY = 0.72  # marginal field yields at 72% of the normal draw
 MARGINAL_COST_PREMIUM = 1.22  # and costs 22% more (poor drainage, more inputs)
 CATASTROPHIC_YIELD_FACTOR = 0.10  # a catastrophic year keeps only 10% of yield
-# (was 0.25 pre-Phase-C; weather stress now adds its own profit variance across
+# (was 0.25 before weather was added; weather stress now adds its own profit variance across
 # seasons, so the override needs a wider margin to stay unambiguously the
 # field's worst season -- verified empirically against seed=42, not assumed)
 

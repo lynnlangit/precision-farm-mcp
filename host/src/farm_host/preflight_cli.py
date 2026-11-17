@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import shutil
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,12 +22,8 @@ from farm_core.audit import AuditLog
 
 from . import __version__
 from .cli import answer_question
+from .farms import DEFAULT_AUDIT_LOG, DEFAULT_CONFIRM_STORE, DEFAULT_DATA_DIR, FARMS, Farm
 from .mcp_client import SERVERS, MCPFleet, ServerStartTimeout
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DATA_DIR = REPO_ROOT / "data" / "synthetic"
-DEFAULT_CONFIRM_STORE = REPO_ROOT / "data" / "confirmed_mappings.json"
-DEFAULT_AUDIT_LOG = REPO_ROOT / "data" / "audit.jsonl"
 REQUIRED_MODEL = "gemma3:4b"
 DEFAULT_TEST_QUESTION = "was the north eighty a bad field or a bad year"
 # Preflight is where first-run environment builds are expected, so it gives
@@ -115,6 +112,34 @@ def check_confirmed_mappings(confirm_store: Path) -> CheckResult:
     return CheckResult("farm-ingest has run", True, f"found {confirm_store}")
 
 
+def farm_checks(farm: Farm) -> list[CheckResult]:
+    """The data and farm-ingest checks for one example farm, named and fixed
+    for that farm. The web app's "Prerequisites loaded" line uses these too."""
+    data = check_synthetic_data(farm.data_dir)
+    mappings = check_confirmed_mappings(farm.confirm_store)
+    return [
+        dataclasses.replace(
+            data,
+            name=f"{farm.name} data generated",
+            fix=None if data.ok else f"run `{farm.generate_cmd}`",
+        ),
+        dataclasses.replace(
+            mappings,
+            name=f"{farm.name} farm-ingest has run",
+            fix=None if mappings.ok else f"run `{farm.ingest_cmd}`",
+        ),
+    ]
+
+
+def data_checks(data_dir: Path, confirm_store: Path) -> list[CheckResult]:
+    """Both example farms when data_dir is one of them (the README sets up
+    both), otherwise just the folder given (your own farm's records)."""
+    example_dirs = {farm.data_dir.resolve() for farm in FARMS.values()}
+    if data_dir.resolve() in example_dirs:
+        return [check for farm in FARMS.values() for check in farm_checks(farm)]
+    return [check_synthetic_data(data_dir), check_confirmed_mappings(confirm_store)]
+
+
 async def _start_all_servers(timeout: float) -> dict[str, float]:
     async with MCPFleet(list(SERVERS), start_timeout=timeout) as fleet:
         return dict(fleet.start_seconds)
@@ -188,8 +213,7 @@ def run_all(
     ollama_check, pulled_models = check_ollama_running()
     results.append(ollama_check)
     results.append(check_model_pulled(pulled_models))
-    results.append(check_synthetic_data(data_dir))
-    results.append(check_confirmed_mappings(confirm_store))
+    results += data_checks(data_dir, confirm_store)
 
     # Only worth attempting a real query if everything it depends on passed --
     # otherwise it just repeats one of the failures above with a stack trace.

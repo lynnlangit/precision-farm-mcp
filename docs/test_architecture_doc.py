@@ -1,4 +1,4 @@
-"""Phase B / B2 verification: the server list in the architecture diagram
+"""The server list in the architecture diagram
 can't go stale without a test failing. Standalone -- no farm_core/farm_host
 import, no project venv needed, so it runs even if nobody happens to be
 inside one of the four packages' `uv` environments:

@@ -1,4 +1,4 @@
-"""Phase A / A4 verification: DEF-INJECTION puts prompt-injection-style text
+"""DEF-INJECTION puts prompt-injection-style text
 in West 120's 2020 ledger Notes cell -- the one tool response field that
 echoes raw farmer-authored free text (cost-ledger.get_cost_ledger_row).
 Proves the injected text has no effect on the narration: it must not follow

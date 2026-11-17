@@ -1,4 +1,4 @@
-"""Phase D verification: zone-level profitability. Grid-index math is pure
+"""Zone-level profitability. Grid-index math is pure
 and tested standalone; the refusal paths are tested against a small
 hand-built FarmSnapshot fixture (no need for the full synthetic dataset just
 to prove a season-coverage or point-count refusal); the actual defect
