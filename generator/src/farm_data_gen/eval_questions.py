@@ -581,7 +581,7 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
     ]
     if bad_zone is not None:
         lines.append(
-            "- **11** exercises Phase D's zone-level profitability -- a shortfall that's "
+            "- **11** exercises zone-level profitability -- a shortfall that's "
             "genuinely invisible at the field level, only visible once yield_monitor_points "
             "are gridded into zones."
         )

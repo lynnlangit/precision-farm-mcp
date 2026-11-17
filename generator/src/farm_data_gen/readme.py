@@ -52,25 +52,20 @@ def render_readme(config: SimConfig, ground_truth: dict) -> str:
         "Regenerate identically with:",
         "",
         "```bash",
-        f"uv run python -m farm_data_gen.cli --seed {config.random_seed} "
+        f"uv run --project generator python -m farm_data_gen.cli --seed {config.random_seed} "
         f"--fields {config.num_fields} --seasons {config.num_seasons} "
         + ("--clean --out data/synthetic-clean" if config.clean_records else "--out data/synthetic"),
         "```",
         "",
         "## Outputs",
         "",
-        "| Directory / file | Format | Notes |",
-        "|---|---|---|",
-        "| `boundaries/` | GeoJSON, one file per season | CRS varies by season -- see "
-        "`ground_truth.json` `identity_events` / per-season files for which |",
-        "| `yield_monitor/` | CSV, one file per field per season | Absent for the two "
-        "oldest seasons (older combine) |",
-        "| `scale_tickets/` | CSV, one file per season | Authoritative bushel source |",
-        "| `as_applied/` | CSV, one file per season | Newest 4 seasons only |",
-        "| `cost_ledger.xlsx` | XLSX workbook | One tab per season plus a shared "
-        "`Unit Prices` tab; this is the farmer's own messy spreadsheet |",
-        "| `ground_truth.json` | JSON | Exact expected profit per field per season, "
-        "every injected defect with a stable ID, and the field-identity event graph |",
+        "Every file and its columns are listed in "
+        "[docs/YOUR_RECORDS.md](../../docs/YOUR_RECORDS.md#the-files-you-need-for-your-own-farm). "
+        "In this example data, `yield_monitor/` has no files for the two oldest seasons "
+        "(an older combine), `as_applied/` covers the newest 4 seasons only, `scale_tickets/` "
+        "is the authoritative bushel source, and `ground_truth.json` is the answer key: exact "
+        "profit per field per season, every injected defect with a stable ID, and the "
+        "field-identity event graph. Boundary CRS varies by season.",
         "",
         "## Why each defect exists",
         "",

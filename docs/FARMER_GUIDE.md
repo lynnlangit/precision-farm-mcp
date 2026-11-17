@@ -322,16 +322,13 @@ you ever want to review it.
   how to fix it, rather than guessing from the error text.
 - **Something looks structurally wrong (a whole season missing, numbers
   that don't add up)** — check your file layout and column names against
-  the working example in `data/synthetic/` first; a misnamed file or
+  the working example in `data/synthetic-clean/` first; a misnamed file or
   column is the most common cause.
 
 ## Where to go next
 
-- [README.md](../README.md) — the short overview and quick start
-  on how the tool is built and what makes it trustworthy.
-- [docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — fifteen example questions
-  with known-correct answers, good for building confidence in the tool.
-- [docs/ARCHITECTURE.md](ARCHITECTURE.md) — the full technical design, for
-  the curious or the technically inclined.
-- [docs/VERIFICATION.md](VERIFICATION.md) — how the tool is tested, and what
-  those tests prove.
+- [YOUR_RECORDS.md](YOUR_RECORDS.md): where each answer's numbers come
+  from, and how to check one by hand.
+- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md): fifteen example questions with
+  known-correct answers, good for building confidence in the tool.
+- Every other doc is listed in the [README](../README.md#start-here).

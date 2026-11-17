@@ -95,7 +95,7 @@ In the web app, every numbered question except 10 is also an example button. **P
 - **4-5** exercise the deterministic relative-vs-explicit season resolution -- the model extracts a count or explicit years; a plain Python function resolves either into concrete seasons, never the model's own arithmetic.
 - **6, 10** exercise field-identity resolution at its two extremes: a name that resolves through drift, and a name that correctly resolves to nothing at all.
 - **7-9** exercise all three reconciliation defects, including the one (#8) specifically designed so a naive totals-only check would pass it silently.
-- **11** exercises Phase D's zone-level profitability -- a shortfall that's genuinely invisible at the field level, only visible once yield_monitor_points are gridded into zones.
+- **11** exercises zone-level profitability -- a shortfall that's genuinely invisible at the field level, only visible once yield_monitor_points are gridded into zones.
 - **12-15** exercise the weather-history and as-applied servers: a season's rain against the farm's own record, a field's soil, and as-applied rates where nitrogen logged in gal/ac of UAN 32% must be converted to lb N/ac before any comparison.
 
 ---
