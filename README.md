@@ -1,6 +1,6 @@
 # Precision Farm MCP
 
-**Version 0.1.1** (`uv run --project host farm-cli --version`)
+**Version 0.2.0** (`uv run --project host farm-cli --version`) · [What's new](CHANGELOG.md)
 
 Ask a plain-English question about ten seasons of your own farm records
 (costs, yields, profit) and get an answer calculated from your own files,
@@ -105,7 +105,7 @@ only.
 | `host/` (`farm_host`) | MCP client and router, `farm-ingest` (human confirmation), `farm-cli`, `farm-preflight` |
 | `web/` (`farm_web`) | `farm-web`, the local Gradio app for growers, a thin layer over `farm_host` |
 | `model/` (`farm_model`) | The bounded Gemma layer: question to lookup, the one added sentence, and the 8 checks |
-| `docs/` | [FARMER_GUIDE](docs/FARMER_GUIDE.md), [YOUR_RECORDS](docs/YOUR_RECORDS.md), [ARCHITECTURE](docs/ARCHITECTURE.md), [VERIFICATION](docs/VERIFICATION.md), [EVAL_QUESTIONS](docs/EVAL_QUESTIONS.md), [PROJECT_HISTORY](docs/PROJECT_HISTORY.md) |
+| `docs/` | [FARMER_GUIDE](docs/FARMER_GUIDE.md), [YOUR_RECORDS](docs/YOUR_RECORDS.md), [ARCHITECTURE](docs/ARCHITECTURE.md), [VERIFICATION](docs/VERIFICATION.md), [EVAL_QUESTIONS](docs/EVAL_QUESTIONS.md), [PROJECT_HISTORY](docs/PROJECT_HISTORY.md); release notes in [CHANGELOG](CHANGELOG.md) |
 
 The MCP design is adapted from
 [precision-medicine-mcp](https://github.com/lynnlangit/precision-medicine-mcp).

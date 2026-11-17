@@ -238,7 +238,7 @@ before the day, not during it:
 - 193 tests green across 4 packages (generator 16, core 72 + 1 skipped,
   host 81, model 24).
 
-## v0.1.0–v0.1.1 (November 2026): eval fixes and the grower web app
+## v0.1.0–v0.2.0 (November 2026): eval fixes and the grower web app
 
 One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 
@@ -273,6 +273,7 @@ One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 | #28 | Records-list fields classified for the untrusted-text check |
 | #29 | CI simplified: one Ubuntu PR check (generator, core, host without the model); real-model job manual only, no nightly; Windows dropped from CI |
 | #30 | PR check runs core and host tests 4 at a time (pytest-xdist): about 7 min to about 3 |
+| #31 (v0.2.0) | Every package on 0.2.0; release notes in [CHANGELOG.md](../CHANGELOG.md); tag `v0.2.0` |
 
 About 450 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
 
