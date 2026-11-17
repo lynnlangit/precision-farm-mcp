@@ -12,10 +12,10 @@ tests fail.
 
 | Package | Tests | Needs Ollama | Runs in CI |
 |---|---|---|---|
-| `generator` | 19 | No | Every PR (Ubuntu and Windows) |
-| `core` | 96 | No | Every PR (Ubuntu and Windows) |
-| `host` | 175, of which 27 are the opt-in `eval_nl` suite | Some | Nightly and on demand (Ubuntu) |
-| `model` | 96 | Some | Nightly and on demand (Ubuntu) |
+| `generator` | 19 | No | Every PR |
+| `core` | 96 | No | Every PR |
+| `host` | 175, of which 27 are the opt-in `eval_nl` suite and 6 are marked `ollama` | Some | Every PR without the model (142); all of it on demand |
+| `model` | 96 | Some | On demand |
 | `web` | 65, of which 25 are the opt-in `ui` browser suite | No | Locally |
 | `docs/test_architecture_doc.py` | 2 | No | Locally |
 
@@ -38,12 +38,16 @@ uv run --project web pytest -m ui web/tests
 
 ## CI and demos
 
-`.github/workflows/tests.yml` keeps CI fast:
+Two workflows keep CI fast:
 
-- **Pull requests** run only `generator` and `core` (no Ollama), on Ubuntu
-  and Windows. Docs-only changes skip CI.
-- **The real-model job** (`host` and `model` with Ollama on Ubuntu, about
-  12 minutes) runs nightly and on demand (Actions, tests, Run workflow).
+- **Pull requests** (`.github/workflows/tests.yml`) run one Ubuntu check:
+  `generator`, `core`, and every `host` test that doesn't call the model
+  (`pytest -m "not eval_nl and not ollama"`). Docs-only changes skip CI.
+  Windows isn't tested in CI: growers see the app on a Mac rather than
+  installing it.
+- **The real-model job** (`.github/workflows/real-model.yml`: all of `host`
+  and `model` with Ollama on Ubuntu, 12 to 20 minutes) runs only when started
+  by hand (Actions, real-model tests, Run workflow). There is no nightly run.
 - **Before a demo**, run the `host` and `model` suites, and the `eval_nl`
   suite, on a Mac with Ollama, where Gemma is fast.
 

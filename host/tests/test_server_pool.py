@@ -34,7 +34,7 @@ def _our_report_export_pids() -> list[int]:
     """report-export processes started by this test only -- never another
     running copy of the web app's servers."""
     rows = subprocess.run(
-        ["ps", "-A", "-o", "pid=,ppid=,command="], capture_output=True, text=True
+        ["ps", "-A", "-ww", "-o", "pid=,ppid=,command="], capture_output=True, text=True
     ).stdout.splitlines()
     procs = [(int(r.split(None, 2)[0]), int(r.split(None, 2)[1]), r.split(None, 2)[2])
              for r in rows if len(r.split(None, 2)) == 3]

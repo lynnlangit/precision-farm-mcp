@@ -1,0 +1,65 @@
+name: real-model tests
+
+# host + model with a real gemma3:4b on Ollama: every host test (including
+# the ones marked `ollama`) and the model package. Gemma on a CPU-only
+# runner takes 12-20 min, so this runs only when started by hand (Actions ->
+# real-model tests -> Run workflow), never on a pull request or a schedule.
+# Before a demo, run the same suites on a Mac, where Ollama is fast:
+#   uv run --project host pytest -q host/tests
+#   uv run --project model pytest -q model/tests
+#
+# host + model make real, unmocked calls to Ollama (see
+# model/tests/test_model_bounded.py's own docstring -- this project's
+# convention is to test the real model, not a mock of it). Driving Ollama
+# unattended on a Windows runner is untested here, so this is ubuntu-latest only.
+on:
+  workflow_dispatch:
+
+jobs:
+  full:
+    name: host + model (ubuntu-latest, needs Ollama)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: cache pulled model
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-gemma3-4b-${{ runner.os }}
+
+      - name: start Ollama and wait for it to be ready
+        run: |
+          ollama serve &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:11434 >/dev/null && exit 0
+            sleep 1
+          done
+          echo "Ollama did not become ready in time" >&2
+          exit 1
+
+      - name: pull gemma3:4b
+        run: ollama pull gemma3:4b
+
+      - name: generate synthetic data
+        run: uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
+
+      - name: confirm synthetic data (non-interactive)
+        run: uv run --project host farm-ingest --auto-approve-synthetic-only
+
+      - name: generate and confirm Farm 1 (clean records, web app farm picker)
+        run: |
+          uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
+          uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
+
+      - name: host tests
+        run: uv run --project host pytest -q host/tests
+
+      - name: model tests
+        run: uv run --project model pytest -q model/tests

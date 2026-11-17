@@ -78,8 +78,8 @@ Three pieces of free software, installed once:
      ```
 
    (Installers for every OS are on [astral.sh/uv](https://astral.sh/uv).
-   The parts that use Ollama are tested on Linux and a Mac, not Windows
-   (see [VERIFICATION.md](VERIFICATION.md)), so on Windows `farm-preflight`,
+   The tool is tested on a Mac and on Linux, not Windows (see
+   [VERIFICATION.md](VERIFICATION.md)), so on Windows `farm-preflight`,
    below, is the quickest way to spot a rough edge.)
 
 3. **Ollama**, running a small local AI model — this is what turns your

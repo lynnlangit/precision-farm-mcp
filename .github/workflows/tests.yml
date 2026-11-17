@@ -1,33 +1,24 @@
 name: tests
 
-# Scope is intentionally split, not "all 4 packages on every OS":
+# Pull-request check: one Ubuntu job, every test that doesn't call the model.
 #
-# - generator + core have no Ollama dependency at all -- pure Python/DuckDB/
-#   file I/O -- and are exactly where a real cross-platform bug would show up
-#   (core/src/farm_core/audit.py's msvcrt/fcntl file-locking split, CSV
-#   newline handling, path handling). These run on both ubuntu-latest and
-#   windows-latest, so "Windows is CI-covered" in docs/FARMER_GUIDE.md is a
-#   claim this workflow actually backs.
-# - host + model make real, unmocked calls to a local Ollama + gemma3:4b
-#   (see model/tests/test_model_bounded.py's own docstring -- this project's
-#   convention is to test the real model, not a mock of it). Installing and
-#   driving Ollama unattended on a Windows GitHub-hosted runner is untested
-#   from this repo's development environment, so that suite runs on
-#   ubuntu-latest only rather than silently claiming Windows coverage it
-#   doesn't have.
-
+# - generator + core: pure Python/DuckDB/file I/O, no Ollama.
+# - host tests that don't call the model (MCP servers, routing, the records
+#   list, the server pool, the untrusted-field classification):
+#   pytest -m "not eval_nl and not ollama".
+#
+# Not here: the host tests marked `ollama`, the eval_nl suite and the model
+# package call a real gemma3:4b. They run in real-model.yml (manual only) or
+# on Lynn's Mac before a demo, where Ollama is fast. Windows is not tested in
+# CI: growers see the app on Lynn's Mac rather than installing it.
+#
 # When it runs (kept fast for iterative work on a teaching tool):
-# - Pull requests run only the deterministic job (~2-4 min). CI no longer
-#   re-runs on the merge to main, which doubled every wait.
+# - Pull requests, and on demand (Actions -> tests -> Run workflow). CI does
+#   not re-run on the merge to main, which doubled every wait.
 # - Docs-only changes (*.md, docs/, images/) skip CI entirely.
-# - The real-model job (Gemma on a CPU-only runner, ~12 min) runs nightly on
-#   main and on demand (Actions -> tests -> Run workflow). Before a demo, run
-#   the host + model suites locally where Ollama is fast.
 on:
   pull_request:
     paths-ignore: ["**/*.md", "docs/**", "images/**"]
-  schedule:
-    - cron: "0 9 * * *"  # 09:00 UTC = 3-4 AM US Central
   workflow_dispatch:
 
 # A new push to the same PR cancels the run it supersedes.
@@ -36,13 +27,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deterministic:
-    name: generator + core (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  tests:
+    name: tests, no model (ubuntu-latest)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
@@ -54,53 +41,10 @@ jobs:
         run: uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
       - name: core tests
         run: uv run --project core pytest -q core/tests
-
-  full:
-    name: host + model (ubuntu-latest, needs Ollama)
-    # Nightly and manual runs only -- see "When it runs" above.
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
-      - name: install Ollama
-        run: curl -fsSL https://ollama.com/install.sh | sh
-
-      - name: cache pulled model
-        uses: actions/cache@v4
-        with:
-          path: ~/.ollama/models
-          key: ollama-gemma3-4b-${{ runner.os }}
-
-      - name: start Ollama and wait for it to be ready
+      - name: confirm both example farms
         run: |
-          ollama serve &
-          for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:11434 >/dev/null && exit 0
-            sleep 1
-          done
-          echo "Ollama did not become ready in time" >&2
-          exit 1
-
-      - name: pull gemma3:4b
-        run: ollama pull gemma3:4b
-
-      - name: generate synthetic data
-        run: uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
-
-      - name: confirm synthetic data (non-interactive)
-        run: uv run --project host farm-ingest --auto-approve-synthetic-only
-
-      - name: generate and confirm Farm 1 (clean records, web app farm picker)
-        run: |
+          uv run --project host farm-ingest --auto-approve-synthetic-only
           uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
           uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
-
-      - name: host tests
-        run: uv run --project host pytest -q host/tests
-
-      - name: model tests
-        run: uv run --project model pytest -q model/tests
+      - name: host tests that don't call the model
+        run: uv run --project host pytest -q host/tests -m "not eval_nl and not ollama"
