@@ -15,8 +15,8 @@ seasons), and (iii) the answer -- its verified lead figures, its Therefore
 line, or its refusal code.
 
 test_withheld_sentence_demo also checks the AI sentence itself on eval 2: it
-must be written and then withheld (the web app's "When the AI is stopped"
-example). Just that one:
+must be written and then withheld (the web app's East 80 example under
+"Bad field or bad year?"). Just that one:
 
     uv run --project host pytest -m eval_nl host/tests -k withheld
 """
@@ -216,8 +216,8 @@ async def test_eval_question_end_to_end(ev: Eval, tmp_path):
 # shortfall; the true cause, hail, is in no record), so it fails the
 # "doesn't name a cause your records don't show" check. The narrator gets
 # one try, so the grower sees the verified answer alone, plus the blocked
-# sentence and the failed check -- the web app's "When the AI is stopped"
-# example. If this starts failing, the model changed what it writes: pick a
+# sentence and the failed check -- the web app's East 80 example under
+# "Bad field or bad year?". If this starts failing, the model changed what it writes: pick a
 # new question with scripts/probe_narration.py rather than loosening the
 # check.
 

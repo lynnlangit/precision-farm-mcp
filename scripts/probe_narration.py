@@ -1,6 +1,7 @@
 """Ask questions through the real path (Gemma parses, a tool answers, Gemma
 adds a checked sentence) and print what the AI wrote and what the checks did.
-Use it to find or re-check the web app's "When the AI is stopped" example.
+Use it to find or re-check the web app's withheld-sentence example (East 80
+under "Bad field or bad year?").
 Needs Ollama with gemma3:4b and both farms' data. From the repo root:
 
     uv run --project host python scripts/probe_narration.py

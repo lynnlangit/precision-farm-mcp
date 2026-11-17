@@ -714,11 +714,6 @@ def farm_badge_html(farm: Farm) -> str:
     )
 
 
-def farm_note_html(farm: Farm) -> str:
-    """The line under the farm picker."""
-    return f'<p class="pf-farm-note">{escape(farm.blurb)}</p>'
-
-
 def with_farm(view: AnswerView, farm: Farm) -> AnswerView:
     """Marks the answer with the farm whose records it came from, so an
     answer can never be mistaken for the other farm's."""

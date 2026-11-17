@@ -186,7 +186,7 @@ A browser tab opens at `http://127.0.0.1:7860`. When everything is set
 up, a small "Prerequisites loaded: 6 of 6" line sits at the bottom of the
 page (click it to see the six checks). If one fails, it moves to the top,
 open, and tells you the command that fixes it. Type a question, or open
-one of the groups under **Or try an example** and tap a question, and you should get
+**Example questions**, then one of the question types, and tap a question, and you should get
 back a real, grounded answer in a few seconds. The app starts its lookup
 servers in the background when it opens, so later questions skip that step;
 if you regenerate the data or re-run `farm-ingest`, restart the app.
@@ -231,8 +231,9 @@ the answer card says **AI sentence withheld**; click **See what it wrote**
 to see what the AI tried to say and which check stopped it. How we checked
 it opens by itself then, so the failed check is easy to find.
 
-To see that happen, open **When the AI is stopped** under the example
-questions and tap "Was East 80 a bad field or just a bad year?". The AI
+To see that happen, open **Example questions**, then **Bad field or bad
+year?**, and tap the third question, "Was East 80 a bad field or just a bad
+year?". The AI
 tries to add that the 2020 loss was due to an unusual weather pattern. Your
 records show that 2020 was a bad year, but not why, so the sentence is
 blocked. The AI gets one try, so the answer you see is the part calculated
