@@ -11,6 +11,7 @@ from farm_core.profitability import bad_field_or_bad_year
 from farm_core.pipeline import load_query_time_snapshot
 from farm_host import cli
 from farm_host.cli import _build_structured_query, answer_question_structured
+from farm_host.farms import FARMS
 from farm_model.query_schema import QueryIntent, QueryObject
 from pydantic import ValidationError
 
@@ -18,7 +19,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "data" / "synthetic"
-CONFIRM_STORE_PATH = REPO_ROOT / "data" / "confirmed_mappings.json"
+CONFIRM_STORE_PATH = FARMS["farm2"].confirm_store  # conftest: a fresh, auto-approved copy
 
 
 async def test_structured_bad_field_or_bad_year_matches_direct_call(tmp_path):

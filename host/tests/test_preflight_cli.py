@@ -6,6 +6,7 @@ actually proves readiness" convention as model/tests/test_model_bounded.py.
 """
 
 import pytest
+from farm_host.farms import FARMS
 from pathlib import Path
 
 from farm_host.preflight_cli import (
@@ -20,8 +21,9 @@ from farm_host.preflight_cli import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "data" / "synthetic"
-CONFIRM_STORE_PATH = REPO_ROOT / "data" / "confirmed_mappings.json"
-AUDIT_LOG_PATH = REPO_ROOT / "data" / "audit.jsonl"
+# conftest: a fresh, auto-approved store and a throwaway audit log, never data/'s.
+CONFIRM_STORE_PATH = FARMS["farm2"].confirm_store
+AUDIT_LOG_PATH = CONFIRM_STORE_PATH.with_name("preflight-audit.jsonl")
 
 
 def test_check_uv_passes_when_on_path():

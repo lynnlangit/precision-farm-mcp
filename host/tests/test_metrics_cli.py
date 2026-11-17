@@ -14,10 +14,11 @@ from pathlib import Path
 from farm_core.audit import AuditLog
 from farm_core.metrics import build_report
 from farm_host.cli import answer_question
+from farm_host.farms import FARMS
 from farm_host.metrics_cli import main as metrics_main
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "synthetic"
-CONFIRM_STORE = Path(__file__).resolve().parents[2] / "data" / "confirmed_mappings.json"
+CONFIRM_STORE = FARMS["farm2"].confirm_store  # conftest: a fresh, auto-approved copy
 
 
 @pytest.mark.ollama
