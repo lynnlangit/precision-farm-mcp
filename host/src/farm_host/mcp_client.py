@@ -1,4 +1,4 @@
-"""The host's MCP client and tool router: launches the five Precision Farm
+"""The host's MCP client and tool router: launches the six Precision Farm
 MCP servers as stdio child processes (never HTTP, never a network call --
 this is what "local-first, no network access" actually looks like at the
 transport level) and routes tool calls to them. The host application (query
@@ -14,12 +14,11 @@ import dataclasses
 import json
 import os
 import time
-from pathlib import Path
 
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+from .farms import REPO_ROOT
 
 # The one field name, across every tool response in this system, that carries
 # raw farmer-authored free text (the cost ledger's Notes column) rather than
@@ -114,7 +113,7 @@ SERVERS: dict[str, tuple[str, str]] = {
 # Every server child gets these unless env_overrides says otherwise: no
 # FastMCP banner, no "Update available" check (a network call) and no INFO
 # "Starting MCP server" lines on every question. Warnings and errors still
-# show. FastMCP stays pinned at 3.4.5.
+# show.
 DEFAULT_CHILD_ENV: dict[str, str] = {
     "FASTMCP_SHOW_SERVER_BANNER": "false",
     "FASTMCP_CHECK_FOR_UPDATES": "off",

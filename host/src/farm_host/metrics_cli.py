@@ -1,4 +1,4 @@
-"""Phase B governance metrics: HITL catch rate, tool grounding, narration
+"""Governance metrics: HITL catch rate, tool grounding, narration
 faithfulness, and sovereignty integrity, computed from the audit log --
 see farm_core.metrics for the definitions.
 
@@ -16,10 +16,7 @@ from farm_core import pipeline
 from farm_core.audit import AuditLog
 from farm_core.metrics import build_report
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_AUDIT_LOG = REPO_ROOT / "data" / "audit.jsonl"
-DEFAULT_DATA_DIR = REPO_ROOT / "data" / "synthetic"
-DEFAULT_CONFIRM_STORE = REPO_ROOT / "data" / "confirmed_mappings.json"
+from .farms import DEFAULT_AUDIT_LOG, DEFAULT_CONFIRM_STORE, DEFAULT_DATA_DIR
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

@@ -41,7 +41,7 @@ _NOTE_POOL = [
 # Deliberate defect (DEF-INJECTION): one field/season's Notes cell carries
 # prompt-injection-style text instead of a normal freeform note. Notes is the
 # one reachable free-text surface a tool response echoes back today (see
-# mcp_cost_ledger.server.get_cost_ledger_row) -- A4's sanitization wraps it as
+# mcp_cost_ledger.server.get_cost_ledger_row) -- the untrusted-text handling wraps it as
 # untrusted data before it ever reaches the model, and this defect is what
 # proves that actually holds (narration is unaffected by its presence).
 INJECTION_FIELD_ID = "root_01"

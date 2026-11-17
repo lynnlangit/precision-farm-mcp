@@ -43,7 +43,7 @@ class GetCostLedgerRowResult(BaseModel):
     cash_rent_per_ac: float
     cost_basis: str
     # Farmer-authored free text from the ledger's own Notes column -- the one
-    # reachable untrusted-text surface A4 sanitizes before this ever reaches
+    # reachable untrusted-text surface the host sanitizes before this ever reaches
     # the model (see mcp_client.py / narrator.py).
     notes: str | None
     provenance: SnapshotProvenance
@@ -169,7 +169,7 @@ def _rounded_line_item(item) -> dict[str, Any]:
     """Display rounding at the transport layer only: $/ac to cents, pct_diff
     to 4 decimals (0.01 of a percent). The core reconciliation keeps full
     precision for its own outlier threshold, so this can't change
-    outlier_flagged. (Same treatment as yield-history's _rounded, eval-fix P5.)
+    outlier_flagged. (Same treatment as yield-history's _rounded.)
     """
     d = dataclasses.asdict(item)
     for key in ("ledger_cost_per_ac", "as_applied_derived_cost_per_ac"):

@@ -1,7 +1,7 @@
 """Extract just the Field column from every season tab of the farmer's cost
 ledger workbook -- tolerant of the specific messes the ledger is known to
 contain (a merged header row, a totals row inside the data range, blank rows
-mid-table). This is a narrow, Phase-1-only reader (field names + acres, for
+mid-table). This is a narrow reader (field names + acres, for
 identity resolution); ingest_cost_ledger.py does the full-column read with a
 confirmed mapping.
 """

@@ -1,4 +1,4 @@
-"""Phase A / A1 verification: the audit chain survives real multi-process
+"""The audit chain survives real multi-process
 concurrent writers, not just a fresh per-test file written by one process.
 The host process and each spawned MCP server subprocess hold independent
 AuditLog instances pointed at the same file; before the re-read-under-lock

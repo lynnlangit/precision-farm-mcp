@@ -1,6 +1,7 @@
 """The app builds and binds safely by default (no model, no servers)."""
 
 import farm_web.app as web_app
+from farm_host import preflight_cli
 from farm_host.cli import AnswerResult
 from farm_model.query_schema import QueryIntent, QueryObject
 from farm_host.farms import FARMS
@@ -99,8 +100,8 @@ def _check(name, ok):
 def test_ready_check_collapses_when_all_pass_and_opens_on_a_problem(monkeypatch):
     monkeypatch.setattr(web_app, "check_ollama_running", lambda: (_check("Ollama", True), []))
     monkeypatch.setattr(web_app, "check_model_pulled", lambda pulled: _check("gemma", True))
-    monkeypatch.setattr(web_app, "check_synthetic_data", lambda d: _check("data", True))
-    monkeypatch.setattr(web_app, "check_confirmed_mappings", lambda d: _check("ingest", True))
+    monkeypatch.setattr(preflight_cli, "check_synthetic_data", lambda d: _check("data", True))
+    monkeypatch.setattr(preflight_cli, "check_confirmed_mappings", lambda d: _check("ingest", True))
     html = web_app.status_html()
     assert html.startswith('<details class="pf-status-wrap">')  # collapsed
     assert "Prerequisites loaded" in html and "6 of 6" in html
@@ -152,8 +153,8 @@ def test_farms_point_the_servers_at_their_own_records():
 def test_status_checks_both_farms(monkeypatch):
     monkeypatch.setattr(web_app, "check_ollama_running", lambda: (_check("Ollama", True), []))
     monkeypatch.setattr(web_app, "check_model_pulled", lambda pulled: _check("gemma", True))
-    monkeypatch.setattr(web_app, "check_synthetic_data", lambda d: _check("data", "clean" not in str(d)))
-    monkeypatch.setattr(web_app, "check_confirmed_mappings", lambda d: _check("ingest", True))
+    monkeypatch.setattr(preflight_cli, "check_synthetic_data", lambda d: _check("data", "clean" not in str(d)))
+    monkeypatch.setattr(preflight_cli, "check_confirmed_mappings", lambda d: _check("ingest", True))
     html = web_app.status_html()
     assert "Farm 1 data generated" in html and "Farm 2 data generated" in html
     assert "--clean --out data/synthetic-clean" in html  # the fix names Farm 1's command

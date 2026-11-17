@@ -1,7 +1,6 @@
-"""Governance metrics, derived from the audit log. Phase B: these were
-uncomputable before Phase 1 made confirmations real and Phase A made the
-audit log trustworthy under concurrency and the grounding check
-provenance-aware. Every function here is a pure `list[dict] -> dict`
+"""Governance metrics, derived from the audit log. They depend on real
+confirmations, an audit log that is safe under concurrent writes, and a
+provenance-aware grounding check. Every function here is a pure `list[dict] -> dict`
 transform of `AuditLog.entries()`'s output -- no I/O, no side effects, so
 the definitions are stable and independently testable.
 
@@ -13,7 +12,7 @@ before this module existed lack the fields these metrics need (`grounded`,
 treated as a failure.
 
 `attribution_backtest` is the one exception to "pure over audit entries":
-it needs a live `FarmSnapshot` (Phase C's weather/soil data, not anything
+it needs a live `FarmSnapshot` (the weather/soil data, not anything
 logged to the audit trail), so it's a separate function taking a snapshot
 directly, and `build_report` only includes it when a snapshot is passed.
 """
@@ -73,7 +72,7 @@ def _narration_entries_with(entries: list[dict], *fields: str) -> list[dict]:
 
 
 def tool_grounding(entries: list[dict]) -> dict[str, Any]:
-    """Two rates, per the A3 split: whether narrated measured/derived
+    """Two rates, per the grounding split: whether narrated measured/derived
     numbers were grounded, and separately whether narrated modeled numbers
     were -- so a metric can never blend "the tool cited a real number" with
     "the model's own output happened to check out".
@@ -88,7 +87,7 @@ def tool_grounding(entries: list[dict]) -> dict[str, Any]:
         "definition": (
             "measured_or_derived_rate = narrations grounded / narrations analyzed; "
             "modeled_rate = narrations with modeled data grounded / narrations "
-            "with modeled data at all (null until Phase C populates `modeled`)"
+            "with modeled data at all (null when no answer carried `modeled` data)"
         ),
         "measured_or_derived_rate": _rate(measured_or_derived_grounded, len(graded)),
         "modeled_rate": _rate(modeled_grounded, len(with_modeled)),

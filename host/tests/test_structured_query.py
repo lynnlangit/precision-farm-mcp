@@ -1,4 +1,4 @@
-"""The model-free query path (item 4): --intent bypasses parse_question and
+"""The model-free query path: --intent bypasses parse_question and
 narrate_verified entirely, so it must produce the same tool-call result as
 the natural-language path (the established "wrapping must not change a
 number" pattern) while making zero calls to ollama.chat.

@@ -1,5 +1,5 @@
 """The one schema Gemma's query-parsing job is constrained to. Every intent
-maps 1:1 to a host/MCP tool built in Phases 3-4 -- the model can only ever
+maps 1:1 to a host/MCP tool -- the model can only ever
 select from this fixed menu and fill in its parameters, never invent a new
 kind of question or compute an answer itself.
 """

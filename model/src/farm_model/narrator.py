@@ -241,7 +241,7 @@ def cap_payload_for_narration(
     max_free_text_chars: int = MAX_FREE_TEXT_CHARS,
     max_total_chars: int = MAX_PAYLOAD_CHARS,
 ) -> tuple[dict, bool]:
-    """The A4 payload bound: caps known free-text fields first (where
+    """The payload bound: caps known free-text fields first (where
     unbounded growth comes from), then falls back to dropping whole list
     entries if the payload is still oversized -- never truncates the
     serialized JSON string itself, which could cut mid-structure and hand
@@ -282,7 +282,7 @@ def narrate(
     return response.message.content or ""
 
 
-# --- Template-first answers (eval-fix P3b) -----------------------------------
+# --- Template-first answers ------------------------------------------------
 # A live 3x rerun of evals 2, 5, 8 and 11 showed the model-first narration
 # was right in only 4 of 12 runs even with the semantic checks: wrong answers
 # kept taking new shapes (swapped labels, fraction read as percent) that

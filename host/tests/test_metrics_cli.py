@@ -1,4 +1,4 @@
-"""Phase B / B1 verification: farm-metrics end to end against a real
+"""Farm-metrics end to end against a real
 question answered through the real CLI path (not a synthetic fixture) --
 proves the narration audit event actually carries the new fields in
 practice, and that the CLI wrapper (JSON to stdout, optional --out file)
@@ -33,9 +33,8 @@ async def test_metrics_report_reflects_a_real_answered_question(tmp_path):
 
     # Marginal Eighty is a chronic bad_field -- report-export never attaches
     # modeled.attribution to a bad_field verdict (see mcp-report-export's
-    # server.py), so this exercises the "no modeled data yet" path even
-    # though Phase C is live; the modeled-data path is covered separately
-    # below.
+    # server.py), so this exercises the "no modeled data" path; the
+    # modeled-data path is covered separately below.
     await answer_question(
         "was the marginal eighty a bad field or a bad year", audit_log, env_overrides=env
     )
@@ -55,7 +54,7 @@ async def test_metrics_report_reflects_a_real_answered_question(tmp_path):
 
 @pytest.mark.ollama
 async def test_metrics_report_reflects_modeled_attribution_for_a_bad_year(tmp_path):
-    """Phase C: a bad_year verdict carries modeled.attribution, and a
+    """A bad_year verdict carries modeled.attribution, and a
     faithful narration citing both the evidence figure and the modeled
     figure must be counted as grounded in both channels (see verification.
     check_narration_grounded_by_provenance).

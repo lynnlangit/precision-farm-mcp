@@ -5,7 +5,7 @@ Three small, model-free pieces:
 - next_context: what a follow-up carries forward -- the field, season and
   question type of the last *verified* answer, nothing else. A refusal never
   changes it, and no earlier answer's numbers are ever kept.
-- resolved_label: the "Showing: East 80 . 2020 . ..." line shown above each
+- resolved_label: the "Talking about: East 80 . 2020 . ..." line shown above each
   answer, so a grower can see which question was actually answered.
 - suggest_followups: 2-3 fully spelled-out next questions, built from the
   verified result by fixed templates. Each one names its field and season, so

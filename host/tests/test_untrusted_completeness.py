@@ -1,4 +1,4 @@
-"""Phase A / A4 verification: every string-typed field across every server's
+"""Every string-typed field across every server's
 response models is classified as either deterministic (the host/tests rely
 on its exact value) or untrusted free text (sanitized before reaching the
 model) in farm_host.mcp_client's two sets. An unclassified string field

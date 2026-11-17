@@ -1,5 +1,5 @@
 """Shared row-finding helpers for the messy cost-ledger workbook, used by both
-the Phase 1 field-name-only reader and the Phase 2 full-column reader so the
+the field-name-only reader and the full-column reader so the
 messy-parsing logic (merged header, totals row, blank rows) lives in one place.
 """
 

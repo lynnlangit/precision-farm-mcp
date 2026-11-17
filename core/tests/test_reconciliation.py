@@ -1,4 +1,4 @@
-"""Phase 2 verification: every remaining defect ID that reconciliation is
+"""Every remaining defect ID that reconciliation is
 responsible for is detected and handled per its ground-truth
 expected_detection, with no meaningful false-positive noise drowning out the
 real signal.

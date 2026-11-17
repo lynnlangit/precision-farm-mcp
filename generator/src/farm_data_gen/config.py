@@ -61,7 +61,7 @@ class SimConfig:
     rental_lost_last_season_index: int = 3  # present seasons 1-4 (indices 0-3)
     missing_swath_season_index: int = 8  # a GPS-dropout season
 
-    # Weather / soil / causal-yield stress (Phase C)
+    # Weather / soil / causal-yield stress
     soil_awc_in_range: tuple[float, float] = (4.0, 9.0)  # available water capacity, inches
     crop_water_need_mm: float = 450.0  # season-long precip need, both crops (simplification)
     awc_reference_in: float = 6.5  # AWC at which soil buffering halves the water deficit
@@ -79,7 +79,7 @@ class SimConfig:
     weathershortfall_season_index: int = 2  # season for the forced drought
     mgmtshortfall_season_index: int = 7  # a different season, normal weather, forced management
 
-    # Zone-level profitability (Phase D)
+    # Zone-level profitability
     badzone_season_index: int = 8  # must fall within the newest as_applied_seasons_count window
     badzone_zone_index: int = 0  # which of the 2x2 grid zones (see core.zone_profitability)
     badzone_weight_factor: float = 0.15  # yield-monitor point weight multiplier inside the zone

@@ -25,6 +25,9 @@ import dataclasses
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+DATA_ROOT = REPO_ROOT / "data"
+# Every question, lookup and confirmation, for both farms.
+DEFAULT_AUDIT_LOG = DATA_ROOT / "audit.jsonl"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -32,7 +35,6 @@ class Farm:
     key: str
     name: str  # "Farm 1"
     records: str  # "clean records"
-    blurb: str  # one sentence for growers
     data_dir: Path
     confirm_store: Path
     generate_cmd: str
@@ -54,9 +56,8 @@ FARMS: dict[str, Farm] = {
         key="farm1",
         name="Farm 1",
         records="clean records",
-        blurb="Every record agrees with every other.",
-        data_dir=REPO_ROOT / "data" / "synthetic-clean",
-        confirm_store=REPO_ROOT / "data" / "confirmed_mappings_clean.json",
+        data_dir=DATA_ROOT / "synthetic-clean",
+        confirm_store=DATA_ROOT / "confirmed_mappings_clean.json",
         generate_cmd=(
             "uv run --project generator python -m farm_data_gen.cli "
             "--seed 42 --clean --out data/synthetic-clean"
@@ -70,12 +71,16 @@ FARMS: dict[str, Farm] = {
         key="farm2",
         name="Farm 2",
         records="messy records",
-        blurb="The same fields, with the mistakes real records have.",
-        data_dir=REPO_ROOT / "data" / "synthetic",
-        confirm_store=REPO_ROOT / "data" / "confirmed_mappings.json",
+        data_dir=DATA_ROOT / "synthetic",
+        confirm_store=DATA_ROOT / "confirmed_mappings.json",
         generate_cmd="uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic",
         ingest_cmd="uv run --project host farm-ingest --auto-approve-synthetic-only",
     ),
 }
 
 DEFAULT_FARM = "farm1"
+
+# The command-line tools (farm-cli, farm-ingest, farm-preflight, farm-metrics)
+# default to Farm 2, the data the eval questions are written against.
+DEFAULT_DATA_DIR = FARMS["farm2"].data_dir
+DEFAULT_CONFIRM_STORE = FARMS["farm2"].confirm_store

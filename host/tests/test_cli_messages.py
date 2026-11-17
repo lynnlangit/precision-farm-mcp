@@ -1,4 +1,4 @@
-"""answer_question's message branching on ParseFailure.kind (item 1): a dead
+"""answer_question's message branching on ParseFailure.kind: a dead
 Ollama and a genuinely out-of-scope question must produce visibly different,
 correctly-targeted messages. Parse_question is monkeypatched here rather
 than actually killing Ollama -- this is testing cli.py's branching logic,

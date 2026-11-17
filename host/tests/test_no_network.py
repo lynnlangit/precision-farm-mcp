@@ -1,11 +1,11 @@
-"""Phase 6 verification: nothing leaves the laptop. Two complementary checks:
+"""Nothing leaves the laptop. Two complementary checks:
 
 1. Dynamic -- every socket connection actually opened during a full
    question-answer cycle (parse -> MCP tool call -> narrate) is loopback
    only. This is the CLI process's own network behavior; Ollama itself runs
    as a separate local server, but the client library still opens a real
    socket, so this is a genuine end-to-end check, not a mock.
-2. Static -- the five MCP server packages, which run as separate stdio
+2. Static -- the six MCP server packages, which run as separate stdio
    subprocesses this test's socket patch can't observe directly, are scanned
    for any direct import of a networking library. They should have none:
    their only I/O is DuckDB (local file) and stdio.
@@ -83,7 +83,7 @@ async def test_no_non_local_connections_during_full_question_cycle(track_connect
 
 
 def test_mcp_servers_have_no_direct_network_imports():
-    """The five MCP servers' only I/O is DuckDB (local files) and stdio.
+    """The six MCP servers' only I/O is DuckDB (local files) and stdio.
     None of their own code should import a networking library directly --
     if a future change added one, this fails loudly rather than silently.
     """

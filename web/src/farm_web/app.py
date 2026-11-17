@@ -16,7 +16,6 @@ import os
 os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 
 import argparse  # noqa: E402
-import dataclasses  # noqa: E402
 import threading  # noqa: E402
 import time  # noqa: E402
 from html import escape  # noqa: E402
@@ -27,15 +26,14 @@ import gradio as gr  # noqa: E402
 
 from farm_core.audit import AuditLog  # noqa: E402
 from farm_host.cli import DEFAULT_AUDIT_LOG, AnswerResult, answer_question  # noqa: E402
-from farm_host.farms import DEFAULT_FARM, FARMS, Farm  # noqa: E402
+from farm_host.farms import DEFAULT_FARM, FARMS  # noqa: E402
 from farm_host.followups import MAX_SUGGESTIONS, next_context, suggest_followups  # noqa: E402
 from farm_host.server_pool import ServerPool  # noqa: E402
 from farm_host.mcp_client import ServerStartTimeout  # noqa: E402
 from farm_host.preflight_cli import (  # noqa: E402
-    check_confirmed_mappings,
     check_model_pulled,
     check_ollama_running,
-    check_synthetic_data,
+    farm_checks,
 )
 
 from . import __version__  # noqa: E402
@@ -109,7 +107,7 @@ def status_html() -> str:
     ollama_check, pulled = check_ollama_running()
     checks = [ollama_check, check_model_pulled(pulled)]
     for farm in FARMS.values():
-        checks += _farm_checks(farm)
+        checks += farm_checks(farm)
     chips = "".join(
         f'<span class="pf-chip {"ok" if c.ok else "bad"}" title="{escape(c.detail)}">'
         f"{escape(c.name)}</span>"
@@ -139,22 +137,6 @@ def status_html() -> str:
         f'<span class="pf-chip {cls}">{summary}</span></summary>'
         f'<div class="pf-status">{chips}</div>{fix_list}</details>'
     )
-
-
-def _farm_checks(farm: Farm) -> list:
-    """The data checks, once per farm, named and fixed for that farm."""
-    data = check_synthetic_data(farm.data_dir)
-    mappings = check_confirmed_mappings(farm.confirm_store)
-    return [
-        dataclasses.replace(
-            data, name=f"{farm.name} data generated", fix=None if data.ok else f"run `{farm.generate_cmd}`"
-        ),
-        dataclasses.replace(
-            mappings,
-            name=f"{farm.name} farm-ingest has run",
-            fix=None if mappings.ok else f"run `{farm.ingest_cmd}`",
-        ),
-    ]
 
 
 def status_panels() -> tuple[str, str]:

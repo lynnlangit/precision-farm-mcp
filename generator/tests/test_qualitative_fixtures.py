@@ -1,4 +1,4 @@
-"""Phase C2: causal weather/soil yield changed every profit number, but the
+"""Causal weather/soil yield changed every profit number, but the
 qualitative *stories* the eval questions and README depend on must survive
 regeneration unchanged -- same stories, new numbers. Each test here mirrors
 the exact classification logic the query-time system uses

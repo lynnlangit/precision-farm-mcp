@@ -29,7 +29,7 @@ import statistics
 
 from .pipeline import FarmSnapshot
 
-# Mirrors generator/src/farm_data_gen/config.py's Phase C constants.
+# Mirrors generator/src/farm_data_gen/config.py's weather constants.
 CROP_WATER_NEED_MM = 450.0
 AWC_REFERENCE_IN = 6.5
 HEAT_STRESS_THRESHOLD_C = 32.0

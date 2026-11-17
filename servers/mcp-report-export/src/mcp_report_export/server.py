@@ -4,8 +4,8 @@ server, it's modeled on mcp-deidentify's redaction-tool shape instead.
 
 All arithmetic here is a thin pass-through to farm_core.profitability --
 this server adds MCP transport (Pydantic I/O, readOnlyHint, structured
-refusals) around it, nothing more. That's the point of Phase 4: wrapping in
-the protocol must not change a single number.
+refusals) around it, nothing more. Wrapping in the protocol must not change a
+single number.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from farm_core.zone_profitability import (
 
 mcp = FastMCP("report-export")
 
-# Additive, self-describing labels for modeled.attribution (eval-fix P3): in
+# Additive, self-describing labels for modeled.attribution (template-first narration): in
 # the eval run the narrator read season_effect/field_effect as profit causes
 # and reversed their comparison. These say what each value actually is, in
 # the payload itself, so the model doesn't have to guess.
@@ -77,13 +77,11 @@ class FieldProfitResult(BaseModel):
 
 
 class WhichFieldsMadeMoneyResult(BaseModel):
-    """`modeled` is reserved for Phase C's future model output (e.g. a
-    weather-attributed decomposition of a shortfall) -- see A2/A3 in
-    docs/plans. Nothing populates it yet; every value above is measured or
-    derived. Keeping the field on every response now (rather than adding it
-    only when Phase C needs it) means a modeled value can only ever end up
-    somewhere other than here by a reviewable authoring mistake, not a
-    silent tagging omission.
+    """`modeled` is reserved for model output (only bad_field_or_bad_year
+    fills it, with weather attribution); every value here is measured or
+    derived, so it stays None. Keeping the field on every response means a
+    modeled value can only ever end up somewhere other than here by a
+    reviewable authoring mistake, not a silent tagging omission.
     """
 
     results: list[FieldProfitResult]
@@ -97,7 +95,7 @@ class WhichFieldsMadeMoneyResult(BaseModel):
 
 class BadFieldOrBadYearResult(BaseModel):
     """`modeled.attribution` is populated only for a `bad_year` verdict --
-    one entry per outlier season, each Phase C's weather/soil expectation
+    one entry per outlier season, each the weather/soil expectation
     model (farm_core.expectation) decomposing that season's shortfall into
     a weather-driven `season_effect` and an unexplained `residual`. The
     `verdict` itself is unchanged by this: it's a purely statistical
@@ -126,7 +124,7 @@ class ZoneEntry(BaseModel):
 
 
 class ZoneProfitabilityResult(BaseModel):
-    """Derived arithmetic (Phase D), not modeled -- zone cost reuses the
+    """Derived arithmetic, not modeled -- zone cost reuses the
     field's own authoritative $/acre uniformly (see farm_core.
     zone_profitability's module docstring for why: cost has no spatial
     resolution anywhere in this data model), only yield is actually

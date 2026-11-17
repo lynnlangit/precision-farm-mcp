@@ -74,24 +74,6 @@ def refuse_unconfirmed(request: ConfirmationRequest) -> ConfirmationResponse:
     return ConfirmationResponse(approved=False, answer={})
 
 
-def fixture_confirm(fixture: dict[str, dict[str, Any]]) -> ConfirmFn:
-    """Deterministic confirm_fn for automated tests: looks up request.key in a
-    pre-supplied answer table. Raises if a request isn't covered, rather than
-    guessing -- an uncovered request means the test fixture is out of date
-    with the generator, not that the algorithm should improvise.
-    """
-
-    def _confirm(request: ConfirmationRequest) -> ConfirmationResponse:
-        if request.key not in fixture:
-            raise ConfirmationRejected(
-                f"No fixture answer for confirmation request {request.key!r} "
-                f"({request.kind}: {request.subject}); update the test fixture."
-            )
-        return ConfirmationResponse(approved=True, answer=fixture[request.key])
-
-    return _confirm
-
-
 def interactive_confirm(request: ConfirmationRequest) -> ConfirmationResponse:
     """Prompts on stdin. Used by the ingest CLI; low confidence never
     auto-proceeds even in this path. If PersistedConfirm is re-checking an

@@ -82,8 +82,10 @@ def test_run_all_reports_ready_against_real_setup():
         "MCP servers start",
         "Ollama running",
         "gemma3:4b pulled",
-        "farm data generated",
-        "farm-ingest has run",
+        "Farm 1 data generated",
+        "Farm 1 farm-ingest has run",
+        "Farm 2 data generated",
+        "Farm 2 farm-ingest has run",
         "end-to-end query",
     ]
     assert all(r.ok for r in results)

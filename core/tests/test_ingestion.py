@@ -1,4 +1,4 @@
-"""Phase 2 verification: full-column ingestion of all five raw sources,
+"""Full-column ingestion of all five raw sources,
 tolerant of every spreadsheet mess, with originals left untouched and a
 confirmed column mapping reused rather than re-asked for every season.
 """
