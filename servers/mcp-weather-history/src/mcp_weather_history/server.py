@@ -7,17 +7,20 @@ exception to test_no_network.py.
 
 from __future__ import annotations
 
-import functools
-import os
-from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 
-from farm_core import field_conditions, pipeline
-from farm_core.audit import AuditLog
+from farm_core import field_conditions
+from farm_core.server_support import (
+    SnapshotProvenance,
+    audit_log as _audit_log,
+    confirmation_guarded as _confirmation_guarded,
+    provenance as _provenance,
+    snapshot as _snapshot,
+)
 
 mcp = FastMCP("weather-history")
 
@@ -27,12 +30,6 @@ mcp = FastMCP("weather-history")
 # FastMCP's client-side schema validation reject the refusal shape; a Union
 # return type wraps every response in a {"result": ...} envelope). Real
 # enforcement happens at construction time, not via the advertised MCP schema.
-class SnapshotProvenance(BaseModel):
-    data_dir: str
-    built_at: str
-    source_file_count: int
-
-
 class GetSeasonWeatherResult(BaseModel):
     season: int
     total_precip_mm: float
@@ -60,53 +57,6 @@ class GetFieldSoilResult(BaseModel):
     num_current_fields: int
     provenance: SnapshotProvenance
     modeled: dict[str, Any] | None = None
-
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-DATA_DIR = Path(os.getenv("FARM_DATA_DIR", str(_REPO_ROOT / "data" / "synthetic")))
-AUDIT_LOG_PATH = Path(os.getenv("FARM_AUDIT_LOG", str(_REPO_ROOT / "data" / "audit.jsonl")))
-CONFIRM_STORE_PATH = Path(
-    os.getenv("FARM_CONFIRM_STORE", str(_REPO_ROOT / "data" / "confirmed_mappings.json"))
-)
-
-
-@functools.lru_cache(maxsize=1)
-def _snapshot():
-    return pipeline.load_query_time_snapshot(DATA_DIR, CONFIRM_STORE_PATH, _audit_log())
-
-
-@functools.lru_cache(maxsize=1)
-def _audit_log() -> AuditLog:
-    return AuditLog(AUDIT_LOG_PATH)
-
-
-def _confirmation_required(exc: pipeline.SnapshotUnconfirmed) -> dict[str, Any]:
-    return {
-        "error": str(exc),
-        "code": "confirmation_required",
-        "pending_key": exc.request.key,
-        "run": "farm-ingest",
-    }
-
-
-def _confirmation_guarded(fn):
-    @functools.wraps(fn)
-    def wrapper(*args: Any, **kwargs: Any) -> dict:
-        try:
-            return fn(*args, **kwargs)
-        except pipeline.SnapshotUnconfirmed as e:
-            return _confirmation_required(e)
-
-    return wrapper
-
-
-def _provenance() -> dict[str, Any]:
-    snap = _snapshot()
-    return {
-        "data_dir": str(snap.data_dir),
-        "built_at": snap.built_at,
-        "source_file_count": len(snap.source_files),
-    }
-
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
 @_confirmation_guarded
