@@ -29,14 +29,37 @@ uv run --project host farm-cli --version
 
 ![farm-cli answering "was the north eighty a bad field or a bad year" on a Mac](images/farm-cli-example.png)
 
+## Commands and settings
+
+| Command | What it does |
+|---|---|
+| `farm-ingest` | Confirms names, field changes and column mappings once, with a human present |
+| `farm-preflight` | Checks uv, Ollama, the model, the data and ingest, then runs a live query |
+| `farm-web` | The grower web app (`--port`, `--lan`, `--no-browser`) |
+| `farm-cli` | One question in the terminal; `--intent` skips the model |
+| `farm-metrics` | Governance report from the audit log (`--out` writes it to a file) |
+| `scripts/probe_narration.py` | Asks questions through the real model and prints what each check did |
+
+The MCP servers read these settings from the environment. The web app
+sets the first two per farm, and `farm-cli --audit-log` sets the third.
+
+| Setting | Default |
+|---|---|
+| `FARM_DATA_DIR` | `data/synthetic` (Farm 2) |
+| `FARM_CONFIRM_STORE` | `data/confirmed_mappings.json` |
+| `FARM_AUDIT_LOG` | `data/audit.jsonl` |
+| `FARM_SERVER_START_TIMEOUT` | 120 seconds (the first start builds each server's environment) |
+
 ## Repository layout
 
 | Path | What it is |
 |---|---|
-| `generator/` | Synthetic-data generator: 10 seasons, about a dozen fields, every defect (naming drift, splits/merges, sensor calibration error, messy spreadsheets) injected on purpose and recorded in `ground_truth.json` |
+| `generator/` | Synthetic-data generator: 10 seasons, 12 fields, every defect (naming drift, splits/merges, sensor calibration error, messy spreadsheets) injected on purpose and recorded in `ground_truth.json`; also writes [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) |
 | `core/` (`farm_core`) | Shared library: DuckDB ingestion, field identity, reconciliation, profitability, audit log, governance |
 | `servers/mcp-*` | Six FastMCP servers exposing `farm_core` as read-only MCP tools |
-| `host/` (`farm_host`) | MCP client and router, `farm-ingest` (human confirmation), `farm-cli`, `farm-preflight` |
+| `host/` (`farm_host`) | MCP client and router, `farm-ingest` (human confirmation), `farm-cli`, `farm-preflight`, `farm-metrics` |
 | `web/` (`farm_web`) | `farm-web`, the local Gradio app for growers, a thin layer over `farm_host` |
 | `model/` (`farm_model`) | The bounded Gemma layer: question to lookup, the one added sentence, and the 8 checks |
-| `docs/` | [FARMER_GUIDE](FARMER_GUIDE.md), [YOUR_RECORDS](YOUR_RECORDS.md), [ARCHITECTURE](ARCHITECTURE.md), [VERIFICATION](VERIFICATION.md), [EVAL_QUESTIONS](EVAL_QUESTIONS.md), [PROJECT_HISTORY](PROJECT_HISTORY.md); release notes in [CHANGELOG](../CHANGELOG.md) |
+| `scripts/` | `probe_narration.py`, for checking a question against the real model |
+| `data/` | The example farms once generated (`synthetic/`, `synthetic-clean/`), confirmed mappings and the audit log; all gitignored except `data/synthetic/README.md` |
+| `docs/` | Every doc is listed in the [README](../README.md#start-here) |

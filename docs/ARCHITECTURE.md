@@ -149,33 +149,36 @@ sequenceDiagram
 
 ## Component status
 
-| Component | Status | Note |
+What each piece is and where it lives. What growers see is in
+[FARMER_GUIDE.md](FARMER_GUIDE.md); how it is tested is in
+[VERIFICATION.md](VERIFICATION.md).
+
+| Component | Status | Where, and what it does |
 |---|---|---|
-| Ingest/query confirmation split, `ConfirmationGate` | Built | |
-| 6 MCP servers, `farm-cli`, `farm-ingest` | Built | Every server has at least one question type routed to it |
-| Weather, soil and as-applied questions | Built | `SEASON_WEATHER`, `FIELD_SOIL` (`weather-history`) and `APPLIED_INPUTS`, `NITROGEN_HISTORY` (`as-applied`), computed in `core/field_conditions.py`. Nitrogen is always reported in lb N/ac, converting gal/ac of UAN 32%; corn and soybean N are never compared. A `units` check rejects a sentence that puts the wrong unit on a number. These are records, not causes: none of them says why a season went badly |
-| Grower web app (`farm-web`, `web/`) | Built | Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Shows the template sentence, the checked AI sentence or a "withheld" note (its "See what it wrote" opens the blocked sentence), then the checks and the figures and source as two panels folded to a one-line summary each; the checks open by themselves when the AI's sentence was withheld. Example questions fold under one row, then by question type; East 80 under "Bad field or bad year?" (eval 2) shows a withheld sentence; what the grower sees is in [FARMER_GUIDE.md](FARMER_GUIDE.md), how it is tested in [VERIFICATION.md](VERIFICATION.md). Local only unless `--lan` |
-| Persistent servers (`farm_host.server_pool`) | Built | All six servers start once in the background (~7 s) and stay up, so a lookup takes ~0.2 s instead of ~4 s. Restart the app after regenerating data |
-| Farm picker (`farm_host.farms`) | Built | Farm 1: clean records (`data/synthetic-clean`, generator `--clean`). Farm 2: messy records (`data/synthetic`). Same fields and true profits. One server pool per farm via `FARM_DATA_DIR`/`FARM_CONFIRM_STORE`; Farm 1 starts at app open, Farm 2 on first pick. Switching clears follow-ups and re-asks the question; every answer carries a farm badge |
-| "Show the records" (`farm_core.records_behind`, `farm_host.records`) | Built | After a web answer, the host asks `field-registry.records_behind` which files, spreadsheet tabs and rows the lookup read (cost-ledger rows, scale-ticket numbers, yield-monitor files, ...), using a fixed tool-to-records table. Listed under "Where it came from" so a grower can open the raw file and check by hand. Fetched after the checks and never passed to the AI. What each file must contain: [YOUR_RECORDS.md](YOUR_RECORDS.md) |
-| Follow-ups (`farm_host.followups`) | Built | Only the last verified answer's field, season and question type carry over; the parser refuses a follow-up whose field or season came from nowhere. A "Talking about:" line names what was answered, with a "New subject" button that forgets it, plus up to 3 "Ask next" buttons |
-| Template-first narration (`narrate_verified`) | Built | Template sentence always leads; the model may add one sentence, kept only if it passes all 8 checks (grounded, verdict, sign, zone premise, reconciliation, attribution, unsupported cause, units). One try by default (`max_attempts=1`), so a failing sentence is withheld, not rewritten |
-| Hash-chained, concurrency-safe audit log | Built | Host and every server write to it (fixed in Phase A) |
-| Provenance (`modeled` subtree), grounding split | Built | `modeled` is filled by weather attribution on `bad_year` verdicts, `null` elsewhere by design |
-| Untrusted-text handling, payload capping | Built | |
-| Governance metrics (`farm-metrics`) | Built | Includes an `attribution_backtest` section |
-| Weather ingestion, attribution model | Built | Synthetic weather + soil AWC (`weather-history`); `core/expectation.py` splits a shortfall into `season_effect` and `residual`; `EXPLAIN_SHORTFALL` intent |
-| Zone-level (sub-field) profitability | Built | `core/zone_profitability.py`, 2x2 zones per field, as-applied seasons only |
-| Readiness check (`farm-preflight`) | Built | Checks uv, Ollama, model, data and ingest, then runs a live query |
-| Non-interactive ingest (`--auto-approve-synthetic-only`) | Built | Refused outside the two example farms (`data/synthetic/`, `data/synthetic-clean/`); DEF-ALIASTIE shows why it must never touch real records |
-| Model-free query path (`farm-cli --intent`) | Built | No `ollama.chat` call anywhere on this path (`test_structured_path_never_calls_ollama`) |
-| Deterministic "therefore" line (`therefore.py`) | Built | Template-built, omitted where there is no verdict to restate |
+| Confirmation at ingest (`ConfirmationGate`, `farm-ingest`) | Built | `core/governance.py`, `host/ingest_cli.py`. Every name, field change and column mapping confirmed once, persisted, versioned |
+| 6 MCP servers | Built | `servers/mcp-*`. Read-only tools over `farm_core`; each has at least one question type routed to it (`_INTENT_TO_SERVER` in `host/cli.py`) |
+| Weather, soil and as-applied questions | Built | `core/field_conditions.py`. Nitrogen always in lb N/ac (UAN 32% converted from gal/ac); records, never causes |
+| Grower web app (`farm-web`) | Built | `web/`. Thin Gradio layer over `farm_host.cli.answer_question`, so it can't drift from the CLI or evals. Local only unless `--lan` |
+| Persistent servers | Built | `host/server_pool.py`. Six servers start once (about 7 s), then about 0.2 s per lookup. Restart the app after regenerating data |
+| Farm picker | Built | `host/farms.py`. Farm 1 = `data/synthetic-clean` (clean), Farm 2 = `data/synthetic` (messy); one server pool per farm via `FARM_DATA_DIR`/`FARM_CONFIRM_STORE` |
+| "Show the records" | Built | `core/records_behind.py`, `host/records.py`. Files, tabs and rows behind each answer; fetched after the checks, never shown to the AI. File formats: [YOUR_RECORDS.md](YOUR_RECORDS.md) |
+| Follow-ups | Built | `host/followups.py`. Only the last verified answer's field, season and question type carry over |
+| Template-first narration (`narrate_verified`) | Built | `model/narrator.py`, `model/verification.py`. Template sentence leads; one AI try (`max_attempts=1`), kept only if all 8 checks pass |
+| Audit log | Built | `core/audit.py`. Hash-chained, safe under concurrent host and server writes |
+| Provenance (`modeled` subtree), grounding split | Built | Every server response; `modeled` holds the weather attribution on `bad_year` verdicts, `null` elsewhere |
+| Untrusted-text handling, payload capping | Built | `host/mcp_client.py` (`UNTRUSTED_FREE_TEXT_FIELDS`), `model/narrator.py` |
+| Governance metrics (`farm-metrics`) | Built | `core/metrics.py`, `host/metrics_cli.py`, including `attribution_backtest` |
+| Weather attribution model | Built | `core/expectation.py` splits a shortfall into `season_effect` and `residual`; `EXPLAIN_SHORTFALL` intent |
+| Zone-level profitability | Built | `core/zone_profitability.py`. 2x2 zones per field, as-applied seasons only |
+| Readiness check (`farm-preflight`) | Built | `host/preflight_cli.py`. uv, Ollama, model, data and ingest, then a live query |
+| Non-interactive ingest (`--auto-approve-synthetic-only`) | Built | Refused outside the two example farms; `DEF-ALIASTIE` shows why it must never touch real records |
+| Model-free query path (`farm-cli --intent`) | Built | No `ollama.chat` call anywhere on this path |
+| "Therefore" line | Built | `host/therefore.py`. Template-built, omitted where there is no verdict |
 | Clear failures (`ParseFailure.kind`, exit codes) | Built | A dead model and an out-of-scope question get different messages; CLIs exit 1 on any refusal |
-| CI (`.github/workflows/tests.yml`, `real-model.yml`) | Built | PRs run one Ubuntu check: generator, core and the host tests that don't call the model; the real-model job is manual only. Details in [VERIFICATION.md](VERIFICATION.md#ci-and-demos) |
 | **Diverged:** confirmation at query time | — | MCP servers can't prompt a human, so confirmation moved to ingest |
 | **Diverged:** zone cost is field-uniform | — | The data has no per-zone cost (ledger is per acre), so only yield is zone-resolved |
 | Remote sensing | Deferred | Out of scope by design; not scheduled |
-| Agronomy reference data | Deferred | Only needed if an absolute (not relative) expectation model is ever required |
+| Agronomy reference data | Deferred | Only needed for an absolute (not relative) expectation model |
 | Prescriptive crop model / recommendations | Deferred | Out of scope (see README); not scheduled |
 | Live weather / any sync boundary | Deferred | Not scheduled; see below |
 
@@ -194,9 +197,5 @@ this section first.
 
 ## See also
 
-- [README](../README.md) — the simple picture and quick start
-- [DEVELOPER.md](DEVELOPER.md) — farm-cli, quick start notes, and repository layout
-- [FARMER_GUIDE.md](FARMER_GUIDE.md) — plain-language setup and usage guide
-- [VERIFICATION.md](VERIFICATION.md) — how to run the tests and what they prove
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) — fifteen independent evaluation questions
-- [PROJECT_HISTORY.md](PROJECT_HISTORY.md) — the phase history
+Every doc is listed in the [README](../README.md#start-here); the phase
+history is in [PROJECT_HISTORY.md](PROJECT_HISTORY.md).

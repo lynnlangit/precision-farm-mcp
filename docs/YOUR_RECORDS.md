@@ -89,7 +89,7 @@ Marginal Eighty lost money in all 10.
 | "What if my records are wrong?" | Switch to Farm 2, the same farm with messy records, and ask "Does the seed cost on Sheyenne Bottom in 2022 look right?". The record checks catch the mistyped seed cost. The tool checks one record against another; it doesn't trust any single one. |
 | "Is my data sent anywhere?" | Turn off Wi-Fi and ask again: it still works. The question still shows up in `data/audit.jsonl`, on this laptop. |
 | "Could someone change the log?" | Each line in `data/audit.jsonl` carries a hash of the line before it, so a changed or deleted line breaks the chain. |
-| "How do you know it's right?" | The example farms were generated with a known answer key (`ground_truth.json`). About 450 tests compare the tool's answers with it, and [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists 15 questions with the right answer written out. |
+| "How do you know it's right?" | The example farms were generated with a known answer key (`ground_truth.json`). [The tests](VERIFICATION.md) compare the tool's answers with it, and [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists 15 questions with the right answer written out. |
 
 ## The files you need for your own farm
 

@@ -8,16 +8,17 @@ prove. For the overview, see the [README](../README.md).
 About 450 tests across five packages, including all 15
 [evaluation questions](EVAL_QUESTIONS.md) at the tool level. Tests that
 call the model need Ollama running with `gemma3:4b`; without it, only those
-tests fail.
+tests fail. Most tests read the example farms, so generate and confirm both
+first (the [README](../README.md#quick-start) quick start).
 
-| Package | Tests | Needs Ollama | Runs in CI |
-|---|---|---|---|
-| `generator` | 19 | No | Every PR |
-| `core` | 96 | No | Every PR |
-| `host` | 175, of which 27 are the opt-in `eval_nl` suite and 6 are marked `ollama` | Some | Every PR without the model (142); all of it on demand |
-| `model` | 96 | Some | On demand |
-| `web` | 65, of which 25 are the opt-in `ui` browser suite | No | Locally |
-| `docs/test_architecture_doc.py` | 2 | No | Locally |
+| Package | Needs Ollama | Runs in CI |
+|---|---|---|
+| `generator` | No | Every PR |
+| `core` | No | Every PR |
+| `host` | Some (the `ollama` tests and the opt-in `eval_nl` suite) | Every PR without the model; all of it on demand |
+| `model` | Some | On demand |
+| `web` | No (the opt-in `ui` suite needs Playwright's Chromium) | Locally |
+| `docs/test_architecture_doc.py` | No | Locally |
 
 ```bash
 for pkg in generator core host model web; do (cd $pkg && uv run pytest -q); done
@@ -83,6 +84,4 @@ Two workflows keep CI fast:
 
 ## See also
 
-- [ARCHITECTURE.md](ARCHITECTURE.md): the technical design
-- [DEVELOPER.md](DEVELOPER.md): farm-cli, quick start notes, and repository layout
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md): the 15 evaluation questions and their verifiable answers
+[ARCHITECTURE.md](ARCHITECTURE.md) for the design; every other doc is listed in the [README](../README.md#start-here).

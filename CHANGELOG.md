@@ -4,6 +4,14 @@ Every package (generator, core, model, host, web and the six MCP servers)
 carries the same version. PR-by-PR detail is in
 [docs/PROJECT_HISTORY.md](docs/PROJECT_HISTORY.md).
 
+## Unreleased
+
+| Area | What changed |
+|---|---|
+| Home screen | Example questions nest under one "Example questions (5 types)" row; farm description line and the duplicate "When the AI is stopped" group removed (#34) |
+| Docs | README shortened from 115 to 57 lines; developer notes moved to [docs/DEVELOPER.md](docs/DEVELOPER.md) (#33) |
+| Tests | Host tests never touch the app's own state under `data/` (#32) |
+
 ## 0.2.0 (November 2026)
 
 The grower web app grows up: follow-up questions, two example farms, all six
