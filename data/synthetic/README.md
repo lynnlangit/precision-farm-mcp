@@ -5,7 +5,7 @@
 - Seed: `42`
 - Root fields: 12
 - Seasons: 2016-2025 (10 seasons)
-- Generator version: 0.1.1
+- Generator version: 0.2.0
 - Records: messy (Farm 2 in the web app)
 
 Regenerate identically with:
