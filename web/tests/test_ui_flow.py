@@ -163,6 +163,10 @@ class Box:
         self.text.press_sequentially(question, delay=5)
 
     def example(self, group: str, question: str) -> None:
+        types = self.page.locator(".pf-example-types").first
+        group_row = types.get_by_text(group).first
+        if not group_row.is_visible():
+            types.get_by_text("Example questions", exact=False).first.click()
         accordion = self.page.locator(".pf-example-group", has_text=group).first
         button = accordion.get_by_role("button", name=question, exact=True)
         if not button.is_visible():
@@ -421,7 +425,7 @@ def test_a_refusal_after_an_answer_keeps_the_page_usable(box):
 
 def test_east_80_shows_the_ai_sentence_withheld(box):
     """Eval 2: the model blames the weather, which no record shows."""
-    box.example("When the AI is stopped", EAST_80)
+    box.example("Bad field or bad year?", EAST_80)
     box.settle()
     assert [r["question"] for r in box.sent()] == [EAST_80]
     playwright_api.expect(box.answer).to_contain_text("AI sentence withheld")

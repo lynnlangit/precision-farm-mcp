@@ -18,7 +18,7 @@ def test_localhost_only_by_default():
 
 
 def test_examples_are_the_eval_questions():
-    assert sum(len(qs) for _, qs in EXAMPLES) == 15  # eval 10 is a refusal, left out
+    assert sum(len(qs) for _, qs in EXAMPLES) == 14  # eval 10 is a refusal, left out
     from pathlib import Path
 
     doc = (Path(__file__).resolve().parents[2] / "docs" / "EVAL_QUESTIONS.md").read_text()
@@ -116,9 +116,11 @@ def test_ready_check_collapses_when_all_pass_and_opens_on_a_problem(monkeypatch)
 def test_example_groups_start_collapsed(tmp_path):
     app = build_app(tmp_path / "audit.jsonl", _fake_pools(tmp_path))
     accordions = [b for b in app.blocks.values() if type(b).__name__ == "Accordion"]
-    assert len(accordions) == len(EXAMPLES)
+    # One outer row for the question types, then one per type.
+    assert len(accordions) == 1 + len(EXAMPLES)
     assert all(a.open is False for a in accordions)
-    assert accordions[0].label == "Bad field or bad year? (3)"
+    assert accordions[0].label == "Example questions (5 types)"
+    assert accordions[1].label == "Bad field or bad year? (3)"
 
 
 def test_each_farm_has_its_own_servers_started_only_when_picked(monkeypatch, tmp_path):
@@ -166,9 +168,35 @@ def test_how_it_works_strip_is_gone(tmp_path):
     assert "pf-steps" not in build_app(tmp_path / "audit.jsonl").config.__repr__()
 
 
-def test_one_example_shows_a_withheld_sentence():
-    groups = dict(EXAMPLES)
-    assert groups["When the AI is stopped"] == ("Was East 80 a bad field or just a bad year?",)
+def test_examples_are_farm_question_types_only():
+    # "When the AI is stopped" repeated East 80 and isn't a kind of farm
+    # question; the withheld demo is East 80 under "Bad field or bad year?".
+    headings = [h for h, _ in EXAMPLES]
+    assert "When the AI is stopped" not in headings
+    questions = [q for _, qs in EXAMPLES for q in qs]
+    assert len(questions) == len(set(questions))
+
+
+def test_placeholder_is_the_first_example_not_the_withheld_one(tmp_path):
+    first = EXAMPLES[0][1][0]
+    assert "East 80" not in first
+    config = repr(build_app(tmp_path / "audit.jsonl").config)
+    assert f"e.g. {first}" in config
+    assert "e.g. Was East 80" not in config
+
+
+def test_no_farm_description_under_the_picker(tmp_path):
+    config = repr(build_app(tmp_path / "audit.jsonl").config)
+    assert "pf-farm-note" not in config
+    assert "Every record agrees with every other." not in config
+
+
+def test_example_types_fold_under_one_row(tmp_path):
+    from farm_web.app import EXAMPLES_LABEL
+
+    assert EXAMPLES_LABEL == f"Example questions ({len(EXAMPLES)} types)"
+    config = repr(build_app(tmp_path / "audit.jsonl").config)
+    assert "pf-example-types" in config and EXAMPLES_LABEL in config
 
 
 def test_the_withheld_example_is_third_in_its_group():
@@ -208,8 +236,8 @@ def test_enter_sends_and_every_way_of_asking_locks_the_controls(tmp_path):
     # it was the other way round.
     assert box.lines == 1 and box.max_lines == 4
     fns = [d.fn.__name__ for d in app.fns.values() if d.fn is not None]
-    # button, Enter, farm switch, 15 examples, 3 "Ask next" buttons
-    assert fns.count("ask_in_tab") == 2 + 1 + 15 + 3
+    # button, Enter, farm switch, 14 examples, 3 "Ask next" buttons
+    assert fns.count("ask_in_tab") == 2 + 1 + 14 + 3
     # each one claims its tab first, locks the controls, and releases them after
     n = fns.count("ask_in_tab")
     assert fns.count("claim") == fns.count("lock") == fns.count("release") == n

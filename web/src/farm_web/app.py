@@ -47,7 +47,6 @@ from .view import (  # noqa: E402
     build_view,
     checks_panel_html,
     empty_view,
-    farm_note_html,
     numbers_panel_html,
     with_farm,
     with_subject,
@@ -60,8 +59,10 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "Was the Marginal Eighty a bad field or just a bad year?",
             "Was South 160 South a bad field or just a bad year?",
-            # Third, not first: this is the one gemma3:4b fails the checks on
-            # (see "When the AI is stopped" below), so the group opens on two
+            # Third, not first: this is eval 2, the one gemma3:4b fails the
+            # checks on (it blames "an unusual weather pattern", which no
+            # record shows, so the sentence is withheld; see
+            # host/tests/test_eval_nl.py -k withheld). The group opens on two
             # answers that pass.
             "Was East 80 a bad field or just a bad year?",
         ),
@@ -98,15 +99,9 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "Did I put the same nitrogen on Section Corner every year?",
         ),
     ),
-    (
-        # Eval 2 again, filed where a grower looking for it will find it: with
-        # gemma3:4b the AI's sentence blames "an unusual weather pattern",
-        # which no record shows, so it fails the "doesn't name a cause" check
-        # and is withheld (host/tests/test_eval_nl.py -k withheld).
-        "When the AI is stopped",
-        ("Was East 80 a bad field or just a bad year?",),
-    ),
 )
+
+EXAMPLES_LABEL = f"Example questions ({len(EXAMPLES)} types)"
 
 
 def status_html() -> str:
@@ -389,14 +384,13 @@ def build_app(
                     container=False,
                     elem_classes="pf-farm-picker",
                 )
-                farm_note = gr.HTML(farm_note_html(FARMS[DEFAULT_FARM]))
                 gr.HTML('<p class="pf-h" style="margin-top:14px">Ask a question</p>')
                 # One line that grows to four: Enter asks, Shift+Enter starts a
                 # new line. (With lines=2, Gradio made Enter a new line and
                 # Shift+Enter send -- the opposite of every chat box.)
                 question = gr.Textbox(
                     show_label=False,
-                    placeholder="e.g. Was East 80 a bad field or just a bad year?",
+                    placeholder=f"e.g. {EXAMPLES[0][1][0]}",
                     lines=1,
                     max_lines=4,
                     autofocus=True,
@@ -407,15 +401,19 @@ def build_app(
                 # NEW_SUBJECT_JS); never shown itself.
                 clear_btn = gr.Button("Clear", elem_id="pf-clear", elem_classes="pf-hidden")
                 example_buttons: list[tuple[gr.Button, str]] = []
-                gr.HTML('<p class="pf-eyebrow" style="margin-top:14px">Or try an example</p>')
-                for heading, qs in EXAMPLES:
-                    with gr.Accordion(
-                        f"{heading} ({len(qs)})", open=False, elem_classes="pf-example-group"
-                    ):
-                        with gr.Column(elem_classes="pf-examples-group"):
-                            for q in qs:
-                                b = gr.Button(q, size="sm", elem_classes="pf-example")
-                                example_buttons.append((b, q))
+                # One folded row holds the question types; each type folds
+                # again over its questions.
+                with gr.Accordion(
+                    EXAMPLES_LABEL, open=False, elem_classes="pf-example-types"
+                ):
+                    for heading, qs in EXAMPLES:
+                        with gr.Accordion(
+                            f"{heading} ({len(qs)})", open=False, elem_classes="pf-example-group"
+                        ):
+                            with gr.Column(elem_classes="pf-examples-group"):
+                                for q in qs:
+                                    b = gr.Button(q, size="sm", elem_classes="pf-example")
+                                    example_buttons.append((b, q))
             with gr.Column(scale=7, min_width=340):
                 answer = gr.HTML(empty.answer_html, elem_id="pf-answer")
                 followup_heading = gr.HTML(
@@ -519,7 +517,7 @@ def build_app(
             # Start the other farm's servers now, and drop the follow-up
             # context: it described an answer from the other farm's records.
             pools.warm(_farm_key(farm_key))
-            return farm_note_html(FARMS[_farm_key(farm_key)]), None, None
+            return None, None
 
         # Then ask the same question again, so the two farms' answers can be
         # compared directly; with an empty box, just reset the panels.
@@ -528,7 +526,7 @@ def build_app(
             farm_picker.input,
             fill=switch_farm,
             fill_inputs=[farm_picker, question],
-            fill_outputs=[farm_note, context_state, last_ask],
+            fill_outputs=[context_state, last_ask],
         )
         for b, q in example_buttons:
             ask_chain(b.click, fill=lambda q=q: q, fill_outputs=question)

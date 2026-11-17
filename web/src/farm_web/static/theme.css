@@ -130,6 +130,17 @@ footer { opacity: 0.6; }
 .pf-hidden { display: none !important; }
 
 /* ---------- example question chips ---------- */
+/* The outer fold that holds the question types: no card of its own, it
+   reads as the section's heading. */
+.pf-example-types {
+  background: transparent !important; border: none !important; box-shadow: none !important;
+  padding: 0 !important; margin-top: 14px !important;
+}
+.pf-example-types > button, .pf-example-types > .label-wrap {
+  font-weight: 700 !important; color: var(--pf-ink) !important; font-size: 1.1rem !important;
+}
+.pf-example-types > .label-wrap .icon { transform: rotate(-90deg) !important; }
+.pf-example-types > .label-wrap.open .icon { transform: rotate(0deg) !important; }
 .pf-examples-group { gap: 6px !important; }
 .pf-example-group {
   background: var(--pf-card) !important; border: 1px solid var(--pf-card-edge) !important;
@@ -260,7 +271,6 @@ code { font-size: 0.85em; }
 /* Farm picker (Farm 1 clean records / Farm 2 messy records) */
 .pf-farm-picker { margin-top: 4px; }
 .pf-farm-picker label { font-weight: 600; }
-.pf-farm-note { margin: 6px 0 0; font-size: 0.88rem; color: var(--pf-ink-soft); }
 .pf-farm-badge {
   display: inline-block; margin: 0 0 10px; padding: 3px 10px; border-radius: 999px;
   font-size: 0.85rem; color: var(--pf-ink);
