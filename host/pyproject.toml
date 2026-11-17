@@ -27,7 +27,11 @@ farm-core = { path = "../core", editable = true }
 farm-model = { path = "../model", editable = true }
 
 [dependency-groups]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-xdist>=3.5",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -272,6 +272,7 @@ One PR per step, merged in order. Plan: the eval fix plan (P0–P5).
 | #27 | "Show the records" lists the files, tabs and rows behind each answer (`records_behind` tool); `docs/YOUR_RECORDS.md`; question-flow diagram renders on GitHub again |
 | #28 | Records-list fields classified for the untrusted-text check |
 | #29 | CI simplified: one Ubuntu PR check (generator, core, host without the model); real-model job manual only, no nightly; Windows dropped from CI |
+| #30 | PR check runs core and host tests 4 at a time (pytest-xdist): about 7 min to about 3 |
 
 About 450 tests across five packages (see [VERIFICATION.md](VERIFICATION.md)).
 
