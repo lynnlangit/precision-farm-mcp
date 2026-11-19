@@ -297,10 +297,6 @@ def empty_view() -> AnswerView:
     )
 
 
-def _sentence_case(text: str) -> str:
-    return text[:1].upper() + text[1:]
-
-
 NEW_SUBJECT_LABEL = "\u21ba New subject"
 
 
@@ -407,13 +403,9 @@ def _answer_html(result: AnswerResult) -> str:
             f'<p class="pf-muted">Stopped because:</p><ul class="pf-checks fail">{reasons}</ul>',
             "</details>",
         ]
-    if result.therefore:
-        parts += [
-            '<div class="pf-line pf-line-therefore">',
-            '<span class="pf-tag pf-tag-verified">What that means</span>',
-            f"<p>{escape(_sentence_case(result.therefore.removeprefix('Therefore: ')))}</p>",
-            "</div>",
-        ]
+    # The terminal's "Therefore:" line (result.therefore) is left off the
+    # card: it restates the calculated answer, and the card's job is to show
+    # growers which sentence is arithmetic and which is the AI's.
     parts.append("</div>")
     return "".join(parts)
 

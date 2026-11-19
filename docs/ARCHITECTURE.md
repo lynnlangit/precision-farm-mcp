@@ -34,7 +34,7 @@ flowchart TD
     Servers --> DB[("DuckDB — 10 seasons, local files only")]
     Servers -.-> Audit[("audit.jsonl<br/>hash-chained — safe under concurrent<br/>host + server process writes")]
 
-    Router --> Template["Template answer<br/>deterministic lead sentence + 'therefore' line"]
+    Router --> Template["Template answer<br/>deterministic lead sentence<br/>(terminal also adds a 'therefore' line)"]
     Router --> Narrator["Gemma 3 4B<br/>may add one sentence of context. Farmer free text<br/>is delimited as untrusted data first"]
     Narrator --> Checks["Verifier — 9 checks<br/>grounded numbers, verdict, 7 meaning checks —<br/>one try — fails ⇒ sentence withheld"]
     Template --> Answer(["Answer<br/>the web app also shows the checks, figures and source"])
@@ -114,7 +114,7 @@ sequenceDiagram
     else Any check fails
         C-->>H: Failed — sentence is WITHHELD (no second try), the verified answer stands alone
     end
-    H->>H: Add the "therefore" line and write every step to the audit log
+    H->>H: Write every step to the audit log (the terminal also adds a "therefore" line, the web card does not)
     H->>S: Which files, tabs and rows did that lookup read? (field-registry records_behind)
     S-->>H: One entry per file or spreadsheet tab (never shown to the AI or the checks)
     H-->>W: Answer + checks + numbers + source + the records list
@@ -174,7 +174,7 @@ What each piece is and where it lives. What growers see is in
 | Readiness check (`farm-preflight`) | Built | `host/preflight_cli.py`. uv, Ollama, model, data and ingest, then a live query |
 | Non-interactive ingest (`--auto-approve-synthetic-only`) | Built | Refused outside the two example farms; `DEF-ALIASTIE` shows why it must never touch real records |
 | Model-free query path (`farm-cli --intent`) | Built | No `ollama.chat` call anywhere on this path |
-| "Therefore" line | Built | `host/therefore.py`. Template-built, omitted where there is no verdict |
+| "Therefore" line | Built, terminal only | `host/therefore.py`. Template-built, omitted where there is no verdict. `farm-cli` prints it; the web answer card leaves it out so growers see only the calculated sentence and the AI's checked sentence |
 | Clear failures (`ParseFailure.kind`, exit codes) | Built | A dead model and an out-of-scope question get different messages; CLIs exit 1 on any refusal |
 | **Diverged:** confirmation at query time | — | MCP servers can't prompt a human, so confirmation moved to ingest |
 | **Diverged:** zone cost is field-uniform | — | The data has no per-zone cost (ledger is per acre), so only yield is zone-resolved |

@@ -194,7 +194,6 @@ button.pf-example:hover { border-color: var(--pf-wheat) !important; background: 
 .pf-line { padding: 10px 0 10px 14px; border-left: 3px solid var(--pf-verified); margin: 8px 0; }
 .pf-line p { margin: 6px 0 0; line-height: 1.5; font-size: 1.05rem; }
 .pf-line-model { border-left-color: var(--pf-model); }
-.pf-line-therefore { border-left-color: var(--pf-wheat); }
 .pf-lead { font-family: var(--pf-serif); font-size: 1.45rem !important; line-height: 1.4 !important; }
 .pf-tag {
   display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;

@@ -27,9 +27,6 @@ the arithmetic, never by guessing or predicting. For example:
 > **The AI adds, after its sentence passes every check:** "The data
 > indicates that 2018 was an unusually poor year for profit on N 80
 > compared to other seasons."
->
-> **What that means:** "The loss was isolated to 2018 -- every other
-> recorded season was unremarkable, not a sign of a chronic problem."
 
 The tool knew that "north eighty" is the field your maps call "N 80"
 because you confirmed it once, in Step 1.
