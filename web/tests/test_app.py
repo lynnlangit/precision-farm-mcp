@@ -32,7 +32,7 @@ def _fake_answer(seen: list):
     async def fake(question, audit_log, env_overrides=None, context=None, fleet=None):
         seen.append(context)
         if question == "nonsense":
-            return AnswerResult(text="no", ok=False, refusal_kind="unparseable")
+            return AnswerResult(text="no", ok=False, refusal_kind="out_of_scope")
         return AnswerResult(
             text="East 80 had a bad year.",
             ok=True,

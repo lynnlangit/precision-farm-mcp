@@ -56,7 +56,7 @@ def test_a_refusal_never_moves_the_context():
     before = FollowUpContext(
         field_name="East 80", season=2020, intent=QueryIntent.ZONE_PROFITABILITY
     )
-    refused = AnswerResult(text="no", ok=False, refusal_kind="unparseable")
+    refused = AnswerResult(text="no", ok=False, refusal_kind="out_of_scope")
     assert next_context(refused, before) is before
     tool_refused = AnswerResult(
         text="no",

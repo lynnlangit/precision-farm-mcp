@@ -30,3 +30,4 @@ data/audit.jsonl
 data/audit.jsonl.pre-a1-fix
 data/confirmed_mappings.json
 data/confirmed_mappings_clean.json
+data/eval_results.md

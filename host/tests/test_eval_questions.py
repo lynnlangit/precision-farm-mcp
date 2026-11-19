@@ -84,7 +84,7 @@ async def test_q4_ranking_over_relative_five_year_window():
     _assert_matches_ground_truth("East 80", [2021, 2022, 2023, 2024, 2025],
                                  r["results"][0]["total_profit"])
     assert r["results"][-1]["display_name"] == "Marginal Eighty"
-    assert r["results"][-1]["total_profit"] == -112044.65
+    assert r["results"][-1]["total_profit"] == -112044.66
     _assert_matches_ground_truth("Marginal Eighty", [2021, 2022, 2023, 2024, 2025],
                                  r["results"][-1]["total_profit"])
     assert r["num_fields"] == len(r["results"])
@@ -261,8 +261,8 @@ async def test_q2_the_records_never_name_a_cause():
     """The web app's withheld-sentence example (eval 2), at tool level: East
     80's 2020 loss was hail in the ground truth, but no fact the tool returns
     names hail or the weather (the glossary's "e.g. hail" is vocabulary, not
-    evidence). So the sentence gemma3:4b writes ("... due to an unusual
-    weather pattern ...") fails the unsupported-cause check, and so does
+    evidence). So the sentence gemma3:4b sometimes writes ("... due to an
+    unusual weather pattern ...") fails the unsupported-cause check, and so does
     hail -- the right guess. On both farms: the profit records are identical."""
     from farm_host.farms import FARMS
     from farm_model.verification import check_no_unsupported_cause, failed_semantic_checks

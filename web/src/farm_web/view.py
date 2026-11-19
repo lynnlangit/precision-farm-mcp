@@ -352,8 +352,11 @@ def _answer_html(result: AnswerResult) -> str:
     if not result.ok:
         title = {
             "model_unreachable": "The local AI model isn't running",
-            "unparseable": "I couldn't match that to a question I can answer",
+            "invalid_output": "I couldn't match that to a question I can answer",
+            "out_of_range": "That's outside the seasons in your records",
+            "out_of_scope": "I couldn't match that to a question I can answer",
             "unresolved_followup": "I wasn't sure which field or season you meant",
+            "season_not_named": "I wasn't sure which season you meant",
             "tool_refused": "Your records don't have an answer to that",
             "server_timeout": "The lookup took too long to start",
             "error": "Something went wrong on this computer",

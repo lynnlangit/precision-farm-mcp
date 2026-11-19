@@ -182,4 +182,79 @@ def test_live_eval_9_parses_as_cost_reconciliation():
 def test_live_numeric_follow_up_is_refused():
     result = parse_question("What is the seasonal effect of -5.16?", KNOWN_SEASONS)
     assert isinstance(result, ParseFailure)
-    assert result.kind == "out_of_scope"
+    # gemma3:4b either refuses outright or picks season_weather with a year
+    # the question never names -- both are refused before any lookup.
+    assert result.kind in ("out_of_scope", "season_not_named")
+
+
+# --- which_fields_made_money: the years must come from the question --------
+
+
+def test_model_picked_years_for_a_relative_window_are_replaced(monkeypatch):
+    # Eval 4: gemma3:4b once filled seasons=[2019..2023] for "last five years"
+    # instead of season_count_from_latest=5.
+    _stub_chat(
+        monkeypatch,
+        {"intent": "which_fields_made_money", "seasons": [2019, 2020, 2021, 2022, 2023]},
+    )
+    result = parse_question("Which fields made money in the last five years?", KNOWN_SEASONS)
+    assert not isinstance(result, ParseFailure)
+    assert result.seasons == [2021, 2022, 2023, 2024, 2025]
+
+
+def test_relative_window_count_resolves_to_latest_seasons(monkeypatch):
+    _stub_chat(monkeypatch, {"intent": "which_fields_made_money", "season_count_from_latest": 3})
+    result = parse_question("Which fields made money in the last three years?", KNOWN_SEASONS)
+    assert not isinstance(result, ParseFailure)
+    assert result.seasons == [2023, 2024, 2025]
+
+
+def test_named_years_pass_through_unchanged(monkeypatch):
+    _stub_chat(monkeypatch, {"intent": "which_fields_made_money", "seasons": [2019, 2020]})
+    result = parse_question("Which fields made money in 2019 and 2020?", KNOWN_SEASONS)
+    assert not isinstance(result, ParseFailure)
+    assert result.seasons == [2019, 2020]
+
+
+def test_count_wins_over_model_picked_years(monkeypatch):
+    _stub_chat(
+        monkeypatch,
+        {"intent": "which_fields_made_money", "seasons": [2014, 2015], "season_count_from_latest": 3},
+    )
+    result = parse_question("Which fields made money in the last three years?", KNOWN_SEASONS)
+    assert not isinstance(result, ParseFailure)
+    assert result.seasons == [2023, 2024, 2025]
+
+
+def test_follow_up_may_carry_the_earlier_season_into_a_ranking(monkeypatch):
+    _stub_chat(monkeypatch, {"intent": "which_fields_made_money", "seasons": [2022]})
+    result = parse_question("Which fields made money that year?", KNOWN_SEASONS, context=COST_CONTEXT)
+    assert not isinstance(result, ParseFailure)
+    assert result.seasons == [2022]
+
+
+# --- a first question's single season must be written in it ---------------
+
+
+def test_first_question_season_from_nowhere_is_refused(monkeypatch):
+    _stub_chat(monkeypatch, {"intent": "season_weather", "season": 2023})
+    result = parse_question("What is the seasonal effect of -5.16?", KNOWN_SEASONS)
+    assert isinstance(result, ParseFailure)
+    assert result.kind == "season_not_named"
+    assert "2023" in result.reason
+
+
+def test_first_question_named_season_passes(monkeypatch):
+    _stub_chat(monkeypatch, {"intent": "season_weather", "season": 2018})
+    result = parse_question("How dry was 2018?", KNOWN_SEASONS)
+    assert not isinstance(result, ParseFailure)
+    assert result.season == 2018
+
+
+def test_follow_up_season_from_context_still_passes(monkeypatch):
+    _stub_chat(
+        monkeypatch, {"intent": "yield_reconciliation", "field_name": "East 80", "season": 2022}
+    )
+    result = parse_question("What about East 80?", KNOWN_SEASONS, context=COST_CONTEXT)
+    assert not isinstance(result, ParseFailure)
+    assert result.season == 2022

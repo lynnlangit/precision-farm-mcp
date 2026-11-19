@@ -7,12 +7,19 @@ arithmetic and a documented statistical rule, never a guess.
 Revenue always comes from scale tickets (the authoritative bushel source per
 reconciliation), never the yield monitor. Costs come from the
 cost ledger, resolved through the naming-drift alias table first.
+
+Money is computed in Decimal, not float. Revenue (bushels x price) often
+lands exactly on a half cent, and a float SUM can add rows in a different
+order on another machine -- so the same records rounded to different cents
+on Mac and Linux. Revenue and cost are settled to the cent before profit
+is taken from them, as the generator's answer key does.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import statistics
+from decimal import Decimal
 
 import duckdb
 
@@ -20,6 +27,27 @@ from .field_identity import FieldIdentityResolution
 
 LOSS_RATE_BAD_FIELD_THRESHOLD = 0.5  # >= this fraction of loss seasons -> chronically bad field
 OUTLIER_MAD_MULTIPLIER = 2.0  # season profit this many MADs below the field's median -> bad year
+
+def _dec(x: float) -> Decimal:
+    """The value as written in the record (shortest repr), not float noise."""
+    return Decimal(repr(x))
+
+
+def _cents(x: Decimal) -> Decimal:
+    # The exact sum, rounded to the cent the way the generator's answer key
+    # rounds (Python's round() on the float): the same on every platform,
+    # because the float is made once from the exact sum, not added up.
+    return _dec(round(float(x), 2))
+
+
+def revenue_from_loads(loads: list[tuple[float, float]]) -> Decimal:
+    """Sum of net bushels x price over every load, to the cent. Exact, so
+    the order the loads arrive in can't change the cent it rounds to."""
+    return _cents(sum((_dec(bu) * _dec(price) for bu, price in loads), Decimal(0)))
+
+
+def _money_sum(values) -> float:
+    return float(sum((_dec(v) for v in values), Decimal(0)))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -75,21 +103,19 @@ def compute_profitability(
                 continue
             acres, crop = boundary
 
-            revenue = (
-                con.execute(
-                    "SELECT SUM(net_bushels * price_per_bu) FROM scale_ticket_loads "
-                    "WHERE field_name = ? AND season = ?",
-                    [display_name, season],
-                ).fetchone()[0]
-                or 0.0
-            )
+            loads = con.execute(
+                "SELECT net_bushels, price_per_bu FROM scale_ticket_loads "
+                "WHERE field_name = ? AND season = ?",
+                [display_name, season],
+            ).fetchall()
+            revenue = revenue_from_loads(loads)
 
             cost_row = cost_by_season_name.get((season, display_name))
             if cost_row is None:
                 continue
-            total_cost = (
-                sum(
-                    cost_row[k]
+            cost_per_ac = sum(
+                (
+                    _dec(cost_row[k])
                     for k in (
                         "seed_cost_per_ac",
                         "fertilizer_cost_per_ac",
@@ -97,9 +123,10 @@ def compute_profitability(
                         "fuel_cost_per_ac",
                         "cash_rent_per_ac",
                     )
-                )
-                * acres
+                ),
+                Decimal(0),
             )
+            total_cost = _cents(cost_per_ac * _dec(acres))
 
             profit = revenue - total_cost
             records[(canonical_id, season)] = ProfitRecord(
@@ -108,10 +135,10 @@ def compute_profitability(
                 season=season,
                 crop=crop,
                 acres=acres,
-                revenue=round(revenue, 2),
-                total_cost=round(total_cost, 2),
-                profit=round(profit, 2),
-                profit_per_acre=round(profit / acres, 2) if acres else 0.0,
+                revenue=float(revenue),
+                total_cost=float(total_cost),
+                profit=float(profit),
+                profit_per_acre=float(_cents(profit / _dec(acres))) if acres else 0.0,
             )
 
     return records
@@ -138,9 +165,9 @@ def which_fields_made_money(
                 "canonical_id": canonical_id,
                 "display_name": recs[-1].display_name,
                 "seasons": [r.season for r in recs],
-                "total_profit": round(sum(r.profit for r in recs), 2),
-                "total_revenue": round(sum(r.revenue for r in recs), 2),
-                "total_cost": round(sum(r.total_cost for r in recs), 2),
+                "total_profit": _money_sum(r.profit for r in recs),
+                "total_revenue": _money_sum(r.revenue for r in recs),
+                "total_cost": _money_sum(r.total_cost for r in recs),
             }
         )
     results.sort(key=lambda r: r["total_profit"], reverse=True)

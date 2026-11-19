@@ -11,6 +11,11 @@ carries the same version. PR-by-PR detail is in
 | Home screen | Example questions nest under one "Example questions (5 types)" row; farm description line and the duplicate "When the AI is stopped" group removed (#34) |
 | Docs | README shortened from 115 to 57 lines; developer notes moved to [docs/DEVELOPER.md](docs/DEVELOPER.md) (#33) |
 | Tests | Host tests never touch the app's own state under `data/` (#32) |
+| Season windows | "Last five years" always means the latest five known seasons: years the model picks itself are replaced in code, and a single season the question never names is refused (`season_not_named`) |
+| Same cents on every platform | Profit is computed in exact Decimal, revenue and cost settled to the cent like the answer key: a float SUM had put eval 4's Marginal Eighty at -$112,044.66 on a Mac and -$112,044.65 on Linux. Eval 4 tests now expect -$112,044.66; YOUR_RECORDS' worked example is -$16,921.40 |
+| Withheld-sentence demo | `test_withheld_sentence_demo` is xfail: it records the model's wording on one machine, not code behaviour |
+| Refusal labels | `refusal_kind` is the parser's own kind (`out_of_scope`, `invalid_output`, ...), not a catch-all `unparseable` |
+| Eval report | `scripts/run_evals.py` writes each eval question's expected answer next to the app's actual answer |
 
 ## 0.2.0 (November 2026)
 

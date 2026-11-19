@@ -35,8 +35,16 @@ from .query_schema import FollowUpContext, QueryIntent, QueryObject, resolve_rel
 # "unresolved_followup": a follow-up's field or season came from neither the
 # new question nor the carried context (or a year the farmer named was
 # dropped) -- refuse rather than answer what may be the wrong question.
+#
+# "season_not_named": the same rule for a first question -- the lookup needs
+# one season and the model supplied a year the farmer never wrote.
 ParseFailureKind = Literal[
-    "model_unreachable", "invalid_output", "out_of_range", "out_of_scope", "unresolved_followup"
+    "model_unreachable",
+    "invalid_output",
+    "out_of_range",
+    "out_of_scope",
+    "unresolved_followup",
+    "season_not_named",
 ]
 
 DEFAULT_MODEL = "gemma3:4b"
@@ -126,6 +134,10 @@ earlier question other than its season.
 _YEAR = re.compile(r"\b(19|20)\d{2}\b")
 
 
+def _named_years(question: str) -> set[int]:
+    return {int(m.group(0)) for m in _YEAR.finditer(question)}
+
+
 def _normalize(text: str) -> str:
     return " ".join(re.sub(r"[\"'“”‘’?.,!]", " ", text.lower()).split())
 
@@ -152,7 +164,7 @@ def _check_follow_up(
         if not (in_question or from_context):
             return f"the field {name!r} is neither in this question nor the earlier one"
 
-    named_years = {int(m.group(0)) for m in _YEAR.finditer(question)} & set(known_seasons)
+    named_years = _named_years(question) & set(known_seasons)
     # Checked before a relative window ("last five years") is resolved, so
     # season_count_from_latest leaves `used` empty here -- that resolution is
     # done in code against the known range, never by the model.
@@ -190,6 +202,26 @@ NUMERIC_NAME_REASON = (
 
 def _is_numeric_name(name: str | None) -> bool:
     return name is not None and bool(_NUMERIC_NAME.match(name))
+
+
+def _keep_only_named_seasons(
+    question: str, query: QueryObject, context: FollowUpContext | None
+) -> QueryObject:
+    """which_fields_made_money: keep the model's `seasons` only if the farmer
+    wrote every one of those years (or, for a follow-up, it is the carried
+    season). Otherwise the model picked the years itself -- e.g. "last five
+    years" -> [2019..2023] -- so drop them and leave a count for
+    resolve_relative_seasons to turn into the latest N known seasons.
+    """
+    if not query.seasons:
+        return query
+    allowed = _named_years(question)
+    if context is not None and context.season is not None:
+        allowed.add(context.season)
+    if set(query.seasons) <= allowed:
+        return query
+    count = query.season_count_from_latest or len(query.seasons)
+    return query.model_copy(update={"seasons": None, "season_count_from_latest": count})
 
 
 @dataclasses.dataclass(frozen=True)
@@ -255,6 +287,19 @@ def parse_question(
             raw_question=question,
             reason=NUMERIC_NAME_REASON,
             kind="out_of_scope",
+            raw_model_output=raw_output,
+        )
+
+    if query.intent == QueryIntent.WHICH_FIELDS_MADE_MONEY:
+        query = _keep_only_named_seasons(question, query, context)
+
+    # A first question's single season must be written in it. (A follow-up's
+    # may come from the carried context; _check_follow_up handles that.)
+    if context is None and query.season is not None and query.season not in _named_years(question):
+        return ParseFailure(
+            raw_question=question,
+            reason=f"the question doesn't name a year; {query.season} came from the model",
+            kind="season_not_named",
             raw_model_output=raw_output,
         )
 

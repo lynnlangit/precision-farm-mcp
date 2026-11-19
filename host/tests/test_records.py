@@ -49,6 +49,7 @@ def test_your_records_worked_example_matches_farm_1():
     doc = (Path(__file__).resolve().parents[2] / "docs" / "YOUR_RECORDS.md").read_text()
     assert f"{rec.acres} acres" in doc
     assert f"${rec.revenue:,.2f}" in doc
+    assert f"settled to the cent as ${rec.total_cost:,.2f}" in doc
     assert f"**−${-rec.profit:,.2f}**" in doc
     assert f"${-rec.profit_per_acre:,.2f} per acre" in doc
     assert f"{len(snap.source_files)} for Farm 1" in doc
