@@ -141,22 +141,27 @@ def test_verdict_evidence_carries_an_integer_loss_count(profit_records):
             assert 0 <= losses <= v["evidence"]["num_seasons"]
 
 
-# Five loads whose plain float sum rounds to $26,597.13 or $26,597.14
-# depending on the order they're added -- the order a database hands rows
-# back in can differ between machines. (A float SUM put eval 4's Marginal
-# Eighty total at -$112,044.66 on a Mac and -$112,044.65 on Linux CI.)
+# Five loads whose plain float sum, added left to right as a database SUM
+# does, rounds to $26,597.13 or $26,597.14 depending on the order they're
+# added -- and the order a database adds rows in can differ between
+# machines. (A float SUM put eval 4's Marginal Eighty total at -$112,044.66
+# on a Mac and -$112,044.65 on Linux CI.)
 _ORDER_SENSITIVE_LOADS = [
     (809.8, 4.98), (1085.7, 5.35), (1113.0, 3.46), (1164.2, 5.31), (1177.4, 5.71),
 ]
 
 
 def test_revenue_is_the_same_cent_in_any_load_order():
+    import functools
     import itertools
+    import operator
 
     from farm_core.profitability import revenue_from_loads
 
+    # Not sum(): since Python 3.12 it compensates for float error, so it no
+    # longer shows the order sensitivity a plain left-to-right add has.
     float_cents = {
-        round(sum(bu * price for bu, price in order), 2)
+        round(functools.reduce(operator.add, (bu * price for bu, price in order)), 2)
         for order in itertools.permutations(_ORDER_SENSITIVE_LOADS)
     }
     assert len(float_cents) > 1  # the float sum really is order-sensitive here
