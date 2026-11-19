@@ -85,7 +85,7 @@ Marginal Eighty lost money in all 10.
 | They ask | Show them |
 |---|---|
 | "Where did that number come from?" | Open **Show the records** and open the file it names. Do the arithmetic above together. |
-| "Did the AI make it up?" | The AI writes no numbers. The answer's first line is written by code from the records. The AI may add one sentence, and **How we checked it** shows the 8 checks it had to pass. **Where it came from** names the exact lookup and field. |
+| "Did the AI make it up?" | The AI writes no numbers. The answer's first line is written by code from the records. The AI may add one sentence, and **How we checked it** shows the 9 checks it had to pass. **Where it came from** names the exact lookup and field. |
 | "What if my records are wrong?" | Switch to Farm 2, the same farm with messy records, and ask "Does the seed cost on Sheyenne Bottom in 2022 look right?". The record checks catch the mistyped seed cost. The tool checks one record against another; it doesn't trust any single one. |
 | "Is my data sent anywhere?" | Turn off Wi-Fi and ask again: it still works. The question still shows up in `data/audit.jsonl`, on this laptop. |
 | "Could someone change the log?" | Each line in `data/audit.jsonl` carries a hash of the line before it, so a changed or deleted line breaks the chain. |

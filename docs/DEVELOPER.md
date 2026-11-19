@@ -60,7 +60,7 @@ sets the first two per farm, and `farm-cli --audit-log` sets the third.
 | `servers/mcp-*` | Six FastMCP servers exposing `farm_core` as read-only MCP tools |
 | `host/` (`farm_host`) | MCP client and router, `farm-ingest` (human confirmation), `farm-cli`, `farm-preflight`, `farm-metrics` |
 | `web/` (`farm_web`) | `farm-web`, the local Gradio app for growers, a thin layer over `farm_host` |
-| `model/` (`farm_model`) | The bounded Gemma layer: question to lookup, the one added sentence, and the 8 checks |
+| `model/` (`farm_model`) | The bounded Gemma layer: question to lookup, the one added sentence, and the 9 checks |
 | `scripts/` | `probe_narration.py` and `run_evals.py`, for checking questions against the real model |
 | `data/` | The example farms once generated (`synthetic/`, `synthetic-clean/`), confirmed mappings and the audit log; all gitignored except `data/synthetic/README.md` |
 | `docs/` | Every doc is listed in the [README](../README.md#start-here) |

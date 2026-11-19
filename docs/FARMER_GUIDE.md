@@ -220,7 +220,7 @@ Each part of the answer is labelled. **Calculated from your records** is
 plain arithmetic on your files. **Added by the AI, then checked** is the
 one sentence the AI wrote, shown only because it passed every check.
 Below the answer, **How we checked it** and **The numbers behind it** are
-folded to one line each, with a short summary such as "All 8 passed".
+folded to one line each, with a short summary such as "All 9 passed".
 Click either to open it: the checks, the exact figures the answer came
 from, and which records were read. Under **Where it came from**, **Show
 the records** lists every file, spreadsheet tab and row the answer used,

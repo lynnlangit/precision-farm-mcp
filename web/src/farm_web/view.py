@@ -32,6 +32,7 @@ CHECKS: tuple[tuple[str, str], ...] = (
     ("attribution", "It doesn't treat a modeled estimate as a proven cause"),
     ("unsupported_cause", "It doesn't name a cause your records don't show"),
     ("units", "Every number keeps its own unit (mm, inches, lb, gallons)"),
+    ("season_count", "Any count of years or seasons matches your records"),
 )
 _CHECK_LABELS = dict(CHECKS)
 

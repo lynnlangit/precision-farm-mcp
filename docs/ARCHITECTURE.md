@@ -36,7 +36,7 @@ flowchart TD
 
     Router --> Template["Template answer<br/>deterministic lead sentence + 'therefore' line"]
     Router --> Narrator["Gemma 3 4B<br/>may add one sentence of context. Farmer free text<br/>is delimited as untrusted data first"]
-    Narrator --> Checks["Verifier — 8 checks<br/>grounded numbers, verdict, 6 meaning checks —<br/>one try — fails ⇒ sentence withheld"]
+    Narrator --> Checks["Verifier — 9 checks<br/>grounded numbers, verdict, 7 meaning checks —<br/>one try — fails ⇒ sentence withheld"]
     Template --> Answer(["Answer<br/>the web app also shows the checks, figures and source"])
     Checks -->|"only if every check passes"| Answer
 ```
@@ -44,7 +44,7 @@ flowchart TD
 Gemma touches a question at exactly two points: parsing it into a
 validated query, and adding at most one sentence to an answer a
 deterministic template has already written. That sentence is shown only if
-it passes all 8 checks in `model/src/farm_model/verification.py`;
+it passes all 9 checks in `model/src/farm_model/verification.py`;
 otherwise it is withheld and the template answer stands alone. Gemma never
 sees raw data, computes a number, or resolves an ambiguous name; the model
 layer can't import a database or MCP client
@@ -71,7 +71,7 @@ sequenceDiagram
     participant H as Farm host<br/>(plain code)
     participant AI as AI model<br/>(Gemma 3 4B on Ollama)
     participant S as Farm record servers<br/>(6 MCP servers)
-    participant C as The 8 checks<br/>(plain code)
+    participant C as The 9 checks<br/>(plain code)
 
     rect rgb(246, 233, 200)
     Note over W,S: When the app opens (once)
@@ -107,9 +107,9 @@ sequenceDiagram
     H->>H: Write the verified answer from a template using only those numbers
     H->>AI: Add at most one sentence of context?<br/>(sees the question, the verified answer, the numbers)
     AI-->>H: One sentence (or "NONE" — nothing to add)
-    H->>C: Run the 8 checks on the AI's sentence
-    Note over C: 1 Every number appears in your records<br/>2 Agrees with the verified answer<br/>3 Gains are gains, losses are losses<br/>4 Describes the right zones<br/>5 Says correctly whether two records agree<br/>6 Doesn't treat a modeled estimate as a proven cause<br/>7 Doesn't name a cause your records don't show<br/>8 Every number keeps its own unit
-    alt All 8 pass
+    H->>C: Run the 9 checks on the AI's sentence
+    Note over C: 1 Every number appears in your records<br/>2 Agrees with the verified answer<br/>3 Gains are gains, losses are losses<br/>4 Describes the right zones<br/>5 Says correctly whether two records agree<br/>6 Doesn't treat a modeled estimate as a proven cause<br/>7 Doesn't name a cause your records don't show<br/>8 Every number keeps its own unit<br/>9 Any count of years matches your records
+    alt All 9 pass
         C-->>H: Passed — sentence is SHOWN, tagged "Added by the AI, then checked"
     else Any check fails
         C-->>H: Failed — sentence is WITHHELD (no second try), the verified answer stands alone
@@ -164,7 +164,7 @@ What each piece is and where it lives. What growers see is in
 | Farm picker | Built | `host/farms.py`. Farm 1 = `data/synthetic-clean` (clean), Farm 2 = `data/synthetic` (messy); one server pool per farm via `FARM_DATA_DIR`/`FARM_CONFIRM_STORE` |
 | "Show the records" | Built | `core/records_behind.py`, `host/records.py`. Files, tabs and rows behind each answer; fetched after the checks, never shown to the AI. File formats: [YOUR_RECORDS.md](YOUR_RECORDS.md) |
 | Follow-ups | Built | `host/followups.py`. Only the last verified answer's field, season and question type carry over |
-| Template-first narration (`narrate_verified`) | Built | `model/narrator.py`, `model/verification.py`. Template sentence leads; one AI try (`max_attempts=1`), kept only if all 8 checks pass |
+| Template-first narration (`narrate_verified`) | Built | `model/narrator.py`, `model/verification.py`. Template sentence leads; one AI try (`max_attempts=1`), kept only if all 9 checks pass |
 | Audit log | Built | `core/audit.py`. Hash-chained, safe under concurrent host and server writes |
 | Provenance (`modeled` subtree), grounding split | Built | Every server response; `modeled` holds the weather attribution on `bad_year` verdicts, `null` elsewhere |
 | Untrusted-text handling, payload capping | Built | `host/mcp_client.py` (`UNTRUSTED_FREE_TEXT_FIELDS`), `model/narrator.py` |

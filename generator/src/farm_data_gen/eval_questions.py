@@ -516,8 +516,10 @@ def render_eval_questions(ground_truth: dict, data_dir: Path | None = None) -> s
         f'**Tool:** `cost-ledger.get_cost_reconciliation(field_name="{digit_name}", '
         f"season={digit['season']})`",
         f"**Verifiable answer:** The `\"seed\"` line item is `outlier_flagged = true` -- the "
-        f"ledger records `${digit['ledger_value']:,.2f}/ac` where the correct figure is "
-        f"`${digit['correct_value']:,.2f}/ac` (a single transposed digit). Ground truth: "
+        f"ledger records `${digit['ledger_value']:,.2f}/ac` where the correct entry is "
+        f"`${digit['correct_value']:,.2f}/ac` (a single transposed digit). The app compares "
+        "the ledger with its own estimate from the as-applied seeding rate and seed price, "
+        "which lands near the correct entry, not exactly on it. Ground truth: "
         f"`{digit['defect_id']}`.",
         "",
         # effective_season is the FIRST season the field is absent, so the

@@ -55,7 +55,7 @@ In the web app, every numbered question except 10 is also an example button. **P
 ### 9. A ledger entry that doesn't match its own inputs
 **Q:** Does the seed cost on Sheyenne Bottom in 2022 look right?
 **Tool:** `cost-ledger.get_cost_reconciliation(field_name="Sheyenne Bottom", season=2022)`
-**Verifiable answer:** The `"seed"` line item is `outlier_flagged = true` -- the ledger records `$95.55/ac` where the correct figure is `$59.55/ac` (a single transposed digit). Ground truth: `DEF-DIGIT-2022-root_06`.
+**Verifiable answer:** The `"seed"` line item is `outlier_flagged = true` -- the ledger records `$95.55/ac` where the correct entry is `$59.55/ac` (a single transposed digit). The app compares the ledger with its own estimate from the as-applied seeding rate and seed price, which lands near the correct entry, not exactly on it. Ground truth: `DEF-DIGIT-2022-root_06`.
 
 ### 10. A field that no longer exists
 **Q:** What does "Township Rd 12" refer to in 2020?
