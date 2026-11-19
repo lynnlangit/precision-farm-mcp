@@ -57,11 +57,11 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "Was the Marginal Eighty a bad field or just a bad year?",
             "Was South 160 South a bad field or just a bad year?",
-            # Third, not first: this is eval 2, the one gemma3:4b fails the
-            # checks on (it blames "an unusual weather pattern", which no
-            # record shows, so the sentence is withheld; see
-            # host/tests/test_eval_nl.py -k withheld). The group opens on two
-            # answers that pass.
+            # Third, not first: this is eval 2, the one gemma3:4b often
+            # fails the checks on (it may blame "an unusual weather pattern",
+            # which no record shows, so the sentence is withheld; it depends
+            # on the model's output -- see host/tests/test_eval_nl.py -k
+            # withheld). The group opens on two answers that pass.
             "Was East 80 a bad field or just a bad year?",
         ),
     ),

@@ -234,9 +234,9 @@ it opens by itself then, so the failed check is easy to find.
 To see that happen, open **Example questions**, then **Bad field or bad
 year?**, and tap the third question, "Was East 80 a bad field or just a bad
 year?". The AI
-tries to add that the 2020 loss was due to an unusual weather pattern. Your
-records show that 2020 was a bad year, but not why, so the sentence is
-blocked. The AI gets one try, so the answer you see is the part calculated
+often tries to add that the 2020 loss was due to an unusual weather pattern
+(what it writes can vary by computer). Your records show that 2020 was a
+bad year, but not why, so that sentence is blocked. The AI gets one try, so the answer you see is the part calculated
 from your records, nothing more.
 
 ![Below the answer, opened: How we checked it (all 8 checks passed) and The numbers behind it (the figures and where they came from)](images/farm-web-checks.png)

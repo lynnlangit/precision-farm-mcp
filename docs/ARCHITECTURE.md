@@ -94,9 +94,10 @@ sequenceDiagram
     W->>H: The question + which farm + follow-up context<br/>(last field, season, question type)
     H->>AI: Turn this question into ONE lookup
     AI-->>H: Question type + field + season (structured JSON)
-    alt AI not running, question out of scope, or a follow-up's field/season came from nowhere
+    alt AI not running, question out of scope, or a field/season the question (or follow-up context) never named
         H-->>W: Polite "I couldn't look that up" — nothing is looked up
     end
+    H->>H: Years the question didn't name are never used: "last five years" becomes the latest 5 known seasons, in code
     H->>H: Pick the one server and tool for that question type (a fixed table, not AI)
     H->>S: One lookup, e.g. bad_field_or_bad_year("East 80")
     S-->>H: Numbers straight from the records (no AI involved)

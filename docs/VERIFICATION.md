@@ -74,10 +74,11 @@ Two workflows keep CI fast:
 - ✅ **Answers lead with verified text, and the AI's sentence is checked.**
   The model's one added sentence is shown only if it passes all
   [8 checks](ARCHITECTURE.md#how-a-question-flows-in-the-web-app); it gets
-  one try, so a failing sentence is withheld. The East 80 example under
-  "Bad field or bad year?" (eval 2) is one `gemma3:4b` has failed every time we've measured
-  (`pytest -m eval_nl host/tests -k withheld`). Sampling uses a fixed seed,
-  so a given machine mostly gives the same sentence each run;
+  one try, so a failing sentence is withheld. Whether a given question's
+  sentence fails depends on what the model writes on that machine: the
+  East 80 example under "Bad field or bad year?" (eval 2) was withheld
+  4 of 4 times on one Mac and 1 of 4 on another
+  (`pytest -m eval_nl host/tests -k withheld`, xfail for that reason).
   `scripts/probe_narration.py` re-checks any question against the real
   model
 - 📊 **Governance is measurable**: `farm-metrics` reports the human catch

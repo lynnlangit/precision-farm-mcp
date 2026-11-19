@@ -114,8 +114,9 @@ class AnswerResult:
     payload: dict | None = None
     narration: NarrationOutcome | None = None
     therefore: str | None = None
-    # "model_unreachable", "unparseable", "unresolved_followup" or "tool_refused"
-    # when ok is False.
+    # When ok is False: the parser's own ParseFailure.kind ("model_unreachable",
+    # "invalid_output", "out_of_range", "out_of_scope", "unresolved_followup",
+    # "season_not_named"), or "tool_refused".
     refusal_kind: str | None = None
     # The raw files, spreadsheet tabs and rows the lookup read (web app only,
     # "Show the records"); see farm_host.records. Never seen by the narrator.
@@ -178,7 +179,17 @@ async def answer_question(
                     f"Sheyenne Bottom in 2023 look right?\" (Reason: {query.reason})"
                 ),
                 ok=False,
-                refusal_kind="unresolved_followup",
+                refusal_kind=query.kind,
+            )
+        if query.kind == "season_not_named":
+            return AnswerResult(
+                text=(
+                    "That lookup needs a season, and your question didn't name one, so I "
+                    "didn't look anything up. Try naming the year, e.g. \"How dry was "
+                    f"2018?\" (Reason: {query.reason})"
+                ),
+                ok=False,
+                refusal_kind=query.kind,
             )
         if query.kind == "model_unreachable":
             return AnswerResult(
@@ -188,7 +199,7 @@ async def answer_question(
                     f"farm-preflight` to see exactly what. ({query.reason})"
                 ),
                 ok=False,
-                refusal_kind="model_unreachable",
+                refusal_kind=query.kind,
             )
         return AnswerResult(
             text=(
@@ -200,7 +211,7 @@ async def answer_question(
                 f"(Reason: {query.reason})"
             ),
             ok=False,
-            refusal_kind="unparseable",
+            refusal_kind=query.kind,
         )
 
     # What the parser decided, before routing -- lets the eval runner (and a

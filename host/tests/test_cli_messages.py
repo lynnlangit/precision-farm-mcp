@@ -46,6 +46,33 @@ async def test_out_of_scope_message_does_not_mention_preflight(tmp_path, monkeyp
     assert "farm-preflight" not in result.text
 
 
+@pytest.mark.parametrize(
+    "kind",
+    ["model_unreachable", "invalid_output", "out_of_range", "out_of_scope", "season_not_named"],
+)
+async def test_refusal_kind_is_the_parsers_own_kind(tmp_path, monkeypatch, kind):
+    monkeypatch.setattr(
+        cli,
+        "parse_question",
+        lambda question, seasons: ParseFailure(raw_question=question, reason="r", kind=kind),
+    )
+    result = await cli.answer_question("q", AuditLog(tmp_path / "audit.jsonl"))
+    assert not result.ok
+    assert result.refusal_kind == kind
+
+
+async def test_season_not_named_asks_for_the_year(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        cli,
+        "parse_question",
+        lambda question, seasons: ParseFailure(
+            raw_question=question, reason="no year", kind="season_not_named"
+        ),
+    )
+    result = await cli.answer_question("how dry was it", AuditLog(tmp_path / "audit.jsonl"))
+    assert "naming the year" in result.text
+
+
 async def test_numeric_name_refusal_gives_a_grower_friendly_hint(tmp_path, monkeypatch):
     """The "-5.16" follow-up: a refusal (not an answer) that tells the grower
     what to ask instead, never a raw "no field named '-5.16'" error.
