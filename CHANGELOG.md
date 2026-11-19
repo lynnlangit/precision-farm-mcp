@@ -9,6 +9,7 @@ carries the same version. PR-by-PR detail is in
 | Area | What changed |
 |---|---|
 | Answer card | The gold "What that means" section is gone: it restated the calculated answer and could be mistaken for AI text. The card now has two parts, calculated (green) and added by the AI, then checked (blue). `farm-cli` still prints its "Therefore:" line |
+| README | New hero screenshot without the gold line; "What you see in every answer" is a table naming who writes each part |
 | Home screen | Example questions nest under one "Example questions (5 types)" row; farm description line and the duplicate "When the AI is stopped" group removed (#34) |
 | Docs | README shortened from 115 to 57 lines; developer notes moved to [docs/DEVELOPER.md](docs/DEVELOPER.md) (#33) |
 | Tests | Host tests never touch the app's own state under `data/` (#32) |
