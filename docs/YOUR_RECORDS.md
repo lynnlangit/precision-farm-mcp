@@ -75,7 +75,7 @@ ledger. For Farm 1's Marginal Eighty in 2025:
 | `cost_ledger.xlsx`, tab `2025`, row 10 | $40.56 + $44.24 + $155.11 + $83.41 + $183.45 = $506.77 per acre |
 | `boundaries/field_boundaries_2025.geojson` | Marginal Eighty, 165.5 acres, soybean |
 | `scale_tickets/scale_tickets_2025.csv`, tickets 2617 to 2623 | 7 loads, 6,351.9 net bushels at $10.54 = $66,949.03 |
-| The arithmetic | $66,949.03 − $506.77 × 165.5 = **−$16,921.41**, a loss of $102.24 per acre |
+| The arithmetic | Costs: $506.77 × 165.5 = $83,870.435, settled to the cent as $83,870.43. Profit: $66,949.03 − $83,870.43 = **−$16,921.40**, a loss of $102.24 per acre |
 
 Do this for each season and you have the bad-field-or-bad-year answer:
 Marginal Eighty lost money in all 10.
