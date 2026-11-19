@@ -16,6 +16,9 @@ carries the same version. PR-by-PR detail is in
 | Withheld-sentence demo | `test_withheld_sentence_demo` is xfail: it records the model's wording on one machine, not code behaviour |
 | Refusal labels | `refusal_kind` is the parser's own kind (`out_of_scope`, `invalid_output`, ...), not a catch-all `unparseable` |
 | Eval report | `scripts/run_evals.py` writes each eval question's expected answer next to the app's actual answer |
+| Season-count check | A 9th check, `season_count`: an AI sentence that counts years or seasons ("over the past five years") must use a count the records hold, and can't compare a season with the "previous N" that include it |
+| Eval 3 Therefore line | No longer repeats the answer's first sentence; it states the verdict ("5 of its 6 recorded seasons had no loss") |
+| Eval 9 wording | The eval doc says the app checks the ledger against its own as-applied estimate, which lands near the correct entry, not on it |
 
 ## 0.2.0 (November 2026)
 

@@ -431,3 +431,74 @@ def test_unsupported_cause_retry_reason_exists():
     from farm_model import narrator
 
     assert "unsupported_cause" in narrator._RETRY_REASONS
+
+
+# --- Season counts (spelled-out counts slip past numeric grounding) ----------
+
+EVAL12_WEATHER_2018 = {
+    "season": 2018,
+    "total_precip_mm": 172.6,
+    "farm_average_precip_mm": 434.4,
+    "pct_vs_farm_average": -60,
+    "num_seasons_compared": 10,
+    "precip_rank_driest": 1,
+}
+
+EVAL15_NITROGEN = {
+    "field_name": "Section Corner",
+    "nitrogen_by_season": [
+        {"season": 2022, "crop": "soybean", "n_lb_n_ac": 5.2},
+        {"season": 2023, "crop": "corn", "n_lb_n_ac": 160.6},
+        {"season": 2024, "crop": "soybean", "n_lb_n_ac": 6.2},
+        {"season": 2025, "crop": "corn", "n_lb_n_ac": 141.3},
+    ],
+    "nitrogen_by_crop": {
+        "corn": {"num_seasons": 2, "min_season": 2025, "max_season": 2023},
+        "soybean": {"num_seasons": 2, "min_season": 2022, "max_season": 2024},
+    },
+    "logs_start_season": 2022,
+}
+
+# Verbatim from the eval run (data/eval_results.md, evals 15 and 12).
+EVAL15_WRONG = (
+    "Here’s a breakdown of the nitrogen application rates for Section Corner over the "
+    "past five years."
+)
+EVAL12_WRONG = (
+    "2018 experienced significantly below-average rainfall compared to the previous ten "
+    "seasons, resulting in a shortfall for crop water needs."
+)
+
+
+def test_eval15_wrong_count_of_years_fails():
+    assert failed_semantic_checks(EVAL15_WRONG, EVAL15_NITROGEN) == ["season_count"]
+
+
+def test_eval12_previous_seasons_that_include_this_one_fails():
+    assert failed_semantic_checks(EVAL12_WRONG, EVAL12_WEATHER_2018) == ["season_count"]
+
+
+@pytest.mark.parametrize(
+    ("text", "payload"),
+    [
+        ("Section Corner's nitrogen was logged in four seasons, two of them corn.",
+         EVAL15_NITROGEN),
+        ("Nitrogen on Section Corner varied over the 4 logged seasons.", EVAL15_NITROGEN),
+        ("2018 was the driest of the 10 seasons on record.", EVAL12_WEATHER_2018),
+        ("2018 had far less rain than the ten-season farm average.", EVAL12_WEATHER_2018),
+        ("Marginal Eighty lost money over ten consecutive seasons.",
+         {"verdict": "bad_field", "evidence": {"num_seasons": 10}}),
+        ("East 80 made money in every one of the last five years.",
+         {"results": [{"display_name": "East 80", "seasons": [2021, 2022, 2023, 2024, 2025]}]}),
+        ("The loss was confined to one season.", EVAL2_EAST_80),
+    ],
+)
+def test_counts_the_records_support_pass(text, payload):
+    assert failed_semantic_checks(text, payload) == []
+
+
+def test_a_count_with_no_seasons_in_the_payload_fails():
+    soil = {"field_name": "Coulee Field", "awc_in": 6.93}
+    assert failed_semantic_checks("Coulee Field's soil has held water well for 30 years.", soil) == [
+        "season_count"
+    ]

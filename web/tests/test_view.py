@@ -119,7 +119,7 @@ def test_withheld_sentence_is_flagged_in_the_answer_and_its_failed_check_is_open
     assert "agrees with the verified answer" in view.answer_html  # why it was stopped
     # Its panel opens by itself, with the failed count on its folded line.
     assert view.checks_open is True
-    assert view.checks_summary == "2 of 8 failed \u00b7 AI sentence withheld"
+    assert view.checks_summary == "2 of 9 failed \u00b7 AI sentence withheld"
     assert view.checks_tone == "warn"
     # The checks panel shows both tries, open, each with the full checklist.
     assert "withheld: it failed a check on all 2 tries" in view.checks_html
@@ -141,8 +141,8 @@ def test_rejected_try_before_a_passing_one_stays_folded():
         )
     )
     assert "AI sentence withheld" not in view.answer_html
-    assert "passed all 8 checks on try 2" in view.checks_html
-    assert view.checks_summary == "All 8 passed on try 2 \u00b7 AI sentence shown"
+    assert "passed all 9 checks on try 2" in view.checks_html
+    assert view.checks_summary == "All 9 passed on try 2 \u00b7 AI sentence shown"
     assert view.checks_open is False
     assert '<details class="pf-rejected">' in view.checks_html
 
@@ -295,7 +295,7 @@ def test_panels_fold_to_one_summary_line():
     view = build_view(_result(narration=_outcome(context="The weather explains part of it.")))
     checks = checks_panel_html(view)
     assert checks.startswith('<details class="pf-fold">')  # closed when all passed
-    assert "All 8 passed \u00b7 AI sentence shown" in checks
+    assert "All 9 passed \u00b7 AI sentence shown" in checks
     numbers = numbers_panel_html(view)
     assert numbers.startswith('<details class="pf-fold">')
     assert "1 modeled estimate" in numbers and "Where it came from" in numbers

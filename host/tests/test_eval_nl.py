@@ -81,7 +81,7 @@ EVALS = [
          "bad_field_or_bad_year", "report-export", "bad_field_or_bad_year",
          {"field_name": "South 160 South"},
          contains=("1 of 6 recorded seasons", "$175.41/ac"),
-         therefore="lost money in 1 of 6 recorded seasons"),
+         therefore="5 of its 6 recorded seasons had no loss"),
     Eval(4, "Which fields made money in the last five years?",
          "which_fields_made_money", "report-export", "which_fields_made_money",
          {"seasons": [2021, 2022, 2023, 2024, 2025]},

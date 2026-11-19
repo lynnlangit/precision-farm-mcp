@@ -36,7 +36,8 @@ def test_consistently_profitable_verdict_has_a_line():
 
 def test_consistently_profitable_states_the_real_loss_count():
     """Eval 3: South 160 South lost money in 1 of 6 seasons -- the line must
-    say so, not "no season shows a loss pattern".
+    reflect that real count, not "no season shows a loss pattern", and must
+    not repeat the lead ("lost money in 1 of 6 recorded seasons (median ...)").
     """
     payload = {
         "verdict": "consistently_profitable",
@@ -49,8 +50,8 @@ def test_consistently_profitable_states_the_real_loss_count():
     }
     line = build_therefore_line(payload)
     assert line == (
-        "Therefore: this field lost money in 1 of 6 recorded seasons (median $175.41/ac) "
-        "-- neither a chronic pattern nor a single standout bad year."
+        "Therefore: this field is consistently profitable -- 5 of its 6 recorded seasons "
+        "had no loss."
     )
 
 
@@ -61,8 +62,8 @@ def test_consistently_profitable_with_zero_losses():
     }
     line = build_therefore_line(payload)
     assert line == (
-        "Therefore: this field lost money in none of its 10 recorded seasons "
-        "(median $1,234.50/ac)."
+        "Therefore: this field is consistently profitable -- none of its 10 recorded "
+        "seasons had a loss."
     )
 
 

@@ -552,6 +552,85 @@ def check_units_consistent(narration: str, payload: object) -> bool:
     return True
 
 
+# A count of years or seasons the model writes as a word slips past
+# grounding, which only reads digits. Seen live: "a breakdown ... over the
+# past five years" on a nitrogen history with four logged seasons, and
+# "below-average rainfall compared to the previous ten seasons" on 2018's
+# weather, whose 10-season average includes 2018 itself.
+_COUNT_WORDS = {
+    w: i
+    for i, w in enumerate(
+        "two three four five six seven eight nine ten eleven twelve thirteen fourteen "
+        "fifteen sixteen seventeen eighteen nineteen twenty".split(),
+        start=2,
+    )
+}
+_SEASON_COUNT_RE = re.compile(
+    r"\b(?:(previous|prior|preceding|past|last)\s+)?"
+    rf"(\d{{1,2}}|{'|'.join(_COUNT_WORDS)})\s+"
+    r"(?:(?:consecutive|recorded|logged|growing|crop|full|previous|prior|past)\s+)*"
+    r"(?:years?|seasons?|harvests?)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_year(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and 1900 <= value <= 2100
+
+
+def _payload_season_counts(payload: object) -> set[int]:
+    """Every season count the payload supports: num_*season* fields, the
+    length of each list of seasons, and how many distinct seasons it covers."""
+    counts: set[int] = set()
+    years: set[int] = set()
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                key_s = str(key)
+                if key_s.isdigit() and _is_year(int(key_s)):
+                    years.add(int(key_s))
+                if "season" in key_s:
+                    if key_s.startswith("num_") and isinstance(item, int):
+                        counts.add(item)
+                    elif _is_year(item):
+                        years.add(item)
+                    elif isinstance(item, (list, tuple)) and item and all(map(_is_year, item)):
+                        years.update(item)
+                        counts.add(len(set(item)))
+                walk(item)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                walk(item)
+
+    walk(_without_provenance(payload))
+    if years:
+        counts.add(len(years))
+    return counts
+
+
+def check_season_count(narration: str, payload: object) -> bool:
+    """Fails a sentence that counts years or seasons ("over the past five
+    years", "10 recorded seasons") when that count isn't one the payload
+    holds, or that compares one season with the "previous"/"prior" N --
+    every comparison these tools make includes the season itself.
+    """
+    matches = _SEASON_COUNT_RE.findall(narration)
+    if not matches:
+        return True
+    allowed = _payload_season_counts(payload)
+    one_season = isinstance(payload, dict) and _is_year(payload.get("season"))
+    for qualifier, count in matches:
+        n = int(count) if count.isdigit() else _COUNT_WORDS[count.lower()]
+        if n < 2:
+            continue  # "1 season" / "one season" is phrasing, not a window
+        if n not in allowed:
+            return False
+        if one_season and qualifier.lower() in ("previous", "prior", "preceding"):
+            return False
+    return True
+
+
 SEMANTIC_CHECKS = {
     "sign": check_sign_consistency,
     "zone_premise": check_zone_premise,
@@ -559,6 +638,7 @@ SEMANTIC_CHECKS = {
     "attribution": check_attribution_not_causal,
     "unsupported_cause": check_no_unsupported_cause,
     "units": check_units_consistent,
+    "season_count": check_season_count,
 }
 
 

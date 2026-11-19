@@ -20,7 +20,7 @@ on your own laptop. Never a prediction, never a guess, never sent anywhere.
 ## What you see in every answer
 
 - **Calculated from your records.** Plain arithmetic written by code, not by the AI. It always comes first.
-- **One AI sentence, checked.** A small local model (Gemma 3 4B via Ollama) may add one sentence, shown only if it passes all 8 checks. Otherwise it is withheld and you can see what it tried to say.
+- **One AI sentence, checked.** A small local model (Gemma 3 4B via Ollama) may add one sentence, shown only if it passes all 9 checks. Otherwise it is withheld and you can see what it tried to say.
 - **Show the records.** Every file, spreadsheet tab and row the answer used is listed, so you can check it by hand.
 
 The web app comes with two made-up North Dakota example farms: **Farm 1**

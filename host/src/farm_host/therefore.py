@@ -28,25 +28,22 @@ def _for_verdict(payload: dict) -> str | None:
             "every other recorded season was unremarkable, not a sign of a chronic problem."
         )
     if verdict == "consistently_profitable":
+        # The lead already gives the loss count and median; this line states
+        # the verdict and the other side of the count, never the lead again.
         num_seasons = evidence.get("num_seasons")
         losses = evidence.get("num_loss_seasons")
-        median = evidence.get("median_profit_per_acre")
-        median_txt = f" (median ${median:,.2f}/ac)" if median is not None else ""
         if losses is None or num_seasons is None:
             # Older payload without the integer count -- don't derive it from
             # the rounded loss_rate, and don't claim zero losses either.
-            return (
-                f"Therefore: this field's record{median_txt} shows neither a chronic loss "
-                "pattern nor a single standout bad year."
-            )
+            return "Therefore: this field is consistently profitable."
         if losses == 0:
             return (
-                f"Therefore: this field lost money in none of its {num_seasons} recorded "
-                f"seasons{median_txt}."
+                "Therefore: this field is consistently profitable -- none of its "
+                f"{num_seasons} recorded seasons had a loss."
             )
         return (
-            f"Therefore: this field lost money in {losses} of {num_seasons} recorded "
-            f"seasons{median_txt} -- neither a chronic pattern nor a single standout bad year."
+            f"Therefore: this field is consistently profitable -- {num_seasons - losses} of "
+            f"its {num_seasons} recorded seasons had no loss."
         )
     return None  # "no_data" -- nothing was computed, so nothing to restate
 

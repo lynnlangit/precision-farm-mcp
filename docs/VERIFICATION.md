@@ -73,7 +73,7 @@ Two workflows keep CI fast:
   (`test_structured_path_never_calls_ollama`)
 - ✅ **Answers lead with verified text, and the AI's sentence is checked.**
   The model's one added sentence is shown only if it passes all
-  [8 checks](ARCHITECTURE.md#how-a-question-flows-in-the-web-app); it gets
+  [9 checks](ARCHITECTURE.md#how-a-question-flows-in-the-web-app); it gets
   one try, so a failing sentence is withheld. Whether a given question's
   sentence fails depends on what the model writes on that machine: the
   East 80 example under "Bad field or bad year?" (eval 2) was withheld
