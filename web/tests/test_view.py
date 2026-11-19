@@ -153,10 +153,13 @@ def test_nothing_to_add_is_not_called_withheld():
     assert "nothing to add" in view.checks_html
 
 
-def test_therefore_line_is_sentence_cased_without_prefix():
-    view = build_view(_result())
-    assert "Therefore:" not in view.answer_html
-    assert "The loss was isolated to 2020." in view.answer_html
+def test_answer_card_leaves_out_the_therefore_line():
+    # The card shows only what was calculated and what the AI added; the
+    # terminal's "Therefore:" restatement is not part of it.
+    view = build_view(_result(narration=_outcome(context="The weather explains part of it.")))
+    assert "What that means" not in view.answer_html
+    assert "pf-line-therefore" not in view.answer_html
+    assert "isolated to 2020" not in view.answer_html
 
 
 def test_figures_show_evidence_and_label_modeled_estimate():
