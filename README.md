@@ -19,9 +19,11 @@ on your own laptop. Never a prediction, never a guess, never sent anywhere.
 
 ## What you see in every answer
 
-- **Calculated from your records.** Plain arithmetic written by code, not by the AI. It always comes first.
-- **One AI sentence, checked.** A small local model (Gemma 3 4B via Ollama) may add one sentence, shown only if it passes all 9 checks. Otherwise it is withheld and you can see what it tried to say.
-- **Show the records.** Every file, spreadsheet tab and row the answer used is listed, so you can check it by hand.
+| Part | Written by | What it means |
+|---|---|---|
+| **Calculated from your records** (green) | Code, not the AI | Plain arithmetic on your files. Always comes first. |
+| **Added by the AI, then checked** (blue) | Gemma 3 4B, running locally in Ollama | At most one sentence, one try. Shown only if it passes all 9 checks; otherwise withheld, and **See what it wrote** shows what it tried to say. |
+| **How we checked it** / **The numbers behind it** | Code | The 9 checks, the exact figures, and **Show the records**: every file, tab and row used, so you can check by hand. |
 
 The web app comes with two made-up North Dakota example farms: **Farm 1**
 has clean records, **Farm 2** has the mistakes real records have, and its
