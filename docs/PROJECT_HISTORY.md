@@ -87,6 +87,13 @@ One PR per step, merged in order. The eval fix plan was P0–P5.
 | #32 | Host tests never read or write the app's own state under `data/` |
 | #33 | README shortened (115 to 57 lines); new `docs/DEVELOPER.md` |
 | #34 | Tidier home screen: example questions nested under one "Example questions (5 types)" row; farm description line removed |
+| #35, #37–#39 | Repo tidy: docs de-duplicated; ruff and `uv lock --check` in the PR check; `farm-preflight` checks both farms; the six servers share `core/server_support.py` |
+| #40 | README screenshot retaken after the home screen tidy |
+| #43 | Brick Ellis with Lynn: `scripts/run_evals.py` (expected vs. actual answer per eval question); profit computed in exact Decimal so every platform gets the same cents; "last five years" always the latest five known seasons; parser refusal kinds |
+| #44 | Brick Ellis with Lynn: a 9th check, `season_count`; eval 3's Therefore line no longer repeats the answer; eval 9 wording |
+| #45 | Gold "What that means" line removed from the answer card (`farm-cli` keeps "Therefore:") |
+| #46 | New README hero screenshot; "What you see in every answer" as a table |
+| #47 | A few meaningful icons: answer labels, the two folded panels, and each example question type |
 
 ## Where to resume
 
