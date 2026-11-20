@@ -29,7 +29,7 @@ def test_examples_are_the_eval_questions():
 
 
 def _fake_answer(seen: list):
-    async def fake(question, audit_log, env_overrides=None, context=None, fleet=None):
+    async def fake(question, audit_log, env_overrides=None, context=None, fleet=None, **labels):
         seen.append(context)
         if question == "nonsense":
             return AnswerResult(text="no", ok=False, refusal_kind="out_of_scope")

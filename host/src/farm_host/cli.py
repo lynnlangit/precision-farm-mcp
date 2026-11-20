@@ -143,6 +143,9 @@ async def answer_question(
     env_overrides: dict[str, str] | None = None,
     context: FollowUpContext | None = None,
     fleet: MCPFleet | None = None,
+    source: str = "cli",
+    farm: str | None = None,
+    session_id: str | None = None,
 ) -> AnswerResult:
     """`context` is set only for a follow-up (the grower web app): the last
     verified answer's field, season and question type. It only helps parse
@@ -152,14 +155,26 @@ async def answer_question(
     `fleet` is an already-running set of servers (the web app keeps one open
     so each question skips the server start and snapshot build). Without it,
     the needed server is started for this one question, as the CLI does.
+
+    `source` ("cli" or "web"), `farm` (a FARMS key) and `session_id` (one
+    run of the web app) go on the "query" entry, so the web app's Session
+    history can tell runs and farms apart. They change nothing else.
     """
     if context is not None and context.is_empty():
         context = None
+    labels: dict = {"source": source}
+    if farm is not None:
+        labels["farm"] = farm
+    if session_id is not None:
+        labels["session_id"] = session_id
     if context is None:
-        audit_log.log("query", question=question)
+        audit_log.log("query", question=question, **labels)
     else:
         audit_log.log(
-            "query", question=question, follow_up_context=context.model_dump(mode="json")
+            "query",
+            question=question,
+            follow_up_context=context.model_dump(mode="json"),
+            **labels,
         )
 
     # A first question calls the parser exactly as before; only a follow-up
@@ -266,6 +281,11 @@ async def answer_question(
         failed_checks=[list(f) for f in outcome.failed_checks],
         rejected_texts=list(outcome.rejected_texts),
         model_context_shown=outcome.context is not None,
+        # What the grower read: the green lead sentence (written by code)
+        # and the blue model sentence that passed every check (None when
+        # withheld or the model added nothing).
+        lead=outcome.lead,
+        shown_text=outcome.context,
     )
     therefore = build_therefore_line(result)
     text = f"{outcome.text}\n\n{therefore}" if therefore else outcome.text
