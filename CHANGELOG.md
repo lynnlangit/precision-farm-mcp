@@ -8,6 +8,7 @@ carries the same version. PR-by-PR detail is in
 
 | Area | What changed |
 |---|---|
+| Icons | Small line icons where they carry meaning: a calculator on the green "Calculated from your records" label, an AI sparkle with a check on the blue "Added by the AI, then checked" label, a shield and a table on "How we checked it" and "The numbers behind it", and one per example question type. Inline SVG, no new dependencies, hidden from screen readers |
 | Answer card | The gold "What that means" section is gone: it restated the calculated answer and could be mistaken for AI text. The card now has two parts, calculated (green) and added by the AI, then checked (blue). `farm-cli` still prints its "Therefore:" line |
 | README | New hero screenshot without the gold line; "What you see in every answer" is a table naming who writes each part |
 | Home screen | Example questions nest under one "Example questions (5 types)" row; farm description line and the duplicate "When the AI is stopped" group removed (#34) |

@@ -38,6 +38,7 @@ from farm_host.preflight_cli import (  # noqa: E402
 
 from . import __version__  # noqa: E402
 from .banner import BANNER_HTML  # noqa: E402
+from .icons import label_icons_css  # noqa: E402
 from farm_model.query_schema import FollowUpContext  # noqa: E402
 
 from .view import (  # noqa: E402
@@ -100,6 +101,22 @@ EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 EXAMPLES_LABEL = f"Example questions ({len(EXAMPLES)} types)"
+
+# One small icon per question type (see icons.py), so the list scans quickly.
+EXAMPLE_ICONS: dict[str, str] = {
+    "Bad field or bad year?": "field",
+    "Which fields made money?": "money",
+    "Do my records agree?": "agree",
+    "Weather and soil": "weather",
+    "What did I apply?": "applied",
+}
+
+
+def example_group_class(heading: str) -> str:
+    return f"pf-ex-{EXAMPLE_ICONS[heading]}"
+
+
+EXAMPLE_ICONS_CSS = label_icons_css({example_group_class(h): EXAMPLE_ICONS[h] for h, _ in EXAMPLES})
 
 
 def status_html() -> str:
@@ -390,7 +407,9 @@ def build_app(
                 ):
                     for heading, qs in EXAMPLES:
                         with gr.Accordion(
-                            f"{heading} ({len(qs)})", open=False, elem_classes="pf-example-group"
+                            f"{heading} ({len(qs)})",
+                            open=False,
+                            elem_classes=["pf-example-group", example_group_class(heading)],
                         ):
                             with gr.Column(elem_classes="pf-examples-group"):
                                 for q in qs:
@@ -625,6 +644,7 @@ def main(argv: list[str] | None = None) -> int:
         ssr_mode=False,
         theme=theme(),
         css_paths=[Path(str(files("farm_web") / "static" / "theme.css"))],
+        css=EXAMPLE_ICONS_CSS,
     )
     return 0
 
