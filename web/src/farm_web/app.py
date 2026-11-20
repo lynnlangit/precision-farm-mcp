@@ -38,6 +38,7 @@ from farm_host.preflight_cli import (  # noqa: E402
 
 from . import __version__  # noqa: E402
 from .banner import BANNER_HTML  # noqa: E402
+from .history import HISTORY_PATH, history_link_html, history_page, new_session_id  # noqa: E402
 from .icons import label_icons_css  # noqa: E402
 from farm_model.query_schema import FollowUpContext  # noqa: E402
 
@@ -309,13 +310,19 @@ LOCK_NOW_JS = """() => {
 BUSY_LABEL = "Looking it up..."
 
 
-def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
+def make_ask(
+    audit_log_path: Path, pools: FarmPools | None = None, session_id: str | None = None
+):
     """The handler for one question. Gradio state holds only the follow-up
     context (field, season, question type) and the picked farm -- never the
     answers themselves.
 
     `pools` keeps each farm's MCP servers running between questions (see
-    farm_host.server_pool); without one, one is created here."""
+    farm_host.server_pool); without one, one is created here.
+
+    Every question this handler answers is logged with the same
+    `session_id`: one run of the app is one session in Session history."""
+    session_id = session_id or new_session_id()
     audit_log = AuditLog(audit_log_path)
     pools = pools or FarmPools(audit_log_path)
 
@@ -336,7 +343,14 @@ def make_ask(audit_log_path: Path, pools: FarmPools | None = None):
             # running; the answer path itself is the CLI's answer_question.
             result = pool.run(
                 lambda fleet: answer_question(
-                    question, audit_log, env_overrides=server_env, context=context, fleet=fleet
+                    question,
+                    audit_log,
+                    env_overrides=server_env,
+                    context=context,
+                    fleet=fleet,
+                    source="web",
+                    farm=farm.key,
+                    session_id=session_id,
                 )
             )
         except ServerStartTimeout as e:
@@ -563,9 +577,24 @@ def build_app(
         gr.HTML(
             f'<p class="pf-muted" style="text-align:center;margin-top:8px">'
             f"Precision Farm {escape(__version__)} &middot; runs entirely on this computer "
-            "&middot; looks back at your records, never predicts or recommends</p>"
+            "&middot; looks back at your records, never predicts or recommends "
+            f"&middot; {history_link_html()}</p>"
         )
     return app
+
+
+def add_history_route(server, audit_log_path: Path) -> None:
+    """Session history (farm_web.history) at /history, on the same local
+    server as the app: a plain page, read fresh from the audit log on every
+    visit. Put first, so none of Gradio's own routes can answer it."""
+    from fastapi.responses import HTMLResponse
+
+    def history(session: str | None = None) -> HTMLResponse:
+        return HTMLResponse(history_page(audit_log_path, session))
+
+    server.add_api_route(HISTORY_PATH, history, methods=["GET"], include_in_schema=False)
+    routes = server.router.routes
+    routes.insert(0, routes.pop())
 
 
 def theme() -> gr.themes.Base:
@@ -635,6 +664,7 @@ def main(argv: list[str] | None = None) -> int:
             f"http://<this-computer's-IP>:{args.port} -- use only on a network you trust."
         )
     app.queue(default_concurrency_limit=1).launch(
+        prevent_thread_lock=True,
         server_name=host,
         server_port=args.port,
         share=False,
@@ -646,6 +676,8 @@ def main(argv: list[str] | None = None) -> int:
         css_paths=[Path(str(files("farm_web") / "static" / "theme.css"))],
         css=EXAMPLE_ICONS_CSS,
     )
+    add_history_route(app.app, args.audit_log)
+    app.block_thread()
     return 0
 
 

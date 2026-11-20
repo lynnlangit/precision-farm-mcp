@@ -561,7 +561,8 @@ def _source_html(result: AnswerResult) -> str:
         f'<dl class="pf-figures pf-source">{body}</dl>'
         + _records_html(result.records)
         + '<p class="pf-muted">Nothing left this computer. Every question is also written to '
-        "<code>data/audit.jsonl</code>.</p>"
+        "<code>data/audit.jsonl</code>: see it in "
+        '<a href="/history" target="_blank" rel="noopener">Session history</a>.</p>'
     )
 
 
@@ -686,7 +687,13 @@ def checks_panel_html(view: AnswerView) -> str:
         "The AI's sentence is shown only if it passes every one of these." if has_list else "",
         view.checks_summary,
         view.checks_tone,
-        view.checks_html,
+        view.checks_html
+        + (
+            '<p class="pf-muted">Every question you ask is checked and logged: see them all in '
+            '<a href="/history" target="_blank" rel="noopener">Session history</a>.</p>'
+            if has_list
+            else ""
+        ),
         view.checks_open,
     )
 

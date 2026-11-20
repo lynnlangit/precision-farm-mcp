@@ -160,6 +160,11 @@ your own records.
 
 - The app runs only on this laptop: no public link, no usage data. Every
   question is written to `data/audit.jsonl` on your laptop.
+- **Session history** (link at the bottom of the page, and in "How we
+  checked it") reads that log back: each question, what was looked up, the
+  AI sentence that was shown or withheld and the check that stopped it. One
+  run of the app is one session; pick an earlier one from the list. A green
+  "Log intact" line means no entry was edited since it was written.
 - To let others on the same Wi-Fi use it, start it with
   `uv run --project web farm-web --lan`, and only on a network you trust.
 - The app keeps its lookup servers running between questions. Restart it
