@@ -337,3 +337,20 @@ def test_show_the_records_lists_each_file_and_labels_the_whole_farm():
 
 def test_no_records_list_means_no_show_the_records():
     assert "Show the records" not in build_view(_result()).source_html
+
+
+def test_labels_and_panels_carry_a_hidden_icon():
+    """Calculator on the green label, AI-with-a-check on the blue one, a
+    shield and a table on the two panels; each hidden from screen readers,
+    which already read the words beside it."""
+    from farm_web.icons import ICON_PATHS, icon_svg
+    from farm_web.view import checks_panel_html, numbers_panel_html
+
+    view = build_view(_result(narration=_outcome(context="The weather explains part of it.")))
+    assert f'{icon_svg("calculator")}Calculated from your records' in view.answer_html
+    assert f'{icon_svg("ai-checked")}Added by the AI, then checked' in view.answer_html
+    assert f'{icon_svg("shield-check")}How we checked it' in checks_panel_html(view)
+    assert f'{icon_svg("table")}The numbers behind it' in numbers_panel_html(view)
+    for name in ICON_PATHS:
+        svg = icon_svg(name)
+        assert 'aria-hidden="true"' in svg and 'stroke="currentColor"' in svg

@@ -256,3 +256,16 @@ def test_a_tab_answers_one_question_at_a_time(monkeypatch):
     # A claim never released (a tab closed mid-answer) doesn't lock forever.
     monkeypatch.setattr(BusyTabs, "STALE_AFTER", 0.0)
     assert busy.claim("a") is True
+
+
+def test_each_example_type_has_its_own_icon(tmp_path):
+    from farm_web.app import EXAMPLE_ICONS, EXAMPLE_ICONS_CSS, example_group_class
+
+    assert set(EXAMPLE_ICONS) == {h for h, _ in EXAMPLES}
+    assert len(set(EXAMPLE_ICONS.values())) == len(EXAMPLES)  # no two alike
+    app = build_app(tmp_path / "audit.jsonl", _fake_pools(tmp_path))
+    groups = [b for b in app.blocks.values() if "pf-example-group" in (b.elem_classes or [])]
+    for heading, _ in EXAMPLES:
+        cls = example_group_class(heading)
+        assert any(cls in g.elem_classes for g in groups)
+        assert f".{cls} > .label-wrap" in EXAMPLE_ICONS_CSS

@@ -152,6 +152,16 @@ footer { opacity: 0.6; }
 /* Gradio's accordion arrow points left when closed; point it right (closed)
    and down (open), the way every other disclosure on the page does. */
 .pf-example-group .label-wrap .icon { transform: rotate(-90deg) !important; }
+/* The question type's icon (icons.py): its shape comes from a mask set per
+   type in label_icons_css, its colour from here. */
+.pf-example-group > .label-wrap > span:first-child { display: inline-flex; align-items: center; gap: 10px; }
+.pf-example-group > .label-wrap > span:first-child::before {
+  content: ""; flex: none; width: 1.15em; height: 1.15em; background: var(--pf-wheat-deep);
+  -webkit-mask-position: center; mask-position: center;
+  -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.dark .pf-example-group > .label-wrap > span:first-child::before { background: var(--pf-wheat); }
 .pf-example-group .label-wrap.open .icon { transform: rotate(0deg) !important; }
 .pf-example button, button.pf-example {
   justify-content: flex-start !important; text-align: left !important;
@@ -196,11 +206,12 @@ button.pf-example:hover { border-color: var(--pf-wheat) !important; background: 
 .pf-line-model { border-left-color: var(--pf-model); }
 .pf-lead { font-family: var(--pf-serif); font-size: 1.45rem !important; line-height: 1.4 !important; }
 .pf-tag {
-  display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
   padding: 2px 9px; border-radius: 999px;
 }
 .pf-tag-verified { background: var(--pf-verified-bg); color: var(--pf-verified); }
 .pf-tag-model { background: var(--pf-model-bg); color: var(--pf-model); }
+.pf-tag .pf-icon { width: 1.45em; height: 1.45em; flex: none; }
 
 /* ---------- panels ---------- */
 .pf-panel {
@@ -307,7 +318,12 @@ details.pf-line-withheld .pf-checks li { color: var(--pf-loss); border-bottom: 0
 .dark .pf-fold > summary::before { color: var(--pf-wheat); }
 .pf-fold[open] > summary::before { content: "\25BE"; }
 .pf-fold[open] > summary { margin-bottom: 6px; }
-.pf-fold-title { font-family: var(--pf-serif); font-size: 1.3rem; font-weight: 600; color: var(--pf-ink); }
+.pf-fold-title {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--pf-serif); font-size: 1.3rem; font-weight: 600; color: var(--pf-ink);
+}
+.pf-fold-title .pf-icon { width: 0.95em; height: 0.95em; flex: none; color: var(--pf-wheat-deep); }
+.dark .pf-fold-title .pf-icon { color: var(--pf-wheat); }
 .pf-fold-chip { font-size: 0.92rem; font-weight: 600; padding: 3px 11px; border-radius: 999px; }
 .pf-tone-ok { background: var(--pf-verified-bg); color: var(--pf-verified); }
 .pf-tone-warn { background: var(--pf-warn-bg); color: var(--pf-warn); }

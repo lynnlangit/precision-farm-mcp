@@ -20,6 +20,8 @@ from farm_host.farms import Farm
 from farm_host.followups import TOPIC_LABELS, resolved_label
 from farm_model.query_schema import FollowUpContext
 
+from .icons import icon_svg
+
 # The checks a model-written sentence must pass before a grower sees it, in
 # the order the narrator runs them. Labels are plain language on purpose:
 # this panel is the AI-literacy lesson.
@@ -374,14 +376,14 @@ def _answer_html(result: AnswerResult) -> str:
         resolved,
         '<p class="pf-eyebrow">Your answer</p>',
         '<div class="pf-line pf-line-verified">',
-        '<span class="pf-tag pf-tag-verified">Calculated from your records</span>',
+        f'<span class="pf-tag pf-tag-verified">{icon_svg("calculator")}Calculated from your records</span>',
         f'<p class="pf-lead">{escape(n.lead)}</p>',
         "</div>",
     ]
     if n.context:
         parts += [
             '<div class="pf-line pf-line-model">',
-            '<span class="pf-tag pf-tag-model">Added by the AI, then checked</span>',
+            f'<span class="pf-tag pf-tag-model">{icon_svg("ai-checked")}Added by the AI, then checked</span>',
             f"<p>{escape(n.context)}</p>",
             "</div>",
         ]
@@ -662,10 +664,12 @@ def build_view(result: AnswerResult) -> AnswerView:
     )
 
 
-def _fold(title: str, sub: str, summary: str, tone: str, body: str, open_: bool) -> str:
+def _fold(
+    title: str, icon: str, sub: str, summary: str, tone: str, body: str, open_: bool
+) -> str:
     return (
         f'<details class="pf-fold"{" open" if open_ else ""}>'
-        f'<summary><span class="pf-fold-title">{escape(title)}</span>'
+        f'<summary><span class="pf-fold-title">{icon_svg(icon)}{escape(title)}</span>'
         f'<span class="pf-fold-chip pf-tone-{escape(tone)}">{escape(summary)}</span></summary>'
         + (f'<p class="pf-h-sub">{escape(sub)}</p>' if sub else "")
         + f"{body}</details>"
@@ -678,6 +682,7 @@ def checks_panel_html(view: AnswerView) -> str:
     has_list = 'class="pf-checks"' in view.checks_html
     return _fold(
         "How we checked it",
+        "shield-check",
         "The AI's sentence is shown only if it passes every one of these." if has_list else "",
         view.checks_summary,
         view.checks_tone,
@@ -695,6 +700,7 @@ def numbers_panel_html(view: AnswerView) -> str:
     )
     return _fold(
         "The numbers behind it",
+        "table",
         "Straight from your records, no AI involved.",
         view.figures_summary,
         view.figures_tone,
