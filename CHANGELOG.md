@@ -12,7 +12,7 @@ from Brick Ellis working with Lynn (#43, #44).
 
 | Area | What changed |
 |---|---|
-| Session history | New page at `/history`, linked from the web app: the audit log read back by session, with a summary (AI sentences shown and withheld, the check that blocked most, question types) and one card per question (lookup, checks, shown or withheld sentence, the raw log entries). Checks the log's hash chain and says if anything was edited |
+| Question flow | New page at `/history`, linked once at the bottom of the web app: a service map of where questions went (question reader, the six MCP servers, AI sentence writer, 9 checks, shown / withheld / not looked up) with counts, average seconds and refusals on every step; click a circle for its breakdown. Pick one session or all time. The question-by-question cards are folded under the map. Checks the log's hash chain and says if anything was edited |
 | Audit log | Each question now records `source` (web or cli), `farm` and `session_id`; each answer records the green `lead` and the blue `shown_text`. Older entries still read; the page says what they didn't save |
 | Icons | Small line icons where they carry meaning: a calculator on the green "Calculated from your records" label, an AI sparkle with a check on the blue "Added by the AI, then checked" label, a shield and a table on "How we checked it" and "The numbers behind it", and one per example question type. Inline SVG, no new dependencies, hidden from screen readers |
 | Answer card | The gold "What that means" section is gone: it restated the calculated answer and could be mistaken for AI text. The card now has two parts, calculated (green) and added by the AI, then checked (blue). `farm-cli` still prints its "Therefore:" line |

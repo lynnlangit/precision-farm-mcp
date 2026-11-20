@@ -321,7 +321,7 @@ def make_ask(
     farm_host.server_pool); without one, one is created here.
 
     Every question this handler answers is logged with the same
-    `session_id`: one run of the app is one session in Session history."""
+    `session_id`: one run of the app is one session on the Question flow page."""
     session_id = session_id or new_session_id()
     audit_log = AuditLog(audit_log_path)
     pools = pools or FarmPools(audit_log_path)
@@ -584,7 +584,7 @@ def build_app(
 
 
 def add_history_route(server, audit_log_path: Path) -> None:
-    """Session history (farm_web.history) at /history, on the same local
+    """Question flow (farm_web.history) at /history, on the same local
     server as the app: a plain page, read fresh from the audit log on every
     visit. Put first, so none of Gradio's own routes can answer it."""
     from fastapi.responses import HTMLResponse

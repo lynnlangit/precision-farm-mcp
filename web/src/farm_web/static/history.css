@@ -64,3 +64,28 @@ footer{margin-top:24px;font-size:14px;color:var(--soft)}
 @media (max-width:720px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}.q header{flex-direction:column}}
 td:nth-child(1) code,td:nth-child(2) code,td:nth-child(4) code{white-space:nowrap;word-break:normal}
 td:nth-child(1){white-space:nowrap}
+.mapcard{background:var(--card);border:1px solid var(--edge);border-radius:12px;padding:12px 14px;margin:12px 0 18px}
+.flowmap{width:100%;height:auto;display:block}
+.flowmap .disc{fill:var(--card);stroke:var(--edge);stroke-width:1}
+.flowmap .ring{fill:none;stroke-width:6;stroke-linecap:butt}
+.flowmap .ring.idle{stroke:var(--edge);stroke-dasharray:3 4}
+.flowmap .count{font:600 17px var(--serif);fill:var(--ink);text-anchor:middle}
+.flowmap .title{font:600 12.5px system-ui,sans-serif;fill:var(--ink);text-anchor:middle}
+.flowmap .sub{font:11.5px system-ui,sans-serif;fill:var(--soft);text-anchor:middle}
+.flowmap .node{cursor:pointer;outline:none}
+.flowmap .node.idle{opacity:.55}
+.flowmap .node:focus-visible .disc,.flowmap .node.picked .disc{stroke:var(--ink);stroke-width:2}
+.flowmap .edge{fill:none;stroke:var(--edge);opacity:.9;transition:opacity .15s}
+.flowmap .edge.warn{stroke:var(--warn);opacity:.55}
+.flowmap .edge.bad{stroke:var(--loss);opacity:.6}
+.flowmap .edge.dim{opacity:.12}
+.flowmap .ah.ok{fill:var(--edge)}.flowmap .ah.warn{fill:var(--warn)}.flowmap .ah.bad{fill:var(--loss)}
+.flowmap .elabel rect{fill:var(--paper);stroke:var(--edge)}
+.flowmap .elabel text{font:11px system-ui,sans-serif;fill:var(--soft);text-anchor:middle}
+.maplegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--soft);margin-top:6px}
+.sw{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.nodeinfo{margin-top:10px;border-top:1px solid var(--edge);padding-top:8px}
+.nodeinfo h3{font-family:var(--serif);font-size:19px;margin:0}
+.nodeinfo table{width:auto;font-size:14px}
+.nodeinfo td{border-top:1px solid var(--edge);padding:3px 18px 3px 0}
+.qlist>summary{font-family:var(--serif);font-size:19px;cursor:pointer;margin:6px 0 12px;color:var(--ink)}

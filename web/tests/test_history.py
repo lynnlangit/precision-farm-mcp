@@ -101,12 +101,12 @@ def test_questions_group_by_session_id_and_older_entries_by_time(tmp_path):
     assert "grouped by time" in sessions[0].label()
 
 
-def test_page_shows_the_latest_session_with_what_was_read_and_withheld(tmp_path):
+def test_page_shows_what_was_read_and_withheld(tmp_path):
     path = tmp_path / "audit.jsonl"
     _write(path, _shown(0, "old one", session=None) + _shown(100, "East 80?") + _withheld(101, "How dry was 2018?"))
     page = history_page(path)
     assert "Log intact." in page
-    assert "East 80?" in page and "old one" not in page.split("<select")[0]
+    assert "East 80?" in page
     assert "Profit was low in 2020." in page  # the blue sentence that was shown
     assert "East 80 had a bad year." in page  # the green lead
     # The withheld sentence is shown crossed out, escaped, with the check that blocked it.
@@ -160,12 +160,7 @@ def test_history_route_serves_the_page(tmp_path):
     web_app.add_history_route(server, path)
     response = TestClient(server).get("/history")
     assert response.status_code == 200
-    assert "Session history" in response.text and "East 80?" in response.text
-
-
-def test_the_app_links_to_session_history(tmp_path):
-    config = repr(web_app.build_app(tmp_path / "audit.jsonl").config)
-    assert 'href=\\"/history\\"' in config or 'href="/history"' in config
+    assert "Question flow" in response.text and "East 80?" in response.text
 
 
 def test_every_web_question_carries_the_same_session(monkeypatch, tmp_path):
@@ -192,3 +187,59 @@ def test_every_web_question_carries_the_same_session(monkeypatch, tmp_path):
     assert [s["farm"] for s in seen] == ["farm1", "farm2"]
     assert seen[0]["session_id"] == seen[1]["session_id"]
     assert seen[0]["session_id"].startswith("web-")
+
+
+def _flow(tmp_path, rows):
+    from farm_web.flowmap import build_flow
+
+    path = tmp_path / "audit.jsonl"
+    _write(path, rows)
+    return build_flow(questions_from(AuditLog(path).entries()))
+
+
+def test_the_map_counts_every_step_a_question_passed(tmp_path):
+    tool_refused = [
+        (300, "query", {"question": "Marginal 80?"}),
+        (300, "parsed", {"intent": "bad_field_or_bad_year", "field_name": "Marginal 80"}),
+        (300, "tool_call", {"server": "report-export", "tool": "bad_field_or_bad_year", "args": {}}),
+        (300, "tool_refused", {"server": "report-export", "tool": "bad_field_or_bad_year", "code": "not_found"}),
+    ]
+    flow = _flow(
+        tmp_path,
+        _shown(0, "a") + _shown(1, "b") + _withheld(2, "c") + _refused(3, "d") + tool_refused,
+    )
+    n, e = flow.nodes, flow.edges
+    assert n["ask"].count == 5 and n["reader"].count == 5 and n["reader"].trouble == 1
+    assert n["report-export"].count == 3 and n["report-export"].trouble == 1
+    assert n["weather-history"].count == 1
+    assert n["writer"].count == 3 and n["checks"].count == 3 and n["checks"].trouble == 1
+    assert (n["shown"].count, n["withheld"].count, n["refused"].count) == (2, 1, 2)
+    assert e[("reader", "refused")] == 1 and e[("report-export", "refused")] == 1
+    assert e[("report-export", "writer")] == 2 and e[("checks", "withheld")] == 1
+    assert ("Any count of years or seasons matches your records", "blocked 1") in n["checks"].details
+
+
+def test_old_tool_calls_without_a_server_still_land_on_one(tmp_path):
+    flow = _flow(tmp_path, [
+        (0, "query", {"question": "q"}),
+        (0, "tool_call", {"tool": "get_cost_ledger_row", "args": {}}),
+        (0, "narration", {"question": "q", "used_fallback": False}),
+    ])
+    assert flow.nodes["cost-ledger"].count == 1
+
+
+def test_all_time_is_the_default_and_a_session_narrows_it(tmp_path):
+    path = tmp_path / "audit.jsonl"
+    _write(path, _shown(0, "old one", session=None) + _shown(100, "new one"))
+    everything = history_page(path)
+    assert 'value="all" selected' in everything and "2 questions ·" in everything
+    newest = sessions_from(questions_from(AuditLog(path).entries()))[-1].key
+    one = history_page(path, newest)
+    assert "1 question ·" in one
+    assert 'class="flowmap"' in one
+
+
+def test_one_link_only_at_the_bottom_of_the_app(tmp_path):
+    config = repr(web_app.build_app(tmp_path / "audit.jsonl").config)
+    assert config.count("/history") == 1
+    assert "Question flow" in config
