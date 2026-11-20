@@ -143,7 +143,7 @@ Each answer has labelled parts:
 | **How we checked it** | The 9 checks, folded to a summary such as "All 9 passed" |
 | **The numbers behind it** | The exact figures, and **Where it came from**: the lookup used and **Show the records**, every file, tab and row behind the answer, so you can check it by hand ([how](YOUR_RECORDS.md#show-the-records-behind-an-answer)) |
 
-![Below the answer, opened: How we checked it and The numbers behind it (the figures and where they came from)](images/farm-web-checks.png)
+![Below the answer, opened: How we checked it (all 9 checks passed) and The numbers behind it (the figures and where they came from)](images/farm-web-checks.png)
 
 **Two questions worth trying:**
 

@@ -34,11 +34,14 @@ flowchart TD
     Servers --> DB[("DuckDB — 10 seasons, local files only")]
     Servers -.-> Audit[("audit.jsonl<br/>hash-chained — safe under concurrent<br/>host + server process writes")]
 
+    Router -.->|"every step logged"| Audit
     Router --> Template["Template answer<br/>deterministic lead sentence<br/>(terminal also adds a 'therefore' line)"]
     Router --> Narrator["Gemma 3 4B<br/>may add one sentence of context. Farmer free text<br/>is delimited as untrusted data first"]
     Narrator --> Checks["Verifier — 9 checks<br/>grounded numbers, verdict, 7 meaning checks —<br/>one try — fails ⇒ sentence withheld"]
-    Template --> Answer(["Answer<br/>the web app also shows the checks, figures and source"])
+    Template --> Answer(["Answer<br/>the web app also shows the checks, figures and records"])
     Checks -->|"only if every check passes"| Answer
+    Checks --> Records["Records behind the answer<br/>field-registry records_behind, web app only —<br/>fetched after the checks, never seen by Gemma"]
+    Records --> Answer
 ```
 
 Gemma touches a question at exactly two points: parsing it into a
@@ -94,10 +97,12 @@ sequenceDiagram
     W->>H: The question + which farm + follow-up context<br/>(last field, season, question type)
     H->>AI: Turn this question into ONE lookup
     AI-->>H: Question type + field + season (structured JSON)
-    alt AI not running, question out of scope, or a field/season the question (or follow-up context) never named
+    alt AI not running
+        H-->>W: "Couldn't reach the local model" and the farm-preflight command — nothing is looked up
+    else Question out of scope, or a field/season the question (or follow-up context) never named
         H-->>W: Polite "I couldn't look that up" — nothing is looked up
     end
-    H->>H: Years the question didn't name are never used: "last five years" becomes the latest 5 known seasons, in code
+    H->>H: Plain code checks the lookup. Years the question didn't name are never used: "last five years" becomes the latest 5 known seasons, in code
     H->>H: Pick the one server and tool for that question type (a fixed table, not AI)
     H->>S: One lookup, e.g. bad_field_or_bad_year("East 80")
     S-->>H: Numbers straight from the records (no AI involved)
@@ -118,7 +123,7 @@ sequenceDiagram
     H->>S: Which files, tabs and rows did that lookup read? (field-registry records_behind)
     S-->>H: One entry per file or spreadsheet tab (never shown to the AI or the checks)
     H-->>W: Answer + checks + numbers + source + the records list
-    W-->>G: Answer with farm badge, "How we checked it" and<br/>"The numbers behind it" folded to one line each (checks open if one failed)
+    W-->>G: Answer with farm badge, "How we checked it" and<br/>"The numbers behind it" (with "Show the records") folded to one line each (checks open if one failed)
 
     rect rgb(232, 236, 246)
     Note over G,W: Follow-ups
