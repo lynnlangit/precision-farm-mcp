@@ -57,6 +57,15 @@ ICON_PATHS: dict[str, str] = {
         '<path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>'
     ),
 }
+# One small icon per question type, so the example list and the "What can I
+# ask?" answer scan quickly. Keys are the headings in farm_host.examples.
+EXAMPLE_ICONS: dict[str, str] = {
+    "Bad field or bad year?": "field",
+    "Which fields made money?": "money",
+    "Do my records agree?": "agree",
+    "Weather and soil": "weather",
+    "What did I apply?": "applied",
+}
 
 _SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" class="pf-icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" '

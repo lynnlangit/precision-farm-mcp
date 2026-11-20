@@ -113,7 +113,9 @@ class Question:
 
     @property
     def outcome(self) -> str:
-        """shown | withheld | none (no AI sentence) | refused | unfinished"""
+        """shown | withheld | none (no AI sentence) | refused | listed | unfinished"""
+        if self._first("capabilities_listed") is not None:
+            return "listed"  # "What can I ask?": answered by code, nothing looked up
         if self.refusal is not None:
             return "refused"
         n = self.narration
@@ -327,6 +329,11 @@ def _question_html(q: Question) -> str:
         body = (
             '<div class="outcome other">⚠ Nothing looked up: '
             f"{escape(_REFUSAL_TEXT.get(why, str(why)))}</div>"
+        )
+    elif outcome == "listed":
+        body = (
+            '<div class="outcome other">Listed the kinds of questions it can answer '
+            "(written by code: no AI, nothing looked up)</div>"
         )
     else:
         body = '<div class="outcome other">No answer was logged for this question</div>'
