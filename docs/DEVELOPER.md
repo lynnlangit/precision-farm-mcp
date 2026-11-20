@@ -39,7 +39,7 @@ uv run --project host farm-cli --version
 | `farm-cli` | One question in the terminal; `--intent` skips the model |
 | `farm-metrics` | Governance report from the audit log (`--out` writes it to a file) |
 | `scripts/probe_narration.py` | Asks questions through the real model and prints what each check did |
-| `scripts/run_evals.py` | Asks every [eval question](EVAL_QUESTIONS.md) through the real model and writes `data/eval_results.md`: expected answer, tool called and actual answer side by side (`1 7 F2` runs just those; `--farm farm1`) |
+| `scripts/run_evals.py` | Asks every [eval question](EVAL_QUESTIONS.md) through the real model and writes `data/eval_results.md`: expected answer, tool called and actual answer side by side (`1 7 F2` runs just those; `--farm farm1`; `--out`) |
 
 The MCP servers read these settings from the environment. The web app
 sets the first two per farm, and `farm-cli --audit-log` sets the third.

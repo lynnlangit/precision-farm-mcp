@@ -1,137 +1,89 @@
 # Precision Farm MCP — A Guide for Farmers
 
-This guide walks you through trying the tool out on your laptop: what it
-is, how to install it, how to test it with example data first, and how to
-eventually point it at your own farm's records.
-
-No prior programming experience is assumed, but you will be typing
-commands into a terminal window. If you get stuck, the [Troubleshooting](#troubleshooting)
-section at the end covers the most common snags.
+How to try the tool on your laptop with example data, then point it at your
+own farm's records. You will type a few commands into a terminal; no
+programming is needed. Stuck? See [Troubleshooting](#troubleshooting).
 
 **In this guide:** [What is this?](#what-is-this) ·
 [What you'll need](#what-youll-need) ·
 [Step 1: Try it with example data](#step-1-try-it-with-example-data-first) ·
+[Using the app](#using-the-app) ·
 [Step 2: Load your own farm's data](#step-2-load-your-own-farms-data) ·
 [Troubleshooting](#troubleshooting)
 
 ## What is this?
 
-Precision Farm MCP answers plain-English questions about your own farm's
-record — costs, yields, profit — by looking at your own files and doing
-the arithmetic, never by guessing or predicting. For example:
+Ask a plain-English question about your farm's records (costs, yields,
+profit) and get an answer worked out from your own files, never a guess or
+a prediction.
 
 > **You ask:** "Was the north eighty a bad field or just a bad year?"
-> **It answers:** "N 80 had a bad year, not a bad field: 2018 was a clear
-> outlier, and its median profit across 10 recorded seasons was $62.81/ac."
 >
-> **The AI adds, after its sentence passes every check:** "The data
-> indicates that 2018 was an unusually poor year for profit on N 80
-> compared to other seasons."
+> **Calculated from your records:** "N 80 had a bad year, not a bad field:
+> 2018 was a clear outlier, and its median profit across 10 recorded
+> seasons was $62.81/ac."
+>
+> **Added by the AI, then checked:** "The data indicates that 2018 was an
+> unusually poor year for profit on N 80 compared to other seasons."
 
-The tool knew that "north eighty" is the field your maps call "N 80"
-because you confirmed it once, in Step 1.
+It knew "north eighty" means the field your maps call "N 80" because you
+confirmed that once, in Step 1.
 
-Everything happens on your own laptop. Your farm data is never sent
-anywhere — not to a server, not to the internet, not anywhere outside your
-machine. A small local AI model only ever does two things: turns your
-question into a lookup, and may add one sentence to an answer the tool has
-already calculated, which you only see if it passes every check. It
-never touches your numbers directly and it never sees the internet — see
-[ARCHITECTURE.md](ARCHITECTURE.md) and [VERIFICATION.md](VERIFICATION.md)
-for how that's enforced and tested, if you're curious.
-
-**This is v1, and it only answers questions about what already happened.**
-It does not predict next year's yield, does not recommend what to plant,
-and does not process satellite or drone imagery. Those are explicitly out
-of scope for now.
+| Promise | How |
+|---|---|
+| Your data stays on your laptop | Nothing is sent to a server or the internet. [ARCHITECTURE.md](ARCHITECTURE.md) and [VERIFICATION.md](VERIFICATION.md) show how that's enforced and tested |
+| The AI never does the numbers | A small local AI model only turns your question into a lookup, and may add one sentence, shown only if it passes every check |
+| It only looks back | v1 doesn't predict yield, recommend what to plant, or read satellite or drone images |
 
 ## What you'll need
 
-Three pieces of free software, installed once:
+Install these once:
 
-1. **The code itself.** If you were given a link to the GitHub repository:
+| What | How |
+|---|---|
+| **The code** | On the GitHub page, click the green **Code** button, then **Download ZIP**, and unzip it somewhere you'll remember. That folder is "the project folder" below. (`git clone <url>` works too and makes updates easier.) |
+| **`uv`**, which runs the Python programs | Mac or Linux: `curl -LsSf https://astral.sh/uv/install.sh \| sh`. Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 \| iex"`. Others: [astral.sh/uv](https://astral.sh/uv). Tested on Mac and Linux, not Windows |
+| **Ollama**, which runs the local AI model | Install from [ollama.com](https://ollama.com), then run `ollama pull gemma3:4b` (about 3-4 GB, once). It must be running whenever you ask a question; it usually starts by itself |
 
-   - Open the repository page in a browser.
-   - Click the green **Code** button, then **Download ZIP**.
-   - Unzip it somewhere you'll remember (Desktop or Documents is fine) —
-     that unzipped folder is what every command below means by "the project
-     folder."
-
-   (If you're already comfortable with `git`, `git clone <url>` works too
-   and makes it easier to pull future updates — but it's not required, and
-   the ZIP download is the simpler default if you've never used git.)
-
-2. **`uv`** — the tool that installs and runs the Python programs in this
-   project. One-time install:
-
-   - **macOS / Linux (Terminal):**
-     ```bash
-     curl -LsSf https://astral.sh/uv/install.sh | sh
-     ```
-
-   - **Windows (PowerShell):**
-     ```powershell
-     powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-     ```
-
-   (Installers for every OS are on [astral.sh/uv](https://astral.sh/uv).
-   The tool is tested on a Mac and on Linux, not Windows (see
-   [VERIFICATION.md](VERIFICATION.md)), so on Windows `farm-preflight`,
-   below, is the quickest way to spot a rough edge.)
-
-3. **Ollama**, running a small local AI model — this is what turns your
-   question into a lookup and the answer into a sentence. Download it from
-   [ollama.com](https://ollama.com), install it like any other application,
-   then pull the specific model this project uses:
-
-   ```bash
-   ollama pull gemma3:4b
-   ```
-
-   This downloads about 3-4 GB once. Ollama needs to be running in the
-   background whenever you use `farm-web` or `farm-cli` (it starts automatically after
-   install on most systems).
-
-That's the whole setup. Nothing else is downloaded, and once installed,
-none of this needs an internet connection to actually answer a question.
-
-**Once everything above is installed, check it's all actually working**
-before moving on — open a terminal in the project folder and run:
+No internet connection is needed to answer a question once this is set up.
+To check everything is working, open a terminal in the project folder and
+run:
 
 ```bash
 uv run --project host farm-preflight
 ```
 
-It checks `uv`, Ollama, the model, and (once you've done Step 1 below) the
-example data and confirmation step, all in one go, and tells you exactly
-what to fix if something's missing — worth re-running any time something
-seems off, not just the first time.
+It checks `uv`, Ollama, the model and (after Step 1) both example farms,
+then asks a real question, and tells you exactly what to fix. Re-run it
+whenever something seems off.
 
 ## Step 1: Try it with example data first
 
-The project comes with **ten seasons of realistic, entirely made-up farm
-data** — a fictional North Dakota corn/soybean operation with the kind of
-messiness real records have (misspelled field names, a field that got
-split into two, a spreadsheet column that means something different in one
-year than another). Trying this first lets you see how the tool behaves
-before trusting it with your own numbers.
+The project comes with ten seasons of made-up records for a North Dakota
+corn and soybean farm, in two versions:
 
-Open a terminal, navigate to the project folder, and run:
+| Farm | Records | Folder |
+|---|---|---|
+| **Farm 1** | Clean | `data/synthetic-clean/` |
+| **Farm 2** | Messy, like real ones: misspelled field names, a field split in two, a spreadsheet column that changes meaning one year | `data/synthetic/` |
+
+Both are the same farm with the same true profits; only the record keeping
+differs. In a terminal in the project folder:
 
 ```bash
-# Generate the ten seasons of example data (takes a few seconds)
+# Farm 2: generate the records, then confirm how to read them (once)
 uv run --project generator python -m farm_data_gen.cli --seed 42 --out data/synthetic
-```
-
-Next, run the one-time setup step. This is the only time the tool ever
-asks you anything directly — it's confirming how to read the example
-spreadsheet, once, so it never has to guess later:
-
-```bash
 uv run --project host farm-ingest
+
+# Farm 1: generate and approve automatically (allowed for example data only)
+uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
+uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
 ```
 
-You'll see 14 prompts like:
+### Answering the farm-ingest questions
+
+`farm-ingest` is the only time the tool asks you anything. For Farm 2 it
+asks 14 questions like this one:
 
 ```
 [confirm] naming_drift_alias: Cost ledger name 'north eighty' in season 2017
@@ -140,9 +92,8 @@ You'll see 14 prompts like:
   approve? [y/N]:
 ```
 
-Read each one rather than reflexively typing `y` — **this example data
-deliberately includes one prompt where the proposed match is wrong**, on
-purpose, to prove the tool catches it rather than guessing:
+Type `y` for every question except one. **The example data includes one
+wrong proposal on purpose**, to show the tool asks rather than guesses:
 
 ```
 [confirm] naming_drift_alias: Cost ledger name 'Hom Corner' in season 2023 has 2 acreage candidates, not exactly 1
@@ -153,179 +104,110 @@ purpose, to prove the tool catches it rather than guessing:
   correct canonical_boundary_name (blank to reject): Home Quarter
 ```
 
-That proposal is wrong — the ledger entry actually means "Home Quarter,"
-not "Section Corner" (two unrelated fields happen to be the same size that
-year, so acreage alone can't tell them apart, and the name similarity
-happens to point the wrong way too). Type `N` and Enter to reject it, then
-type `Home Quarter` when it asks for the correct name. For every other
-prompt, `y` is correct. On your own data, every name prompt shows
-`confidence: low`, so don't rely on that word: the warning sign is a line
-like "has 2 acreage candidates", which means the tool genuinely can't tell
-two fields apart and needs you to say which one it is.
+"Hom Corner" means Home Quarter: two fields are the same size that year, so
+acres can't tell them apart. Type `N`, then `Home Quarter`.
 
-The app can also show a second example farm, **Farm 1**: the same fields
-with clean records, so you can compare a tidy set of records with a messy
-one. Set it up with two more commands (no prompts this time: it's example
-data whose answers are already known):
+On your own data, don't rely on the `confidence` word: "north eighty" shows
+`low` and is right. The warning sign is a line like **"has 2 acreage
+candidates"**: the tool can't tell two fields apart and needs you to say
+which.
 
-```bash
-uv run --project generator python -m farm_data_gen.cli --seed 42 --clean --out data/synthetic-clean
-uv run --project host farm-ingest --auto-approve-synthetic-only --data-dir data/synthetic-clean --confirm-store data/confirmed_mappings_clean.json
-```
-
-Now open the app in your browser:
+## Using the app
 
 ```bash
 uv run --project web farm-web
 ```
 
-A browser tab opens at `http://127.0.0.1:7860`. When everything is set
-up, a small "Prerequisites loaded: 6 of 6" line sits at the bottom of the
-page (click it to see the six checks). If one fails, it moves to the top,
-open, and tells you the command that fixes it. Type a question, or open
-**Example questions**, then one of the question types, and tap a question, and you should get
-back a real, grounded answer in a few seconds. The app starts its lookup
-servers in the background when it opens, so later questions skip that step;
-if you regenerate the data or re-run `farm-ingest`, restart the app.
-
-**Whose records?** The picker above the question box chooses Farm 1 (clean
-records) or Farm 2 (messy records, the data you confirmed above). Both are
-the same farm with the same true profits; only the record keeping differs.
-Ask a question such as "Does the seed cost on Sheyenne Bottom in 2022 look
-right?", then switch farms: the app asks it again, and the answer card
-names the farm it came from. Farm 1 says the costs are in line; Farm 2
-catches the mistyped seed cost. The first switch to Farm 2 takes a few
-seconds while its lookup servers start.
-
-Type a question and press **Enter** or **Ask my records** (Shift+Enter
-starts a new line). While it's being looked up, the box and buttons are
-locked and the button reads "Looking it up...", so a question is never
-sent twice. Tapping an example or an **Ask next** button asks straight
-away.
-
-After an answer you can ask a follow-up such as "What about East 80?" or
-"And in 2023?". The line **Talking about:** at the top of each answer says
-which field, season and question it actually answered, and **Ask next**
-offers a few full questions to tap. Each follow-up is looked up and checked
-from scratch. When you move on to something else, press **↺ New subject**
-on the Talking about line: it forgets the field and year, empties the box
-and the answer, and starts over.
+A browser tab opens at `http://127.0.0.1:7860`. "Prerequisites loaded: 6 of
+6" at the bottom means Ollama, the model and both farms are ready (click it
+for the list). If one fails, it moves to the top, open, with the command
+that fixes it.
 
 ![The web app answering "Was the Marginal Eighty a bad field or just a bad year?" for Farm 1](images/farm-web-answer.png)
 
-Each part of the answer is labelled. **Calculated from your records** is
-plain arithmetic on your files. **Added by the AI, then checked** is the
-one sentence the AI wrote, shown only because it passed every check.
-Below the answer, **How we checked it** and **The numbers behind it** are
-folded to one line each, with a short summary such as "All 9 passed".
-Click either to open it: the checks, the exact figures the answer came
-from, and which records were read. Under **Where it came from**, **Show
-the records** lists every file, spreadsheet tab and row the answer used,
-so you can open them and check the answer by hand
-([YOUR_RECORDS.md](YOUR_RECORDS.md#show-the-records-behind-an-answer)
-shows how). If the AI's sentence failed a check,
-the answer card says **AI sentence withheld**; click **See what it wrote**
-to see what the AI tried to say and which check stopped it. How we checked
-it opens by itself then, so the failed check is easy to find.
+| To | Do this |
+|---|---|
+| Pick the records | **Whose records?** Farm 1 or Farm 2. Switching asks the same question again, so you can compare. The first switch to Farm 2 takes a few seconds |
+| Ask | Type a question, then **Enter** or **Ask my records** (Shift+Enter for a new line). The button reads "Looking it up..." and the box locks until the answer arrives, so a question is never sent twice |
+| Use an example | Open **Example questions (5 types)**, pick a type, tap a question |
+| Ask a follow-up | Type "What about East 80?" or "And in 2023?", or tap an **Ask next** button. **Talking about:** shows the field, season and question it answered. Every follow-up is looked up and checked from scratch |
+| Start over | **↺ New subject** on the Talking about line forgets the field and year and clears the answer |
 
-To see that happen, open **Example questions**, then **Bad field or bad
-year?**, and tap the third question, "Was East 80 a bad field or just a bad
-year?". The AI
-often tries to add that the 2020 loss was due to an unusual weather pattern
-(what it writes can vary by computer). Your records show that 2020 was a
-bad year, but not why, so that sentence is blocked. The AI gets one try, so the answer you see is the part calculated
-from your records, nothing more.
+Each answer has labelled parts:
 
-![Below the answer, opened: How we checked it (all 8 checks passed) and The numbers behind it (the figures and where they came from)](images/farm-web-checks.png)
+| Part | What it is |
+|---|---|
+| **Calculated from your records** (green) | Plain arithmetic on your files, written by code. Always first |
+| **Added by the AI, then checked** (blue) | At most one AI sentence, one try, shown only if it passes all 9 checks |
+| **AI sentence withheld** | The sentence failed a check. **See what it wrote** shows what it tried to say and which check stopped it; **How we checked it** opens by itself |
+| **How we checked it** | The 9 checks, folded to a summary such as "All 9 passed" |
+| **The numbers behind it** | The exact figures, and **Where it came from**: the lookup used and **Show the records**, every file, tab and row behind the answer, so you can check it by hand ([how](YOUR_RECORDS.md#show-the-records-behind-an-answer)) |
 
-The app only works on this laptop. It never creates a public link and
-sends no usage data; every question is written to `data/audit.jsonl` on
-your laptop. To let others in the room use it from their own laptops on
-the same Wi-Fi, start it with `uv run --project web farm-web --lan`
-instead, and only on a network you trust.
+![Below the answer, opened: How we checked it and The numbers behind it (the figures and where they came from)](images/farm-web-checks.png)
 
-If you prefer the terminal, the same question works there too:
+**Two questions worth trying:**
 
-```bash
-uv run --project host farm-cli "was the north eighty a bad field or a bad year"
-```
+| Question | What it shows |
+|---|---|
+| "Does the seed cost on Sheyenne Bottom in 2022 look right?" on Farm 1, then Farm 2 | Farm 1 says the costs are in line; Farm 2 catches the mistyped seed cost |
+| Example questions → **Bad field or bad year?** → "Was East 80 a bad field or just a bad year?" | The AI often adds that 2020's loss was due to unusual weather. Your records show 2020 was a bad year, not why, so that sentence is withheld (what the AI writes can vary by computer) |
 
-[docs/EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists fifteen example
-questions you can try, each with the verifiable correct answer written
-out, so you can check the tool's answer against the known-right one — a
-good way to build trust in it before moving to Step 2.
+[EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) lists fifteen questions, each with
+its known-right answer, to check the tool against before trusting it with
+your own records.
+
+**Good to know**
+
+- The app runs only on this laptop: no public link, no usage data. Every
+  question is written to `data/audit.jsonl` on your laptop.
+- To let others on the same Wi-Fi use it, start it with
+  `uv run --project web farm-web --lan`, and only on a network you trust.
+- The app keeps its lookup servers running between questions. Restart it
+  after regenerating data or re-running `farm-ingest`.
+- The same question works in the terminal:
+  `uv run --project host farm-cli "was the north eighty a bad field or a bad year"`.
+  The terminal adds a "Therefore:" line the web app leaves out.
 
 ## Step 2: Load your own farm's data
 
-**Read this section fully before starting — it currently expects your
-records in a specific layout, matching the example data's shape exactly.**
-This is a v1 prototype: there is not yet a friendly "drop in any
-spreadsheet" importer, and reformatting your records into the expected
-layout is the fiddliest part of using this tool today. If you have a
-tech-savvy friend, agronomist, or ag-tech consultant, this is the step
-where it's worth asking for a hand the first time.
+**Read this whole section first.** v1 expects your records in the same
+layout as the example data, and reformatting them is the fiddliest part. If
+you know a tech-savvy friend, agronomist or ag-tech consultant, ask for a
+hand the first time.
 
-The tool expects a folder (`data/synthetic/` by default: you can replace
-what's in there) holding your boundaries, cost ledger and scale tickets,
-plus yield monitor, as-applied and weather files for the questions that
-need them. Every file name and column heading is listed in
-**[YOUR_RECORDS.md](YOUR_RECORDS.md#the-files-you-need-for-your-own-farm)**,
-with which questions each file answers. Headings need to match exactly.
-The example data generated in Step 1 is a complete working example of
-every file: open `data/synthetic-clean/` whenever a heading is unclear.
-
-Once your files are in place:
+1. Put your files in `data/synthetic/`, in place of Farm 2's. Every file
+   name and column heading you need is in
+   **[YOUR_RECORDS.md](YOUR_RECORDS.md#the-files-you-need-for-your-own-farm)**.
+   Headings must match exactly; when one is unclear, open the same file in
+   `data/synthetic-clean/`.
+2. For a clean start, delete `data/confirmed_mappings.json` and
+   `data/audit.jsonl` (your confirmations and the question log). Both are
+   recreated.
+3. Confirm your field names and columns once, then ask:
 
 ```bash
-# Confirm your own field names, column mappings, etc. -- once
 uv run --project host farm-ingest
-
-# Ask a real question about your own farm, in the browser...
 uv run --project web farm-web
-# ...or in the terminal
+# or in the terminal
 uv run --project host farm-cli "which fields made money last year"
 ```
 
-If you're adding a new season to data you've already confirmed once, only
-the new parts will prompt you — `farm-ingest` remembers what it already
-confirmed and only asks about what's changed.
-
-**A tip for a clean start:** if you'd rather not mix your own confirmed
-answers with the example data's, delete `data/confirmed_mappings.json` and
-`data/audit.jsonl` before your first real `farm-ingest` run — they'll be
-recreated automatically. Neither is required reading to use the tool; the
-second one is just a running log of every decision the tool made, in case
-you ever want to review it.
+When you add a new season later, `farm-ingest` only asks about what's new.
 
 ## Troubleshooting
 
-- **The browser tab didn't open, or says it can't connect** — check the
-  terminal where you ran `farm-web` is still open, then go to
-  `http://127.0.0.1:7860` yourself. If another program already uses that
-  port, add `--port 7861`.
-- **"confirmation_required" refusal when asking a question** — you haven't
-  run `farm-ingest` yet for this data, or you added new data since the last
-  time you ran it. Run `farm-ingest` again.
-- **The answer is a plain refusal, not a sentence** — this is by design,
-  not a bug. The tool refuses rather than guesses whenever it isn't sure —
-  an unrecognized field name, a season outside your records, or a question
-  outside what v1 answers (predictions, recommendations). Rephrase, or
-  check the field name and season you used are exactly as they appear in
-  your data.
-- **"Couldn't reach the local model" instead of an answer** — this is a
-  different message on purpose: it means the problem isn't your question,
-  it's the setup (Ollama not running, or the model not pulled). Run
-  `uv run --project host farm-preflight` to see exactly what's wrong and
-  how to fix it, rather than guessing from the error text.
-- **Something looks structurally wrong (a whole season missing, numbers
-  that don't add up)** — check your file layout and column names against
-  the working example in `data/synthetic-clean/` first; a misnamed file or
-  column is the most common cause.
+| What you see | What to do |
+|---|---|
+| The browser tab didn't open, or can't connect | Check the terminal running `farm-web` is still open, then go to `http://127.0.0.1:7860` yourself. If another program uses that port, add `--port 7861` |
+| A "confirmation_required" refusal | `farm-ingest` hasn't run for this data, or the data changed since. Run `farm-ingest` again |
+| A plain refusal instead of an answer | By design: the tool refuses rather than guesses (an unknown field name, a season outside your records, a prediction or recommendation). Check the field name and season match your data, or rephrase |
+| "Couldn't reach the local model" | A setup problem, not your question: Ollama isn't running or the model isn't pulled. Run `uv run --project host farm-preflight` |
+| A whole season missing, or numbers that don't add up | Compare your file names and column headings with `data/synthetic-clean/`; a misnamed file or column is the usual cause |
 
 ## Where to go next
 
-- [YOUR_RECORDS.md](YOUR_RECORDS.md): where each answer's numbers come
-  from, and how to check one by hand.
-- [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md): fifteen example questions with
-  known-correct answers, good for building confidence in the tool.
-- Every other doc is listed in the [README](../README.md#start-here).
+| Read | For |
+|---|---|
+| [YOUR_RECORDS.md](YOUR_RECORDS.md) | Where each number comes from, and how to check one by hand |
+| [EVAL_QUESTIONS.md](EVAL_QUESTIONS.md) | Fifteen questions with known-right answers |
+| [README](../README.md#start-here) | Every other doc |
