@@ -3,6 +3,8 @@ servers, no browser. Payloads mirror real tool results (seed 42)."""
 
 from __future__ import annotations
 
+from html import escape
+
 from farm_host.cli import AnswerResult
 from farm_model.narrator import NarrationOutcome
 from farm_model.query_schema import QueryIntent, QueryObject
@@ -354,3 +356,30 @@ def test_labels_and_panels_carry_a_hidden_icon():
     for name in ICON_PATHS:
         svg = icon_svg(name)
         assert 'aria-hidden="true"' in svg and 'stroke="currentColor"' in svg
+
+
+def test_what_can_i_ask_lists_each_type_with_an_example():
+    from farm_host.examples import CAPABILITIES, EXAMPLES_LABEL, capabilities_text
+
+    result = AnswerResult(text=capabilities_text(2016, 2025), ok=True, capabilities=CAPABILITIES)
+    view = build_view(result)
+    html = view.answer_html
+    assert "Questions I can answer" in html
+    assert html.count('class="pf-cap-type"') == len(CAPABILITIES)
+    for heading, example in CAPABILITIES:
+        assert escape(heading) in html and escape(example) in html
+    assert escape(EXAMPLES_LABEL) in html
+    assert "pf-answer-refused" not in html
+    assert view.checks_summary == "Nothing to check"
+    assert view.figures_summary == "No figures looked up"
+
+
+def test_unmatched_question_points_to_the_example_list():
+    from farm_host.examples import EXAMPLES_LABEL
+
+    for kind in ("invalid_output", "out_of_scope"):
+        html = build_view(AnswerResult(text="no", ok=False, refusal_kind=kind)).answer_html
+        assert "Not sure what to ask?" in html and escape(EXAMPLES_LABEL) in html
+    # Not for refusals that already say what to fix.
+    html = build_view(AnswerResult(text="no", ok=False, refusal_kind="model_unreachable")).answer_html
+    assert "Not sure what to ask?" not in html

@@ -119,3 +119,40 @@ def test_main_exits_zero_on_success(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "answer_question", fake_answer_question)
     exit_code = cli.main(["some", "question", "--audit-log", str(tmp_path / "audit.jsonl")])
     assert exit_code == 0
+
+
+PYDANTIC_ERROR = (
+    "1 validation error for QueryObject\n  Value error, which_fields_made_money requires "
+    "either 'seasons' (explicit years) or 'season_count_from_latest' (a relative window) "
+    "[type=value_error] For further information visit https://errors.pydantic.dev/2.14/v/value_error"
+)
+
+
+@pytest.mark.parametrize(
+    "kind", ["invalid_output", "out_of_scope", "out_of_range", "season_not_named", "unresolved_followup"]
+)
+async def test_raw_reason_never_reaches_the_grower(tmp_path, monkeypatch, kind):
+    """The screenshot bug (2026-11-20): a pydantic error was printed in the
+    answer. The reason goes to the audit log; the grower sees a plain sentence."""
+    monkeypatch.setattr(
+        cli,
+        "parse_question",
+        lambda question, seasons: ParseFailure(raw_question=question, reason=PYDANTIC_ERROR, kind=kind),
+    )
+    log = AuditLog(tmp_path / "audit.jsonl")
+    result = await cli.answer_question("which fields?", log)
+    assert not result.ok
+    for leak in ("validation error", "pydantic", "Reason:", "season_count_from_latest"):
+        assert leak not in result.text
+    refused = [e for e in log.entries() if e["event"] == "parse_refused"]
+    assert refused[0]["reason"] == PYDANTIC_ERROR
+
+
+async def test_unmatched_question_points_to_what_can_i_ask(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        cli,
+        "parse_question",
+        lambda question, seasons: ParseFailure(raw_question=question, reason="x", kind="invalid_output"),
+    )
+    result = await cli.answer_question("hmm", AuditLog(tmp_path / "audit.jsonl"))
+    assert "What can I ask?" in result.text

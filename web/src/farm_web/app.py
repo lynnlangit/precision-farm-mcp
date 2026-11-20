@@ -26,6 +26,7 @@ import gradio as gr  # noqa: E402
 
 from farm_core.audit import AuditLog  # noqa: E402
 from farm_host.cli import DEFAULT_AUDIT_LOG, AnswerResult, answer_question  # noqa: E402
+from farm_host.examples import EXAMPLES, EXAMPLES_LABEL  # noqa: E402 -- shared with the "What can I ask?" answer
 from farm_host.farms import DEFAULT_FARM, FARMS  # noqa: E402
 from farm_host.followups import MAX_SUGGESTIONS, next_context, suggest_followups  # noqa: E402
 from farm_host.server_pool import ServerPool  # noqa: E402
@@ -39,7 +40,7 @@ from farm_host.preflight_cli import (  # noqa: E402
 from . import __version__  # noqa: E402
 from .banner import BANNER_HTML  # noqa: E402
 from .history import HISTORY_PATH, history_link_html, history_page, new_session_id  # noqa: E402
-from .icons import label_icons_css  # noqa: E402
+from .icons import EXAMPLE_ICONS, label_icons_css  # noqa: E402
 from farm_model.query_schema import FollowUpContext  # noqa: E402
 
 from .view import (  # noqa: E402
@@ -52,65 +53,6 @@ from .view import (  # noqa: E402
     with_subject,
 )
 
-# The eval questions (docs/EVAL_QUESTIONS.md), grouped the way a grower thinks.
-EXAMPLES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    (
-        "Bad field or bad year?",
-        (
-            "Was the Marginal Eighty a bad field or just a bad year?",
-            "Was South 160 South a bad field or just a bad year?",
-            # Third, not first: this is eval 2, the one gemma3:4b often
-            # fails the checks on (it may blame "an unusual weather pattern",
-            # which no record shows, so the sentence is withheld; it depends
-            # on the model's output -- see host/tests/test_eval_nl.py -k
-            # withheld). The group opens on two answers that pass.
-            "Was East 80 a bad field or just a bad year?",
-        ),
-    ),
-    (
-        "Which fields made money?",
-        (
-            "Which fields made money in the last five years?",
-            "Which fields made money in 2019 and 2020?",
-            "Is any part of Section Corner losing money in 2024, even though the field "
-            "overall is profitable?",
-        ),
-    ),
-    (
-        "Do my records agree?",
-        (
-            "Do the yield monitor and scale tickets agree on Home Quarter in 2019?",
-            "Is there anything odd about the yield monitor coverage on Marginal Eighty in 2024?",
-            "Does the seed cost on Sheyenne Bottom in 2022 look right?",
-            'What does "north eighty" refer to in 2017?',
-        ),
-    ),
-    (
-        "Weather and soil",
-        (
-            "How dry was 2018?",
-            "How much water does Coulee Field's soil hold?",
-        ),
-    ),
-    (
-        "What did I apply?",
-        (
-            "What did I put on Coulee Field in 2023?",
-            "Did I put the same nitrogen on Section Corner every year?",
-        ),
-    ),
-)
-
-EXAMPLES_LABEL = f"Example questions ({len(EXAMPLES)} types)"
-
-# One small icon per question type (see icons.py), so the list scans quickly.
-EXAMPLE_ICONS: dict[str, str] = {
-    "Bad field or bad year?": "field",
-    "Which fields made money?": "money",
-    "Do my records agree?": "agree",
-    "Weather and soil": "weather",
-    "What did I apply?": "applied",
-}
 
 
 def example_group_class(heading: str) -> str:

@@ -16,11 +16,12 @@ from pathlib import Path
 
 from farm_host.cli import REPO_ROOT as _REPO_ROOT
 from farm_host.cli import AnswerResult
+from farm_host.examples import EXAMPLES_LABEL
 from farm_host.farms import Farm
 from farm_host.followups import TOPIC_LABELS, resolved_label
 from farm_model.query_schema import FollowUpContext
 
-from .icons import icon_svg
+from .icons import EXAMPLE_ICONS, icon_svg
 
 # The checks a model-written sentence must pass before a grower sees it, in
 # the order the narrator runs them. Labels are plain language on purpose:
@@ -345,9 +346,37 @@ def with_subject(view: AnswerView, context: FollowUpContext | None) -> AnswerVie
     return dataclass_replace(view, answer_html=html[:end] + subject_html(label) + html[end:])
 
 
+# Refusals where the grower's question didn't match a lookup: point them to
+# the example list rather than leave them guessing what to type.
+_POINT_TO_EXAMPLES = {"invalid_output", "out_of_scope"}
+
+
+def _capabilities_html(result: AnswerResult, resolved: str) -> str:
+    """ "What can I ask?": the question types, one example each. Written by
+    code from the same list as the example buttons; no AI, nothing checked."""
+    items = "".join(
+        f'<li><span class="pf-cap-type">{icon_svg(EXAMPLE_ICONS[heading])}{escape(heading)}</span>'
+        f'<span class="pf-cap-example">e.g. \u201c{escape(example)}\u201d</span></li>'
+        for heading, example in result.capabilities or ()
+    )
+    return (
+        '<div class="pf-answer pf-answer-capabilities">'
+        f"{resolved}"
+        '<p class="pf-eyebrow">Questions I can answer</p>'
+        f"<p>I answer {len(result.capabilities or ())} kinds of questions about your own "
+        "records. One example of each:</p>"
+        f'<ul class="pf-capabilities">{items}</ul>'
+        f'<p class="pf-muted">More examples are under \u201c{escape(EXAMPLES_LABEL)}\u201d, below '
+        "the Ask button. I only look back at your records: I don't predict, recommend, "
+        "or explain terms.</p></div>"
+    )
+
+
 def _answer_html(result: AnswerResult) -> str:
     n = result.narration
     resolved = _resolved_html(result)
+    if result.capabilities:
+        return _capabilities_html(result, resolved)
     if not result.ok:
         title = {
             "model_unreachable": "The local AI model isn't running",
@@ -360,11 +389,18 @@ def _answer_html(result: AnswerResult) -> str:
             "server_timeout": "The lookup took too long to start",
             "error": "Something went wrong on this computer",
         }.get(result.refusal_kind or "", "No answer this time")
+        examples_hint = (
+            '<p class="pf-examples-hint">Not sure what to ask? Open '
+            f"<strong>{escape(EXAMPLES_LABEL)}</strong> below the Ask button.</p>"
+            if result.refusal_kind in _POINT_TO_EXAMPLES
+            else ""
+        )
         return (
             '<div class="pf-answer pf-answer-refused">'
             f"{resolved}"
             f'<p class="pf-eyebrow">{escape(title)}</p>'
             f"<p>{escape(result.text)}</p>"
+            f"{examples_hint}"
             '<p class="pf-muted">Saying "I don\'t know" is part of the design: '
             "this tool would rather refuse than guess.</p></div>"
         )

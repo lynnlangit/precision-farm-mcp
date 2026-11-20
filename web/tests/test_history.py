@@ -243,3 +243,15 @@ def test_one_link_only_at_the_bottom_of_the_app(tmp_path):
     config = repr(web_app.build_app(tmp_path / "audit.jsonl").config)
     assert config.count("/history") == 1
     assert "Question flow" in config
+
+
+def test_what_can_i_ask_shows_as_listed(tmp_path):
+    path = tmp_path / "audit.jsonl"
+    rows = [
+        (0, "query", {"question": "What can I ask?", "source": "web", "session_id": "web-a"}),
+        (0, "capabilities_listed", {"types": ["Bad field or bad year?"]}),
+    ]
+    log = _write(path, rows)
+    (q,) = questions_from(log.entries())
+    assert q.outcome == "listed"
+    assert "Listed the kinds of questions" in history_page(path)

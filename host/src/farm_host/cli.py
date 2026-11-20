@@ -31,6 +31,7 @@ from farm_model.query_schema import (
 )
 
 from . import __version__
+from .examples import CAPABILITIES, capabilities_text, is_capability_question
 from .farms import DEFAULT_AUDIT_LOG, REPO_ROOT  # noqa: F401 -- REPO_ROOT re-exported for farm_web
 from .mcp_client import MCPFleet, ServerStartTimeout
 from .records import records_request
@@ -121,6 +122,9 @@ class AnswerResult:
     # The raw files, spreadsheet tabs and rows the lookup read (web app only,
     # "Show the records"); see farm_host.records. Never seen by the narrator.
     records: list[dict] | None = None
+    # Set only for a "What can I ask?" question: (question type, one example)
+    # pairs, written by code. ok is True, nothing was looked up or checked.
+    capabilities: tuple[tuple[str, str], ...] | None = None
 
 
 async def _fetch_records(fleet: MCPFleet, tool: str, args: dict, payload: dict) -> list[dict] | None:
@@ -177,6 +181,16 @@ async def answer_question(
             **labels,
         )
 
+    # "What can I ask?" is about the tool, not a field: answered here, in
+    # code, before the AI reads anything. Nothing to look up or check.
+    if is_capability_question(question):
+        audit_log.log("capabilities_listed", types=[h for h, _ in CAPABILITIES])
+        return AnswerResult(
+            text=capabilities_text(SEASONS[0], SEASONS[-1]),
+            ok=True,
+            capabilities=CAPABILITIES,
+        )
+
     # A first question calls the parser exactly as before; only a follow-up
     # passes the extra context.
     query = (
@@ -185,13 +199,15 @@ async def answer_question(
         else parse_question(question, SEASONS, context=context)
     )
     if isinstance(query, ParseFailure):
+        # The reason (sometimes a raw validation error from the model's
+        # output) goes to the audit log only. Growers get a plain sentence.
         audit_log.log("parse_refused", question=question, reason=query.reason, kind=query.kind)
         if query.kind == "unresolved_followup":
             return AnswerResult(
                 text=(
                     "I wasn't sure which field or season you meant, so I didn't look "
                     "anything up. Try naming both, e.g. \"Does the seed cost on "
-                    f"Sheyenne Bottom in 2023 look right?\" (Reason: {query.reason})"
+                    "Sheyenne Bottom in 2023 look right?\""
                 ),
                 ok=False,
                 refusal_kind=query.kind,
@@ -201,7 +217,17 @@ async def answer_question(
                 text=(
                     "That lookup needs a season, and your question didn't name one, so I "
                     "didn't look anything up. Try naming the year, e.g. \"How dry was "
-                    f"2018?\" (Reason: {query.reason})"
+                    "2018?\""
+                ),
+                ok=False,
+                refusal_kind=query.kind,
+            )
+        if query.kind == "out_of_range":
+            return AnswerResult(
+                text=(
+                    f"Your records cover {SEASONS[0]}-{SEASONS[-1]}, and that question "
+                    "asks about a season outside them, so I didn't look anything up. "
+                    "Try a year in that range."
                 ),
                 ok=False,
                 refusal_kind=query.kind,
@@ -222,8 +248,8 @@ async def answer_question(
                 "only answers retrospective questions about your own recorded "
                 f"seasons ({SEASONS[0]}-{SEASONS[-1]}). I can look up records, but I "
                 "can't explain terms or numbers yet. Try asking about a field and "
-                "season, e.g. \"Was East 80 a bad field or a bad year?\" "
-                f"(Reason: {query.reason})"
+                "season, e.g. \"Was East 80 a bad field or a bad year?\", or ask "
+                "\"What can I ask?\" to see the kinds of questions I answer."
             ),
             ok=False,
             refusal_kind=query.kind,
