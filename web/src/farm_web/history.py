@@ -1,7 +1,7 @@
-"""Session history: the audit log (data/audit.jsonl), read back one question
-at a time, so a grower or a teacher can see what happened to every question:
-what was looked up, which checks the blue AI sentence passed, and what was
-withheld. Read-only: the page never writes to the log.
+"""Question flow (formerly Session history): the audit log (data/audit.jsonl),
+mapped as a flow (see flowmap.py) and read back one question at a time, so a
+grower or a teacher can see what happened to every question: what was
+looked up, which checks the blue AI sentence passed, and what was withheld. Read-only: the page never writes to the log.
 
 A session is one run of the web app (every question it logs carries the same
 `session_id`). Questions logged before session ids existed, and questions
@@ -15,7 +15,6 @@ import dataclasses
 import datetime
 import json
 import secrets
-from collections import Counter
 from html import escape
 from importlib.resources import files
 from pathlib import Path
@@ -245,59 +244,6 @@ def _topic(intent: str | None) -> str:
 # ---------------------------------------------------------------- rendering
 
 
-def _summary_html(session: Session) -> str:
-    qs = session.questions
-    outcomes = Counter(q.outcome for q in qs)
-    shown, withheld = outcomes["shown"], outcomes["withheld"]
-    other = len(qs) - shown - withheld
-    total = max(len(qs), 1)
-
-    def pct(n: int) -> str:
-        return f"{100 * n / total:.1f}%"
-
-    fails = Counter(c for q in qs for c in q.failed_checks)
-    if fails:
-        top = fails.most_common()
-        best = top[0][1]
-        names = [c for c, n in top if n == best]
-        blocked = (
-            f'<div class="v small">{escape(_CHECK_LABELS.get(names[0], names[0]))}</div>'
-            f'<div class="n">blocked {best} AI sentence{"s" if best != 1 else ""}'
-            + (
-                " (tied with "
-                + ", ".join(f"“{escape(_CHECK_LABELS.get(c, c))}”" for c in names[1:])
-                + ")"
-                if len(names) > 1
-                else ""
-            )
-            + "</div>"
-        )
-    else:
-        blocked = '<div class="v small">None</div><div class="n">no AI sentence was blocked</div>'
-    types = Counter(_topic(q.parsed.get("intent")) for q in qs if q.parsed)
-    type_rows = "".join(
-        f"<li><span>{escape(t)}</span><b>{n}</b></li>" for t, n in types.most_common(5)
-    ) or '<li><span class="n">none looked up</span></li>'
-    follow_ups = sum(q.follow_up for q in qs)
-    return f"""
-<div class="strip">
-  <div class="tile"><div class="k">Questions</div><div class="v">{len(qs)}</div>
-    <div class="n">{follow_ups} follow-up{"s" if follow_ups != 1 else ""} ·
-    {_time(session.started)} to {_time(session.ended)}</div></div>
-  <div class="tile"><div class="k">Blue AI sentence</div>
-    <div class="v">{shown} <span class="n">shown</span></div>
-    <div class="bar" role="img" aria-label="{shown} shown, {withheld} withheld, {other} other">
-      <span style="width:{pct(shown)};background:var(--model)"></span>
-      <span style="width:{pct(withheld)};background:var(--loss)"></span>
-      <span style="width:{pct(other)};background:var(--warn)"></span></div>
-    <div class="legend"><span><i class="dot" style="background:var(--model)"></i>{shown} shown</span>
-      <span><i class="dot" style="background:var(--loss)"></i>{withheld} withheld</span>
-      <span><i class="dot" style="background:var(--warn)"></i>{other} no AI sentence</span></div></div>
-  <div class="tile"><div class="k">Check that blocked most</div>{blocked}</div>
-  <div class="tile"><div class="k">Question types</div><ul class="types">{type_rows}</ul></div>
-</div>"""
-
-
 def _entries_table(q: Question) -> str:
     rows = []
     for e in q.entries:
@@ -407,16 +353,23 @@ def _question_html(q: Question) -> str:
 </article>"""
 
 
-def _picker_html(sessions: list[Session], current: Session) -> str:
-    options = "".join(
-        f'<option value="{escape(s.key)}"{" selected" if s is current else ""}>'
+ALL_TIME = "all"
+
+
+def _picker_html(sessions: list[Session], current_key: str, total: int) -> str:
+    first = sessions[0].started
+    options = [
+        f'<option value="{ALL_TIME}"{" selected" if current_key == ALL_TIME else ""}>'
+        f"All time · since {escape(_date(first))} · {total} questions</option>"
+    ] + [
+        f'<option value="{escape(s.key)}"{" selected" if s.key == current_key else ""}>'
         f"{escape(s.label())}</option>"
         for s in reversed(sessions)
-    )
+    ]
     return (
         f'<form class="picker" method="get" action="{HISTORY_PATH}">'
-        '<label for="pf-session">Session</label>'
-        f'<select id="pf-session" name="session" onchange="this.form.submit()">{options}</select>'
+        '<label for="pf-session">Show</label>'
+        f'<select id="pf-session" name="session" onchange="this.form.submit()">{"".join(options)}</select>'
         '<noscript><button type="submit">Show</button></noscript></form>'
     )
 
@@ -442,7 +395,14 @@ def history_page(audit_log_path: Path, session_key: str | None = None) -> str:
     if not sessions:
         main = '<p class="empty">No questions in the log yet. Ask one, then come back.</p>'
     else:
-        current = next((s for s in sessions if s.key == session_key), sessions[-1])
+        from .flowmap import build_flow, flow_details_html, flow_legend_html, flow_svg
+
+        current = next((s for s in sessions if s.key == session_key), None)
+        key = current.key if current is not None else ALL_TIME
+        questions = (
+            current.questions if current is not None else [q for s in sessions for q in s.questions]
+        )
+        flow = build_flow(questions)
         filters = "".join(
             f'<button type="button" data-k="{k}" aria-pressed="{"true" if k == "all" else "false"}">'
             f"{label}</button>"
@@ -454,19 +414,31 @@ def history_page(audit_log_path: Path, session_key: str | None = None) -> str:
                 ("fu", "Follow-ups"),
             )
         )
-        cards = "".join(_question_html(q) for q in reversed(current.questions))
+        cards = "".join(_question_html(q) for q in reversed(questions))
         note = (
-            ""
-            if current.labelled
-            else '<p class="n">Grouped by time: these questions were logged before the web '
+            '<p class="n">Grouped by time: these questions were logged before the web '
             "app saved a session, or came from the terminal.</p>"
+            if current is not None and not current.labelled
+            else ""
+        )
+        span = f"{_date(questions[0].started)}, {_time(questions[0].started)} to " + (
+            f"{_date(questions[-1].started)}, {_time(questions[-1].started)}"
         )
         main = (
-            _picker_html(sessions, current)
+            _picker_html(sessions, key, sum(len(s.questions) for s in sessions))
             + note
-            + _summary_html(current)
+            + '<section class="mapcard">'
+            + f'<p class="n">{len(questions)} question{"s" if len(questions) != 1 else ""} · '
+            + f"{escape(span)}</p>"
+            + flow_svg(flow)
+            + flow_legend_html()
+            + f'<div class="nodeinfos">{flow_details_html(flow)}</div>'
+            + "</section>"
+            + '<details class="qlist"><summary>'
+            + (f"The {len(questions)} questions, one by one" if len(questions) != 1 else "The question")
+            + "</summary>"
             + f'<div class="filters" id="pf-filters">{filters}</div>'
-            + f'<div id="pf-list">{cards}</div>'
+            + f'<div id="pf-list">{cards}</div></details>'
         )
 
     return _PAGE.format(
@@ -482,7 +454,7 @@ def _css() -> str:
     return (files("farm_web") / "static" / "history.css").read_text(encoding="utf-8")
 
 
-def history_link_html(text: str = "Session history") -> str:
+def history_link_html(text: str = "Question flow") -> str:
     return (
         f'<a class="pf-history-link" href="{quote(HISTORY_PATH)}" target="_blank" '
         f'rel="noopener">{escape(text)}</a>'
@@ -494,7 +466,7 @@ _PAGE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Session history · Precision Farm</title>
+<title>Question flow · Precision Farm</title>
 <style>
 {css}
 </style>
@@ -502,8 +474,8 @@ _PAGE = """<!doctype html>
 <body>
 <div class="wrap">
   <a href="{home}">← Back to questions</a>
-  <h1>Session history</h1>
-  <p class="sub">What happened to each question, read from the audit log
+  <h1>Question flow</h1>
+  <p class="sub">Where questions went, read from the audit log
   (<code>{log_name}</code>). This page only reads the log; nothing here can be changed.</p>
   {banner}
   {main}
@@ -512,6 +484,23 @@ _PAGE = """<!doctype html>
 </div>
 <script>
 (function () {{
+  var infos = document.querySelectorAll(".nodeinfo");
+  function pick(key) {{
+    document.querySelectorAll(".flowmap .node").forEach(function (g) {{
+      g.classList.toggle("picked", g.dataset.node === key);
+    }});
+    document.querySelectorAll(".flowmap .edge").forEach(function (e) {{
+      e.classList.toggle("dim", !!key && e.dataset.from !== key && e.dataset.to !== key);
+    }});
+    infos.forEach(function (d) {{ d.hidden = d.dataset.info !== key; }});
+  }}
+  document.querySelectorAll(".flowmap .node").forEach(function (g) {{
+    var go = function () {{ pick(g.classList.contains("picked") ? null : g.dataset.node); }};
+    g.addEventListener("click", go);
+    g.addEventListener("keydown", function (e) {{
+      if (e.key === "Enter" || e.key === " ") {{ e.preventDefault(); go(); }}
+    }});
+  }});
   var bar = document.getElementById("pf-filters");
   if (!bar) return;
   bar.addEventListener("click", function (e) {{
