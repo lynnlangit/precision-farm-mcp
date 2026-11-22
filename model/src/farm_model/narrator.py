@@ -12,6 +12,8 @@ import re
 
 import ollama
 
+from .ollama_settings import KEEP_ALIVE, NARRATION_MAX_TOKENS, record
+
 from .verification import (
     GroundingResult,
     check_narration_grounded,
@@ -28,7 +30,12 @@ DEFAULT_MODEL = "gemma3:4b"
 # to produce. (Measured on a Mac with gemma3:4b: most answers repeat exactly;
 # a few can still differ between runs.)
 NARRATION_SEED = 42
-_NARRATION_OPTIONS = {"temperature": 0.2, "seed": NARRATION_SEED}
+_NARRATION_OPTIONS = {
+    "temperature": 0.2,
+    "seed": NARRATION_SEED,
+    # Only the first sentence is kept; see ollama_settings.
+    "num_predict": NARRATION_MAX_TOKENS,
+}
 
 _NARRATION_PROMPT_TEMPLATE = """The farmer asked: "{question}"
 
@@ -278,7 +285,9 @@ def narrate(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         options=dict(_NARRATION_OPTIONS),
+        keep_alive=KEEP_ALIVE,
     )
+    record("narrate", response)
     return response.message.content or ""
 
 
@@ -723,7 +732,9 @@ def narrate_verified(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 options=dict(_NARRATION_OPTIONS),
+                keep_alive=KEEP_ALIVE,
             )
+            record("narrate", response)
         except (ConnectionError, ollama.ResponseError):
             break  # a dead connection won't recover on retry -- template alone
         attempts = attempt + 1

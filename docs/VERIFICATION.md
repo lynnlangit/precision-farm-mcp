@@ -16,7 +16,7 @@ first (the [README](../README.md#quick-start) quick start).
 | `generator` | 19 | No | Every PR |
 | `core` | 97 | No | Every PR |
 | `host` | 230 (27 opt-in `eval_nl`) | The `ollama` and `eval_nl` tests | Every PR without the model; all of it on demand |
-| `model` | 114 | Some | On demand |
+| `model` | 119 | Some | On demand |
 | `web` | 70 (25 opt-in `ui`, needing Playwright's Chromium) | No | Locally |
 | `docs/test_architecture_doc.py` | 2 | No | Every PR |
 

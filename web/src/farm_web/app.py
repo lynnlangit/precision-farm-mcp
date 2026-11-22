@@ -41,6 +41,8 @@ from . import __version__  # noqa: E402
 from .banner import BANNER_HTML  # noqa: E402
 from .history import HISTORY_PATH, history_link_html, history_page, new_session_id  # noqa: E402
 from .icons import EXAMPLE_ICONS, label_icons_css  # noqa: E402
+from farm_model.narrator import DEFAULT_MODEL  # noqa: E402
+from farm_model.ollama_settings import warm_up  # noqa: E402
 from farm_model.query_schema import FollowUpContext  # noqa: E402
 
 from .view import (  # noqa: E402
@@ -598,6 +600,9 @@ def main(argv: list[str] | None = None) -> int:
     # question). Farm 2's start the first time someone picks it.
     pools = FarmPools(args.audit_log)
     pools.warm(DEFAULT_FARM)
+    # Load Gemma in the background too, so the first question doesn't wait
+    # for it. Best effort: if Ollama is down, the first question says so.
+    threading.Thread(target=warm_up, args=(DEFAULT_MODEL,), daemon=True).start()
     app = build_app(args.audit_log, pools)
     host = "0.0.0.0" if args.lan else "127.0.0.1"
     if args.lan:

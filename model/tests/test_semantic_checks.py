@@ -212,7 +212,7 @@ def _stub_narrations(monkeypatch, texts):
     prompts = []
     replies = iter(texts)
 
-    def fake_chat(model, messages, options):
+    def fake_chat(model, messages, options, **_):
         prompts.append(messages[0]["content"])
         return types.SimpleNamespace(message=types.SimpleNamespace(content=next(replies)))
 

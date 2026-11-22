@@ -79,6 +79,21 @@ First run on Lynn's Mac, 2026-11-22, all 19 questions per model. **Decision: Gem
 
 To repeat the run, use the `farm-evals` command above. The results depend on the model build and the machine, so record the date with any new numbers.
 
+## Speed settings
+
+These settings change how fast an answer comes back, never what it says. They are all in `model/src/farm_model/ollama_settings.py`.
+
+| Setting | Value | What it does |
+|---|---|---|
+| `keep_alive` on every model call | `60m` | Ollama keeps the model in memory for an hour after a question (its default is 5 minutes), so a pause in a session doesn't mean a reload |
+| Warm-up when `farm-web` starts | one empty request | Loads Gemma while the page opens, alongside the MCP servers, so the first question doesn't wait |
+| `num_predict` on the AI sentence | 120 tokens | Only the first sentence is ever kept; the cap stops a model that keeps writing after it. Same seed and temperature, so the sentence itself doesn't change |
+| Timings in the audit log | `model_timing` | The `parsed` (or `parse_refused`) and `narration` entries in `data/audit.jsonl` carry Ollama's own times for that call: `load_s`, `read_s` (reading the prompt), `write_s`, `total_s`, `read_tokens`, `write_tokens` |
+
+Before these settings, the audit log showed a median of 3.7 s to read the question and 2.7 s to write the AI sentence on Lynn's Mac (181 questions, 2026-11-22); the MCP lookups took almost no time. Settings that don't help at our prompt sizes: `num_ctx`, flash attention, KV cache type. Sampling settings (temperature, seed, top-k) change wording, not speed.
+
+Two smaller Gemma builds can be compared with no code change: `farm-evals --models gemma3:4b gemma3:4b-it-qat gemma3:1b` (pull them first).
+
 ## One question with another model
 
 ```bash

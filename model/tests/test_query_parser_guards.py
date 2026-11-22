@@ -22,7 +22,7 @@ KNOWN_SEASONS = list(range(2016, 2026))
 def _stub_chat(monkeypatch, output: dict) -> dict:
     captured: dict = {}
 
-    def fake_chat(model, messages, format, options):  # noqa: A002 -- mirrors ollama.chat
+    def fake_chat(model, messages, format, options, **_):  # noqa: A002 -- mirrors ollama.chat
         captured["messages"] = messages
         return types.SimpleNamespace(message=types.SimpleNamespace(content=json.dumps(output)))
 

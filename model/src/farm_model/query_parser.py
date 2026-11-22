@@ -19,6 +19,8 @@ import re
 from typing import Literal
 
 import ollama
+
+from .ollama_settings import KEEP_ALIVE, record
 from pydantic import ValidationError
 
 from .query_schema import FollowUpContext, QueryIntent, QueryObject, resolve_relative_seasons
@@ -254,7 +256,9 @@ def parse_question(
             ],
             format=schema,
             options={"temperature": 0},
+            keep_alive=KEEP_ALIVE,
         )
+        record("parse", response)
     except (ConnectionError, ollama.ResponseError) as e:
         # Ollama isn't running, or the model isn't pulled -- an environment
         # problem, not a question the farmer needs to reword.
