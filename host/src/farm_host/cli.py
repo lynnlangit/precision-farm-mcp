@@ -21,6 +21,7 @@ from pydantic import ValidationError
 from farm_core.audit import AuditLog
 from farm_core.pipeline import SEASONS
 from farm_model.narrator import NarrationOutcome, narrate_verified
+from farm_model.ollama_settings import start_timing, timings_for
 from farm_model.query_parser import ParseFailure, parse_question
 from farm_model.query_schema import (
     REQUIRED_FIELDS,
@@ -141,6 +142,13 @@ async def _fetch_records(fleet: MCPFleet, tool: str, args: dict, payload: dict) 
     return data.get("records")
 
 
+def _timing_field(timings: list[dict], job: str) -> dict:
+    """{"model_timing": [...]} for an audit entry, or {} when there is
+    nothing to add (no model call, or a test stand-in without timings)."""
+    found = timings_for(timings, job)
+    return {"model_timing": found} if found else {}
+
+
 async def answer_question(
     question: str,
     audit_log: AuditLog,
@@ -201,6 +209,10 @@ async def answer_question(
             capabilities=CAPABILITIES,
         )
 
+    # Ollama's own load/read/write times for this question's model calls,
+    # added to the parsed / parse_refused and narration entries below.
+    timings = start_timing()
+
     # A first question calls the parser exactly as before; only a follow-up
     # passes the extra context.
     query = (
@@ -211,7 +223,13 @@ async def answer_question(
     if isinstance(query, ParseFailure):
         # The reason (sometimes a raw validation error from the model's
         # output) goes to the audit log only. Growers get a plain sentence.
-        audit_log.log("parse_refused", question=question, reason=query.reason, kind=query.kind)
+        audit_log.log(
+            "parse_refused",
+            question=question,
+            reason=query.reason,
+            kind=query.kind,
+            **_timing_field(timings, "parse"),
+        )
         if query.kind == "unresolved_followup":
             return AnswerResult(
                 text=(
@@ -275,6 +293,7 @@ async def answer_question(
         season=query.season,
         seasons=query.seasons,
         season_count_from_latest=query.season_count_from_latest,
+        **_timing_field(timings, "parse"),
     )
 
     server = _INTENT_TO_SERVER[query.intent]
@@ -324,6 +343,7 @@ async def answer_question(
         # withheld or the model added nothing).
         lead=outcome.lead,
         shown_text=outcome.context,
+        **_timing_field(timings, "narrate"),
     )
     therefore = build_therefore_line(result)
     text = f"{outcome.text}\n\n{therefore}" if therefore else outcome.text

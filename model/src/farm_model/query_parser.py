@@ -21,6 +21,7 @@ from typing import Literal
 import ollama
 from pydantic import ValidationError
 
+from .ollama_settings import KEEP_ALIVE, record
 from .query_schema import FollowUpContext, QueryIntent, QueryObject, resolve_relative_seasons
 
 # Distinguishes "Ollama/the model itself isn't in a working state" from
@@ -254,7 +255,9 @@ def parse_question(
             ],
             format=schema,
             options={"temperature": 0},
+            keep_alive=KEEP_ALIVE,
         )
+        record("parse", response)
     except (ConnectionError, ollama.ResponseError) as e:
         # Ollama isn't running, or the model isn't pulled -- an environment
         # problem, not a question the farmer needs to reword.
