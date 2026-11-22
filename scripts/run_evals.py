@@ -11,6 +11,10 @@ Needs Ollama with gemma3:4b. From the repo root:
     uv run --project host python scripts/run_evals.py              # all, Farm 2
     uv run --project host python scripts/run_evals.py 1 7 F2       # just these
     uv run --project host python scripts/run_evals.py --farm farm1 # clean records
+    uv run --project host python scripts/run_evals.py --model phi4-mini
+
+For a graded pass/fail table across several models, use farm-evals instead
+(docs/MODELS.md).
 
 Writes data/eval_results.md (git-ignored) unless --out says otherwise.
 Read-only: audit logs go to a temporary folder, not data/audit.jsonl.
@@ -91,10 +95,14 @@ def parse_eval_doc(text: str) -> list[EvalCase]:
     return cases
 
 
-async def _ask(question: str, farm_env: dict[str, str], tmp: Path, context=None) -> AnswerResult:
+async def _ask(
+    question: str, farm_env: dict[str, str], tmp: Path, context=None, model: str | None = None
+) -> AnswerResult:
     log = tmp / f"audit-{time.monotonic_ns()}.jsonl"
     env = {"FARM_AUDIT_LOG": str(log), **farm_env}
-    return await answer_question(question, AuditLog(log), env_overrides=env, context=context)
+    return await answer_question(
+        question, AuditLog(log), env_overrides=env, context=context, model=model
+    )
 
 
 def _routing(r: AnswerResult) -> str:
@@ -109,10 +117,10 @@ def _fence(text: str) -> str:
     return f"```text\n{text.rstrip()}\n```"
 
 
-async def run(cases: list[EvalCase], farm_key: str) -> str:
+async def run(cases: list[EvalCase], farm_key: str, model: str | None = None) -> str:
     farm_env = FARMS[farm_key].server_env()
     out = [
-        f"# Eval results -- {FARMS[farm_key].label}",
+        f"# Eval results -- {FARMS[farm_key].label}, model `{model or 'gemma3:4b'}`",
         "",
         f"Run {datetime.now():%Y-%m-%d %H:%M}, {len(cases)} question(s), "
         f"from `{EVAL_DOC.relative_to(REPO_ROOT)}`. "
@@ -129,7 +137,7 @@ async def run(cases: list[EvalCase], farm_key: str) -> str:
             try:
                 context = None
                 if case.first:
-                    first = await _ask(case.first, farm_env, tmp)
+                    first = await _ask(case.first, farm_env, tmp, model=model)
                     out += [
                         f"**First:** {case.first}",
                         f"**Routed to:** {_routing(first)}",
@@ -141,7 +149,7 @@ async def run(cases: list[EvalCase], farm_key: str) -> str:
                     out.append(f"**Then:** {case.question}")
                 else:
                     out.append(f"**Q:** {case.question}")
-                result = await _ask(case.question, farm_env, tmp, context=context)
+                result = await _ask(case.question, farm_env, tmp, context=context, model=model)
                 out += [
                     "",
                     "**Expected (from the eval doc):**",
@@ -165,6 +173,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("ids", nargs="*", help="eval ids to run, e.g. 1 7 F2 (default: all)")
     p.add_argument("--farm", choices=sorted(FARMS), default="farm2")
     p.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    p.add_argument("--model", help="Ollama model to use instead of gemma3:4b, e.g. phi4-mini")
     args = p.parse_args(argv)
 
     cases = parse_eval_doc(EVAL_DOC.read_text())
@@ -175,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
             p.error(f"no such eval(s): {', '.join(sorted(unknown))}")
         cases = [c for c in cases if c.id in wanted]
 
-    report = asyncio.run(run(cases, args.farm))
+    report = asyncio.run(run(cases, args.farm, args.model))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(report)
     print(f"Wrote {args.out}", file=sys.stderr)

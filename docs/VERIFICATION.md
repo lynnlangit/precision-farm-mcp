@@ -15,7 +15,7 @@ first (the [README](../README.md#quick-start) quick start).
 |---|---|---|---|
 | `generator` | 19 | No | Every PR |
 | `core` | 97 | No | Every PR |
-| `host` | 183 (27 opt-in `eval_nl`) | The `ollama` and `eval_nl` tests | Every PR without the model; all of it on demand |
+| `host` | 230 (27 opt-in `eval_nl`) | The `ollama` and `eval_nl` tests | Every PR without the model; all of it on demand |
 | `model` | 114 | Some | On demand |
 | `web` | 70 (25 opt-in `ui`, needing Playwright's Chromium) | No | Locally |
 | `docs/test_architecture_doc.py` | 2 | No | Every PR |
@@ -44,6 +44,7 @@ uv run --project web pytest -m ui web/tests
 | Every pull request (`.github/workflows/tests.yml`, about 3 minutes) | Lint (`uvx ruff check .`, settings in `ruff.toml`), every `uv.lock` up to date, `generator`, `core`, the architecture-doc test, and every `host` test that doesn't call the model (`-m "not eval_nl and not ollama"`). `core` and `host` run 4 at a time (`-n 4`, which works locally too). Docs-only changes skip CI | One Ubuntu runner. Windows isn't tested: growers see the app on a Mac |
 | By hand only (`.github/workflows/real-model.yml`: Actions, real-model tests, Run workflow) | All of `host` and `model` with Ollama, 12 to 20 minutes. No nightly run | Ubuntu |
 | Before a demo | The `host` and `model` suites, plus `eval_nl` | A Mac with Ollama, where Gemma is fast |
+| Comparing models | `farm-evals --models gemma3:4b phi4-mini granite4:micro` ([MODELS.md](MODELS.md)) | A Mac with Ollama; never in CI |
 
 ## What the tests prove
 

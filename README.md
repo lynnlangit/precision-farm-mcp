@@ -15,7 +15,7 @@ on your own laptop. Never a prediction, never a guess, never sent anywhere.
 | A grower trying it out | [docs/FARMER_GUIDE.md](docs/FARMER_GUIDE.md): setup, the example farms, loading your own records |
 | A grower who wants to check the answers | [docs/YOUR_RECORDS.md](docs/YOUR_RECORDS.md): where the files are, the records behind each answer, the files your own farm needs |
 | Leading a session | [docs/EVAL_QUESTIONS.md](docs/EVAL_QUESTIONS.md): 15 demo questions plus follow-up pairs, each with its known-correct answer |
-| A developer | [docs/DEVELOPER.md](docs/DEVELOPER.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/VERIFICATION.md](docs/VERIFICATION.md) |
+| A developer | [docs/DEVELOPER.md](docs/DEVELOPER.md), [docs/MODELS.md](docs/MODELS.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/VERIFICATION.md](docs/VERIFICATION.md) |
 
 ## What you see in every answer
 
