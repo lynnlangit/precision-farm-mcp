@@ -150,6 +150,7 @@ async def answer_question(
     source: str = "cli",
     farm: str | None = None,
     session_id: str | None = None,
+    model: str | None = None,
 ) -> AnswerResult:
     """`context` is set only for a follow-up (the grower web app): the last
     verified answer's field, season and question type. It only helps parse
@@ -163,6 +164,12 @@ async def answer_question(
     `source` ("cli" or "web"), `farm` (a FARMS key) and `session_id` (one
     run of the web app) go on the "query" entry, so the web app's Session
     history can tell runs and farms apart. They change nothing else.
+
+    `model` is a developer option (farm-cli --model, scripts/run_evals.py):
+    another Ollama model to parse and narrate with instead of gemma3:4b. None,
+    the default and what the web app always uses, calls the parser and the
+    narrator exactly as before. The template lead and every check are the
+    same whichever model is underneath.
     """
     if context is not None and context.is_empty():
         context = None
@@ -171,6 +178,9 @@ async def answer_question(
         labels["farm"] = farm
     if session_id is not None:
         labels["session_id"] = session_id
+    if model is not None:
+        labels["model"] = model
+    model_kw: dict = {} if model is None else {"model": model}
     if context is None:
         audit_log.log("query", question=question, **labels)
     else:
@@ -194,9 +204,9 @@ async def answer_question(
     # A first question calls the parser exactly as before; only a follow-up
     # passes the extra context.
     query = (
-        parse_question(question, SEASONS)
+        parse_question(question, SEASONS, **model_kw)
         if context is None
-        else parse_question(question, SEASONS, context=context)
+        else parse_question(question, SEASONS, context=context, **model_kw)
     )
     if isinstance(query, ParseFailure):
         # The reason (sometimes a raw validation error from the model's
@@ -292,7 +302,9 @@ async def answer_question(
             refusal_kind="tool_refused",
         )
 
-    outcome = narrate_verified(question, result, untrusted_paths=tool_result.untrusted_paths)
+    outcome = narrate_verified(
+        question, result, untrusted_paths=tool_result.untrusted_paths, **model_kw
+    )
     if outcome.truncated:
         audit_log.log("payload_truncated", server=server, tool=tool)
     audit_log.log(
@@ -414,6 +426,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--audit-log", type=Path, default=DEFAULT_AUDIT_LOG)
     parser.add_argument(
+        "--model",
+        help="Developers only: the Ollama model that parses the question and writes "
+        "the extra sentence, e.g. phi4-mini (default: gemma3:4b, the only model the "
+        "web app uses). Pull it first with `ollama pull <model>`. See docs/MODELS.md.",
+    )
+    parser.add_argument(
         "--intent",
         choices=[i.value for i in QueryIntent if i != QueryIntent.UNRECOGNIZED],
         help="Model-free path: skip natural-language parsing and narration entirely, "
@@ -465,7 +483,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        result = asyncio.run(answer_question(question, audit_log, env_overrides=server_env))
+        # Without --model, the call is exactly what it was before the flag.
+        model_kw = {} if args.model is None else {"model": args.model}
+        result = asyncio.run(
+            answer_question(question, audit_log, env_overrides=server_env, **model_kw)
+        )
     except ServerStartTimeout as e:
         print(e)
         return 1

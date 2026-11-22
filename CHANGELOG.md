@@ -12,6 +12,7 @@ from Brick Ellis working with Lynn (#43, #44).
 
 | Area | What changed |
 |---|---|
+| Comparing models | Developers only: `farm-evals --models gemma3:4b phi4-mini granite4:micro` grades the 15 eval questions (plus 4 on Farm 1) against the answer key for each model and writes a side-by-side table to `data/model_comparison.md`; `farm-cli --model` and `scripts/run_evals.py --model` ask with another Ollama model. The web app still always uses `gemma3:4b`. See [docs/MODELS.md](docs/MODELS.md) |
 | "What can I ask?" | Questions about the tool itself ("What can I ask?", "What questions can you answer?") get a list of the 5 question types with one example each, written by code from the same list as the example buttons: no AI, nothing looked up. Refusals never show raw error text (the reason stays in the audit log), and "couldn't match" refusals point to "Example questions (5 types)" |
 | Question flow | New page at `/history`, linked once at the bottom of the web app: a service map of where questions went (question reader, the six MCP servers, AI sentence writer, 9 checks, shown / withheld / not looked up) with counts, average seconds and refusals on every step; click a circle for its breakdown. Pick one session or all time. The question-by-question cards are folded under the map. Checks the log's hash chain and says if anything was edited |
 | Audit log | Each question now records `source` (web or cli), `farm` and `session_id`; each answer records the green `lead` and the blue `shown_text`. Older entries still read; the page says what they didn't save |
