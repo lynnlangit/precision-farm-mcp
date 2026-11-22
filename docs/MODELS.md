@@ -59,6 +59,26 @@ A model that isn't pulled is skipped and named in the summary. The command
 exits 1 if any question failed, so it can be scripted. One model takes a
 few minutes on a Mac; it is never run in CI.
 
+## Results so far
+
+First run on Lynn's Mac, 2026-11-22, all 19 questions per model. **Decision: Gemma 3 4B stays the default.**
+
+| Model | Passed | Wrong answers shown | Failed on | AI sentence shown / withheld | Avg seconds |
+|---|---|---|---|---|---|
+| Gemma 3 4B (`gemma3:4b`) | 19 of 19 | 0 | nothing | 13 / 4 | 9.8 |
+| Phi-4-mini (`phi4-mini`) | 14 of 19 | 0 | evals 6, 7, 10; Farm 1 evals 6, 7 | 12 / 1 | 6.1 |
+| Granite 4 Micro (`granite4:micro`) | 17 of 19 | 0 | evals 10, 11 | 9 / 1 | 6.0 |
+
+| What we learned | Why it matters |
+|---|---|
+| Every failure had the same cause: the right question type, but a required piece left out (the quoted name in "north eighty" or "Township Rd 12", the field Home Quarter, or the year 2024 for Section Corner) | The form check caught all 7 and refused the question. No model reached a lookup with the wrong field or season |
+| No model showed a wrong figure | The figures and the Therefore line come from code. A weaker model means more "couldn't understand that" refusals, not wrong numbers. This is the teaching point for growers |
+| Phi-4-mini struggles with quoted names | 4 of its 5 failures were "What does X refer to" questions or a name inside a longer question |
+| Phi and Granite are about 40% faster | They're smaller, but the speed doesn't make up for the missed questions |
+| Gemma writes more AI sentences, and more of them are withheld | Withheld sentences are the checks working, not failures |
+
+To repeat the run, use the `farm-evals` command above. The results depend on the model build and the machine, so record the date with any new numbers.
+
 ## One question with another model
 
 ```bash
