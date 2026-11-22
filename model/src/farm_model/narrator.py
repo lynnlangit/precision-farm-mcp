@@ -13,7 +13,6 @@ import re
 import ollama
 
 from .ollama_settings import KEEP_ALIVE, NARRATION_MAX_TOKENS, record
-
 from .verification import (
     GroundingResult,
     check_narration_grounded,
